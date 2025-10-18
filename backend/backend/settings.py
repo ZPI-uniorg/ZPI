@@ -127,6 +127,11 @@ STATIC_URL = 'static/'
 # Authentication
 AUTH_USER_MODEL = 'core.User'
 
+AUTHENTICATION_BACKENDS = [
+    'core.auth_backends.UsernameOrIdentifierBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
