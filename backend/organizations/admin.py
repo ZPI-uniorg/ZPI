@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Membership, Organization
+from .models import Membership, Organization, Tag, Project
 
 
 @admin.register(Organization)
@@ -16,3 +16,7 @@ class MembershipAdmin(admin.ModelAdmin):
     search_fields = ("organization__name", "user__username")
     list_filter = ("role",)
     autocomplete_fields = ("organization", "user", "invited_by")
+
+
+admin.site.register(Tag)
+admin.site.register(Project)
