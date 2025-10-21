@@ -82,6 +82,10 @@ class Tag(models.Model):
         return self.name
 
 
+class TagRule(models.Model):
+    pass
+
+
 class Project(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
