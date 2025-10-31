@@ -31,13 +31,17 @@ class MembershipSerializer(serializers.ModelSerializer):
 
 
 class MembershipCreateSerializer(serializers.Serializer):
-    user_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
+    user_id = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(), required=False
+    )
     username = serializers.CharField(required=False)
     password = serializers.CharField(required=False, write_only=True)
     email = serializers.EmailField(required=False)
     first_name = serializers.CharField(required=False, allow_blank=True)
     last_name = serializers.CharField(required=False, allow_blank=True)
-    role = serializers.ChoiceField(choices=Membership.Role.choices, default=Membership.Role.MEMBER)
+    role = serializers.ChoiceField(
+        choices=Membership.Role.choices, default=Membership.Role.MEMBER
+    )
 
     def validate(self, attrs):
         user = attrs.get("user_id")
@@ -45,13 +49,19 @@ class MembershipCreateSerializer(serializers.Serializer):
         password = attrs.get("password")
 
         if not user and not username:
-            raise serializers.ValidationError("Provide either an existing user_id or username to create a new user.")
+            raise serializers.ValidationError(
+                "Provide either an existing user_id or username to create a new user."
+            )
 
         if user and username:
-            raise serializers.ValidationError("Use either user_id or username, not both.")
+            raise serializers.ValidationError(
+                "Use either user_id or username, not both."
+            )
 
         if username and not password:
-            raise serializers.ValidationError("Password is required when creating a new user.")
+            raise serializers.ValidationError(
+                "Password is required when creating a new user."
+            )
 
         return attrs
 
@@ -87,7 +97,16 @@ class OrganizationSerializer(serializers.ModelSerializer):
             "role",
             "member_count",
         ]
-    read_only_fields = ["id", "slug", "created_by", "created_at", "updated_at", "role", "member_count"]
+
+    read_only_fields = [
+        "id",
+        "slug",
+        "created_by",
+        "created_at",
+        "updated_at",
+        "role",
+        "member_count",
+    ]
 
     def get_role(self, obj):
         actor = self.context.get("actor")
@@ -110,7 +129,9 @@ class OrganizationCreateSerializer(serializers.ModelSerializer):
 
     def validate_name(self, value):
         if Organization.objects.filter(name__iexact=value).exists():
-            raise serializers.ValidationError(_("An organization with this name already exists."))
+            raise serializers.ValidationError(
+                _("An organization with this name already exists.")
+            )
         return value
 
 
@@ -120,5 +141,7 @@ class OrganizationRegistrationSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         if "organization" not in attrs or "admin" not in attrs:
-            raise serializers.ValidationError("Organization and admin details are required.")
+            raise serializers.ValidationError(
+                "Organization and admin details are required."
+            )
         return attrs

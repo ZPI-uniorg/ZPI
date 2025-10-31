@@ -1,3 +1,5 @@
+import json
+
 from django.http import JsonResponse, QueryDict
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
@@ -56,7 +58,6 @@ def create_kanban_board(request):
         return JsonResponse({"error": str(e)}, status=400)
 
 
-
 @require_http_methods(["DELETE"])
 @csrf_exempt
 def delete_kanban_board(request, board_id):
@@ -76,7 +77,7 @@ def update_kanban_board(request, board_id):
     try:
         board = KanbanBoard.objects.get(board_id=board_id)
 
-        data = QueryDict(request.body)
+        data = json.loads(request.body)
 
         title = data.get("title")
 
@@ -194,7 +195,7 @@ def update_column(request, column_id):
     try:
         column = KanbanColumn.objects.get(column_id=column_id)
 
-        data = QueryDict(request.body)
+        data = json.loads(request.body)
 
         title = data.get("title")
         position = data.get("position")
@@ -336,7 +337,7 @@ def update_task(request, task_id):
     try:
         task = Task.objects.get(task_id=task_id)
 
-        data = QueryDict(request.body)
+        data = json.loads(request.body)
 
         title = data.get("title")
         description = data.get("description")
