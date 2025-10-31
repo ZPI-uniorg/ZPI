@@ -3,7 +3,28 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from .models import KanbanBoard, KanbanColumn, Task
-from ..organizations.models import Organization
+from organizations.models import Organization
+
+
+@require_http_methods(["GET"])
+@csrf_exempt
+def get_kanban_boards(request):
+    try:
+        boards = KanbanBoard.objects.all()
+        boards_data = []
+
+        for board in boards:
+            boards_data.append(
+                {
+                    "board_id": board.board_id,
+                    "title": board.title,
+                    "organization_id": board.organization.id,
+                }
+            )
+
+        return JsonResponse(boards_data, safe=False, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
 
 
 # Create your views here.
@@ -56,14 +77,15 @@ def create_kanban_board(request):
         return JsonResponse({"error": str(e)}, status=400)
 
 
-
 @require_http_methods(["DELETE"])
 @csrf_exempt
 def delete_kanban_board(request, board_id):
     try:
         board = KanbanBoard.objects.get(board_id=board_id)
         board.delete()
-        return JsonResponse({"message": "Kanban Board deleted successfully"}, status=200)
+        return JsonResponse(
+            {"message": "Kanban Board deleted successfully"}, status=200
+        )
     except KanbanBoard.DoesNotExist:
         return JsonResponse({"error": "Kanban Board not found"}, status=404)
     except Exception as e:
@@ -177,7 +199,9 @@ def delete_column(request, column_id):
     try:
         column = KanbanColumn.objects.get(column_id=column_id)
         column.delete()
-        return JsonResponse({"message": "Kanban Column deleted successfully"}, status=200)
+        return JsonResponse(
+            {"message": "Kanban Column deleted successfully"}, status=200
+        )
     except KanbanColumn.DoesNotExist:
         return JsonResponse({"error": "Kanban Column not found"}, status=404)
     except Exception as e:

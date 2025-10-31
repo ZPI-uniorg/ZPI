@@ -63,9 +63,13 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         organization = self.perform_create(serializer)
-        output_serializer = OrganizationSerializer(organization, context={"request": request})
+        output_serializer = OrganizationSerializer(
+            organization, context={"request": request}
+        )
         headers = self.get_success_headers(output_serializer.data)
-        return Response(output_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        return Response(
+            output_serializer.data, status=status.HTTP_201_CREATED, headers=headers
+        )
 
     # Organization member operations handled by dedicated API views below
 
@@ -75,7 +79,9 @@ def _is_member(organization, user):
 
 
 def _is_admin(organization, user):
-    return organization.memberships.filter(user=user, role=Membership.Role.ADMIN).exists()
+    return organization.memberships.filter(
+        user=user, role=Membership.Role.ADMIN
+    ).exists()
 
 
 def _has_another_admin(organization, exclude_members=None):
@@ -92,7 +98,9 @@ class OrganizationMembersView(APIView):
         organization = get_object_or_404(Organization, pk=organization_id)
         if not _is_member(organization, request.user):
             return Response(status=status.HTTP_403_FORBIDDEN)
-        serializer = MembershipSerializer(organization.memberships.select_related("user"), many=True)
+        serializer = MembershipSerializer(
+            organization.memberships.select_related("user"), many=True
+        )
         return Response(serializer.data)
 
     def post(self, request, organization_id):
@@ -111,9 +119,13 @@ class OrganizationMembersView(APIView):
             username = data["username"]
             password = data["password"]
 
-            if organization.memberships.filter(user__username__iexact=username).exists():
+            if organization.memberships.filter(
+                user__username__iexact=username
+            ).exists():
                 return Response(
-                    {"detail": "Użytkownik o tym loginie już jest członkiem tej organizacji."},
+                    {
+                        "detail": "Użytkownik o tym loginie już jest członkiem tej organizacji."
+                    },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
@@ -140,7 +152,9 @@ class OrganizationMembersView(APIView):
             )
 
         response_serializer = MembershipSerializer(membership)
-        status_code = status.HTTP_201_CREATED if created_new_user else status.HTTP_200_OK
+        status_code = (
+            status.HTTP_201_CREATED if created_new_user else status.HTTP_200_OK
+        )
         return Response(response_serializer.data, status=status_code)
 
 
@@ -152,8 +166,12 @@ class OrganizationMemberDetailView(APIView):
         if not _is_admin(organization, request.user):
             return Response(status=status.HTTP_403_FORBIDDEN)
 
-        membership = get_object_or_404(Membership, pk=member_id, organization=organization)
-        serializer = MembershipUpdateSerializer(membership, data=request.data, partial=True)
+        membership = get_object_or_404(
+            Membership, pk=member_id, organization=organization
+        )
+        serializer = MembershipUpdateSerializer(
+            membership, data=request.data, partial=True
+        )
         serializer.is_valid(raise_exception=True)
 
         if (
@@ -161,23 +179,41 @@ class OrganizationMemberDetailView(APIView):
             and serializer.validated_data.get("role") != Membership.Role.ADMIN
             and not _has_another_admin(organization, exclude_members=[membership])
         ):
-            return Response({"detail": "Organization must have at least one administrator."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Organization must have at least one administrator."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         serializer.save()
         return Response(MembershipSerializer(membership).data)
 
     def delete(self, request, organization_id, member_id):
         organization = get_object_or_404(Organization, pk=organization_id)
-        membership = get_object_or_404(Membership, pk=member_id, organization=organization)
+        membership = get_object_or_404(
+            Membership, pk=member_id, organization=organization
+        )
 
-        if request.user == membership.user and not _has_another_admin(organization, exclude_members=[membership]):
-            return Response({"detail": "Organization must have at least one administrator."}, status=status.HTTP_400_BAD_REQUEST)
+        if request.user == membership.user and not _has_another_admin(
+            organization, exclude_members=[membership]
+        ):
+            return Response(
+                {"detail": "Organization must have at least one administrator."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        if not _is_admin(organization, request.user) and request.user != membership.user:
+        if (
+            not _is_admin(organization, request.user)
+            and request.user != membership.user
+        ):
             return Response(status=status.HTTP_403_FORBIDDEN)
 
-        if membership.role == Membership.Role.ADMIN and not _has_another_admin(organization, exclude_members=[membership]):
-            return Response({"detail": "Organization must have at least one administrator."}, status=status.HTTP_400_BAD_REQUEST)
+        if membership.role == Membership.Role.ADMIN and not _has_another_admin(
+            organization, exclude_members=[membership]
+        ):
+            return Response(
+                {"detail": "Organization must have at least one administrator."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         membership.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -276,18 +312,15 @@ def get_all_tags(request):
 @csrf_exempt
 def create_tag(request):
     try:
-        name = request.POST.get('name')
-        organization_id = request.POST.get('organization_id')
+        name = request.POST.get("name")
+        organization_id = request.POST.get("organization_id")
 
         if not name or not organization_id:
             return JsonResponse({"error": "Missing fields"}, status=400)
 
         organization = Organization.objects.get(id=organization_id)
 
-        tag = Tag.objects.create(
-            name=name,
-            organization=organization
-        )
+        tag = Tag.objects.create(name=name, organization=organization)
 
         tag_data = {
             "id": tag.id,
@@ -358,7 +391,9 @@ def get_all_projects(request):
                 "end_dte": project.end_dte,
                 "organization_id": project.organization.id,
                 "tag_id": project.tag.id,
-                "coordinator_id": project.coordinator.id if project.coordinator else None,
+                "coordinator_id": project.coordinator.id
+                if project.coordinator
+                else None,
             }
             for project in projects
         ]
@@ -371,21 +406,18 @@ def get_all_projects(request):
 @csrf_exempt
 def create_project(request):
     try:
-        name = request.POST.get('name')
-        description = request.POST.get('description', '')
-        start_dte = request.POST.get('start_dte')
-        end_dte = request.POST.get('end_dte')
-        organization_id = request.POST.get('organization_id')
-        coordinator_username = request.POST.get('coordinator_username')
+        name = request.POST.get("name")
+        description = request.POST.get("description", "")
+        start_dte = request.POST.get("start_dte")
+        end_dte = request.POST.get("end_dte")
+        organization_id = request.POST.get("organization_id")
+        coordinator_username = request.POST.get("coordinator_username")
 
         if not all([name, start_dte, end_dte, organization_id, coordinator_username]):
             return JsonResponse({"error": "Missing fields"}, status=400)
 
         organization = Organization.objects.get(id=organization_id)
-        tag = Tag.objects.create(
-            name=name,
-            organization=organization
-        )
+        tag = Tag.objects.create(name=name, organization=organization)
         coordinator = User.objects.get(username=coordinator_username)
 
         project = Project.objects.create(
@@ -395,7 +427,7 @@ def create_project(request):
             end_dte=end_dte,
             organization=organization,
             tag=tag,
-            coordinator=coordinator
+            coordinator=coordinator,
         )
 
         project_data = {
@@ -406,7 +438,9 @@ def create_project(request):
             "end_dte": project.end_dte,
             "organization_id": project.organization.id,
             "tag_id": project.tag.id,
-            "coordinator": project.coordinator.get_username() if project.coordinator else None,
+            "coordinator": project.coordinator.get_username()
+            if project.coordinator
+            else None,
         }
 
         return JsonResponse(project_data, status=201)
@@ -444,11 +478,11 @@ def update_project(request, project_id):
     try:
         project = Project.objects.get(id=project_id)
 
-        name = request.PUT.get('name')
-        description = request.PUT.get('description')
-        start_dte = request.PUT.get('start_dte')
-        end_dte = request.PUT.get('end_dte')
-        coordinator_username = request.PUT.get('coordinator_username')
+        name = request.PUT.get("name")
+        description = request.PUT.get("description")
+        start_dte = request.PUT.get("start_dte")
+        end_dte = request.PUT.get("end_dte")
+        coordinator_username = request.PUT.get("coordinator_username")
 
         if name:
             project.name = name
