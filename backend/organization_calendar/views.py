@@ -1,4 +1,4 @@
-from django.http import JsonResponse
+from django.http import JsonResponse, QueryDict
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -111,10 +111,12 @@ def update_event(request, event_id):
     try:
         event = Event.objects.get(event_id=event_id)
 
-        name = request.PUT.get("name")
-        description = request.PUT.get("description")
-        start_time = request.PUT.get("start_time")
-        end_time = request.PUT.get("end_time")
+        data = QueryDict(request.body)
+
+        name = data.get("name")
+        description = data.get("description")
+        start_time = data.get("start_time")
+        end_time = data.get("end_time")
 
         if name:
             event.name = name

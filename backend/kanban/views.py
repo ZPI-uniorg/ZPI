@@ -1,4 +1,4 @@
-from django.http import JsonResponse
+from django.http import JsonResponse, QueryDict
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -97,7 +97,11 @@ def delete_kanban_board(request, board_id):
 def update_kanban_board(request, board_id):
     try:
         board = KanbanBoard.objects.get(board_id=board_id)
-        title = request.PUT.get("title")
+
+        data = QueryDict(request.body)
+
+        title = data.get("title")
+
 
         if title:
             board.title = title
@@ -213,8 +217,12 @@ def delete_column(request, column_id):
 def update_column(request, column_id):
     try:
         column = KanbanColumn.objects.get(column_id=column_id)
-        title = request.PUT.get("title")
-        position = request.PUT.get("position")
+
+        data = QueryDict(request.body)
+
+        title = data.get("title")
+        position = data.get("position")
+
 
         if title:
             column.title = title
@@ -351,12 +359,15 @@ def delete_task(request, task_id):
 def update_task(request, task_id):
     try:
         task = Task.objects.get(task_id=task_id)
-        title = request.PUT.get("title")
-        description = request.PUT.get("description")
-        position = request.PUT.get("position")
-        due_date = request.PUT.get("due_date")
-        assigned_to_id = request.PUT.get("assigned_to_id")
-        status = request.PUT.get("status")
+
+        data = QueryDict(request.body)
+
+        title = data.get("title")
+        description = data.get("description")
+        position = data.get("position")
+        due_date = data.get("due_date")
+        assigned_to_id = data.get("assigned_to_id")
+        status = data.get("status")
 
         if title:
             task.title = title
