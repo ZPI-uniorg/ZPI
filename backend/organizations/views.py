@@ -1,3 +1,5 @@
+import json
+
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
 from django.db.models import Count
@@ -111,9 +113,9 @@ def create_organization(request):
 
 @require_http_methods(["DELETE"])
 @csrf_exempt
-def delete_organization(request, org_id):
+def delete_organization(request, organization_id):
     try:
-        org = Organization.objects.get(id=org_id)
+        org = Organization.objects.get(id=organization_id)
         org.delete()
 
         return JsonResponse({"message": "Organization deleted successfully"}, status=200)
@@ -125,11 +127,11 @@ def delete_organization(request, org_id):
 
 @require_http_methods(["PUT"])
 @csrf_exempt
-def update_organization(request, org_id):
+def update_organization(request, organization_id):
     try:
-        org = Organization.objects.get(id=org_id)
+        org = Organization.objects.get(id=organization_id)
 
-        data = QueryDict(request.body)
+        data = json.loads(request.body)
 
         name = data.get('name')
         description = data.get('description')
@@ -262,7 +264,7 @@ def update_membership(request, org_id, user_id):
     try:
         membership = Membership.objects.get(organization__id=org_id, user__id=user_id)
 
-        data = QueryDict(request.body)
+        data = json.loads(request.body)
 
         role = data.get('role')
         invited_by_id = data.get('invited_by_id')
@@ -496,7 +498,7 @@ def update_project(request, project_id):
     try:
         project = Project.objects.get(id=project_id)
 
-        data = QueryDict(request.body)
+        data = json.loads(request.body)
 
         name = data.get('name')
         description = data.get('description')
