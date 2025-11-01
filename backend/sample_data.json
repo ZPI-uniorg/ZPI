@@ -1,0 +1,575 @@
+[
+  {
+    "model": "organizations.organization",
+    "pk": 1,
+    "fields": {
+      "name": "Green Initiatives",
+      "slug": "green-initiatives",
+      "description": "Promowanie zrównoważonego rozwoju środowiska poprzez projekty społeczne.",
+      "created_by": 1,
+      "created_at": "2024-05-21T12:00:00Z",
+      "updated_at": "2024-05-21T12:00:00Z"
+    }
+  },
+  {
+    "model": "organizations.organization",
+    "pk": 2,
+    "fields": {
+      "name": "Tech for Good",
+      "slug": "tech-for-good",
+      "description": "Wykorzystanie technologii do rozwiązywania problemów społecznych.",
+      "created_by": 3,
+      "created_at": "2024-05-21T12:00:00Z",
+      "updated_at": "2024-05-21T12:00:00Z"
+    }
+  },
+  {
+    "model": "organizations.membership",
+    "pk": 1,
+    "fields": {
+      "organization": 1,
+      "user": 1,
+      "role": "admin",
+      "invited_by": 1,
+      "created_at": "2024-05-21T12:00:00Z",
+      "updated_at": "2024-05-21T12:00:00Z"
+    }
+  },
+  {
+    "model": "organizations.membership",
+    "pk": 2,
+    "fields": {
+      "organization": 1,
+      "user": 2,
+      "role": "coordinator",
+      "invited_by": 1,
+      "created_at": "2024-05-21T12:00:00Z",
+      "updated_at": "2024-05-21T12:00:00Z"
+    }
+  },
+  {
+    "model": "organizations.membership",
+    "pk": 3,
+    "fields": {
+      "organization": 2,
+      "user": 3,
+      "role": "admin",
+      "invited_by": 3,
+      "created_at": "2024-05-21T12:00:00Z",
+      "updated_at": "2024-05-21T12:00:00Z"
+    }
+  },
+  {
+    "model": "organizations.membership",
+    "pk": 4,
+    "fields": {
+      "organization": 2,
+      "user": 4,
+      "role": "member",
+      "invited_by": 3,
+      "created_at": "2024-05-21T12:00:00Z",
+      "updated_at": "2024-05-21T12:00:00Z"
+    }
+  },
+  {
+    "model": "organizations.tag",
+    "pk": 1,
+    "fields": {
+      "name": "Recykling",
+      "organization": 1
+    }
+  },
+  {
+    "model": "organizations.tag",
+    "pk": 2,
+    "fields": {
+      "name": "Ogród społeczny",
+      "organization": 1
+    }
+  },
+  {
+    "model": "organizations.tag",
+    "pk": 3,
+    "fields": {
+      "name": "Open Source",
+      "organization": 2
+    }
+  },
+  {
+    "model": "organizations.project",
+    "pk": 1,
+    "fields": {
+      "name": "Sprzątanie Parku Miejskiego",
+      "description": "Wydarzenie sprzątania centralnego parku miejskiego, organizowane co dwa tygodnie.",
+      "start_dte": "2024-01-15",
+      "end_dte": "2024-12-31",
+      "organization": 1,
+      "tag": 1,
+      "coordinator": 2
+    }
+  },
+  {
+    "model": "organizations.project",
+    "pk": 2,
+    "fields": {
+      "name": "Inicjatywa Ogrodu na Dachu",
+      "description": "Budowa ogrodu społecznego na dachu biblioteki.",
+      "start_dte": "2024-03-01",
+      "end_dte": "2024-10-31",
+      "organization": 1,
+      "tag": 2,
+      "coordinator": 2
+    }
+  },
+  {
+    "model": "organizations.project",
+    "pk": 3,
+    "fields": {
+      "name": "Kod dla Dobroczynności",
+      "description": "Tworzenie strony internetowej dla lokalnego schroniska dla zwierząt.",
+      "start_dte": "2024-02-01",
+      "end_dte": "2024-06-30",
+      "organization": 2,
+      "tag": 3,
+      "coordinator": 3
+    }
+  },
+   {
+    "model": "organization_calendar.event",
+    "pk": 1,
+    "fields": {
+      "name": "Spotkanie organizacyjne - Sprzątanie Parku",
+      "description": "Omówienie logistyki i podział na zespoły przed pierwszym sprzątaniem parku w nowym roku.",
+      "start_time": "2024-01-20T10:00:00Z",
+      "end_time": "2024-01-20T11:30:00Z",
+      "organization": 1
+    }
+  },
+  {
+    "model": "organization_calendar.event",
+    "pk": 2,
+    "fields": {
+      "name": "Warsztaty z budowy grządek podwyższonych",
+      "description": "Praktyczne warsztaty dla wolontariuszy projektu 'Inicjatywa Ogrodu na Dachu'. Zapewniamy narzędzia i materiały.",
+      "start_time": "2024-03-10T12:00:00Z",
+      "end_time": "2024-03-10T16:00:00Z",
+      "organization": 1
+    }
+  },
+  {
+    "model": "organization_calendar.event",
+    "pk": 3,
+    "fields": {
+      "name": "Hackathon 'Kod dla Dobroczynności' - Start",
+      "description": "Rozpoczęcie weekendowego maratonu programistycznego. Prezentacja projektu strony dla schroniska i formowanie zespołów.",
+      "start_time": "2024-02-09T18:00:00Z",
+      "end_time": "2024-02-11T20:00:00Z",
+      "organization": 2
+    }
+  },
+  {
+    "model": "organization_calendar.event",
+    "pk": 4,
+    "fields": {
+      "name": "Spotkanie kwartalne 'Tech for Good'",
+      "description": "Podsumowanie dotychczasowych działań i planowanie nowych projektów na kolejny kwartał.",
+      "start_time": "2024-04-05T17:30:00Z",
+      "end_time": "2024-04-05T19:00:00Z",
+      "organization": 2
+    }
+  },
+  {
+    "model": "organization_calendar.event",
+    "pk": 5,
+    "fields": {
+      "name": "Comiesięczne sprzątanie parku - Luty",
+      "description": "Dołącz do nas, aby posprzątać Park Miejski. Zapewniamy worki i rękawice.",
+      "start_time": "2024-02-18T09:00:00Z",
+      "end_time": "2024-02-18T12:00:00Z",
+      "organization": 1
+    }
+  },
+  {
+    "model": "organization_calendar.event",
+    "pk": 6,
+    "fields": {
+      "name": "Warsztaty z kompostowania",
+      "description": "Naucz się, jak założyć własny kompostownik w domu.",
+      "start_time": "2024-02-25T11:00:00Z",
+      "end_time": "2024-02-25T13:00:00Z",
+      "organization": 1
+    }
+  },
+  {
+    "model": "organization_calendar.event",
+    "pk": 7,
+    "fields": {
+      "name": "Comiesięczne sprzątanie parku - Marzec",
+      "description": "Wiosenne porządki w Parku Miejskim. Każda para rąk się przyda!",
+      "start_time": "2024-03-17T09:00:00Z",
+      "end_time": "2024-03-17T12:00:00Z",
+      "organization": 1
+    }
+  },
+  {
+    "model": "organization_calendar.event",
+    "pk": 8,
+    "fields": {
+      "name": "Spotkanie planistyczne ogrodu społecznego",
+      "description": "Omówienie planu nasadzeń na nadchodzący sezon.",
+      "start_time": "2024-03-22T18:00:00Z",
+      "end_time": "2024-03-22T19:30:00Z",
+      "organization": 1
+    }
+  },
+  {
+    "model": "organization_calendar.event",
+    "pk": 9,
+    "fields": {
+      "name": "Dzień Sadzenia Drzew",
+      "description": "Wspólnie posadzimy 50 nowych drzew wzdłuż alei parkowej.",
+      "start_time": "2024-04-13T10:00:00Z",
+      "end_time": "2024-04-13T15:00:00Z",
+      "organization": 1
+    }
+  },
+  {
+    "model": "organization_calendar.event",
+    "pk": 10,
+    "fields": {
+      "name": "Comiesięczne sprzątanie parku - Kwiecień",
+      "description": "Kontynuujemy naszą misję utrzymania czystości w parku.",
+      "start_time": "2024-04-21T09:00:00Z",
+      "end_time": "2024-04-21T12:00:00Z",
+      "organization": 1
+    }
+  },
+  {
+    "model": "organization_calendar.event",
+    "pk": 11,
+    "fields": {
+      "name": "Warsztaty: Życie Zero Waste",
+      "description": "Praktyczne porady, jak ograniczyć produkcję śmieci w codziennym życiu.",
+      "start_time": "2024-05-11T16:00:00Z",
+      "end_time": "2024-05-11T18:00:00Z",
+      "organization": 1
+    }
+  },
+  {
+    "model": "organization_calendar.event",
+    "pk": 12,
+    "fields": {
+      "name": "Sprzątanie brzegów rzeki",
+      "description": "Akcja sprzątania lokalnego odcinka rzeki we współpracy z miastem.",
+      "start_time": "2024-06-08T09:30:00Z",
+      "end_time": "2024-06-08T13:30:00Z",
+      "organization": 1
+    }
+  },
+  {
+    "model": "organization_calendar.event",
+    "pk": 13,
+    "fields": {
+      "name": "Letni festyn ekologiczny",
+      "description": "Całodniowe wydarzenie z grami, warsztatami i muzyką na żywo.",
+      "start_time": "2024-07-20T12:00:00Z",
+      "end_time": "2024-07-20T20:00:00Z",
+      "organization": 1
+    }
+  },
+  {
+    "model": "organization_calendar.event",
+    "pk": 14,
+    "fields": {
+      "name": "Spotkanie podsumowujące sezon ogrodniczy",
+      "description": "Podsumowanie prac w ogrodzie społecznym i planowanie na przyszły rok.",
+      "start_time": "2024-10-19T17:00:00Z",
+      "end_time": "2024-10-19T18:30:00Z",
+      "organization": 1
+    }
+  },
+  {
+    "model": "organization_calendar.event",
+    "pk": 15,
+    "fields": {
+      "name": "Warsztaty: Wprowadzenie do Pythona",
+      "description": "Bezpłatne warsztaty dla początkujących, którzy chcą zacząć programować.",
+      "start_time": "2024-03-02T10:00:00Z",
+      "end_time": "2024-03-02T14:00:00Z",
+      "organization": 2
+    }
+  },
+  {
+    "model": "organization_calendar.event",
+    "pk": 16,
+    "fields": {
+      "name": "Projekt 'Strona dla Schroniska' - Planowanie sprintu",
+      "description": "Spotkanie zespołu w celu zaplanowania zadań na kolejny sprint.",
+      "start_time": "2024-03-04T18:30:00Z",
+      "end_time": "2024-03-04T19:30:00Z",
+      "organization": 2
+    }
+  },
+  {
+    "model": "organization_calendar.event",
+    "pk": 17,
+    "fields": {
+      "name": "Tech Talk: AI dla dobra społecznego",
+      "description": "Prelekcja na temat wykorzystania sztucznej inteligencji w projektach non-profit.",
+      "start_time": "2024-03-20T19:00:00Z",
+      "end_time": "2024-03-20T20:30:00Z",
+      "organization": 2
+    }
+  },
+  {
+    "model": "organization_calendar.event",
+    "pk": 18,
+    "fields": {
+      "name": "Projekt 'Strona dla Schroniska' - Przegląd sprintu",
+      "description": "Prezentacja postępów i omówienie ukończonych zadań.",
+      "start_time": "2024-03-18T18:30:00Z",
+      "end_time": "2024-03-18T19:30:00Z",
+      "organization": 2
+    }
+  },
+  {
+    "model": "organization_calendar.event",
+    "pk": 19,
+    "fields": {
+      "name": "Hackathon: Aplikacje dla dostępności",
+      "description": "Weekendowy maraton tworzenia aplikacji ułatwiających życie osobom z niepełnosprawnościami.",
+      "start_time": "2024-04-19T18:00:00Z",
+      "end_time": "2024-04-21T20:00:00Z",
+      "organization": 2
+    }
+  },
+  {
+    "model": "organization_calendar.event",
+    "pk": 20,
+    "fields": {
+      "name": "Spotkanie wprowadzające dla nowych wolontariuszy",
+      "description": "Poznaj naszą organizację, projekty i dowiedz się, jak możesz pomóc.",
+      "start_time": "2024-05-07T18:00:00Z",
+      "end_time": "2024-05-07T19:00:00Z",
+      "organization": 2
+    }
+  },
+  {
+    "model": "organization_calendar.event",
+    "pk": 21,
+    "fields": {
+      "name": "Projekt 'Strona dla Schroniska' - Dzień wdrożenia",
+      "description": "Wspólne wdrożenie gotowej strony internetowej na serwer produkcyjny.",
+      "start_time": "2024-06-15T10:00:00Z",
+      "end_time": "2024-06-15T14:00:00Z",
+      "organization": 2
+    }
+  },
+  {
+    "model": "organization_calendar.event",
+    "pk": 22,
+    "fields": {
+      "name": "Comiesięczny Tech Meetup",
+      "description": "Luźne spotkanie społeczności technologicznej przy pizzy i napojach.",
+      "start_time": "2024-06-26T18:30:00Z",
+      "end_time": "2024-06-26T21:00:00Z",
+      "organization": 2
+    }
+  },
+  {
+    "model": "organization_calendar.event",
+    "pk": 23,
+    "fields": {
+      "name": "Warsztaty: UI/UX dla organizacji non-profit",
+      "description": "Jak projektować intuicyjne i skuteczne interfejsy dla projektów społecznych.",
+      "start_time": "2024-09-14T10:00:00Z",
+      "end_time": "2024-09-14T15:00:00Z",
+      "organization": 2
+    }
+  },
+  {
+    "model": "organization_calendar.event",
+    "pk": 24,
+    "fields": {
+      "name": "Prezentacja projektów na koniec roku",
+      "description": "Pokaz wszystkich projektów zrealizowanych w ciągu roku przez naszych wolontariuszy.",
+      "start_time": "2024-12-05T18:00:00Z",
+      "end_time": "2024-12-05T21:00:00Z",
+      "organization": 2
+    }
+  },
+  {
+    "model": "kanban.kanbanboard",
+    "pk": 1,
+    "fields": {
+      "title": "Projekty Green Initiatives",
+      "organization": 1
+    }
+  },
+  {
+    "model": "kanban.kanbanboard",
+    "pk": 2,
+    "fields": {
+      "title": "Projekty Tech for Good",
+      "organization": 2
+    }
+  },
+  {
+    "model": "kanban.kanbancolumn",
+    "pk": 1,
+    "fields": {
+      "title": "Do zrobienia",
+      "board": 1,
+      "position": 1
+    }
+  },
+  {
+    "model": "kanban.kanbancolumn",
+    "pk": 2,
+    "fields": {
+      "title": "W trakcie",
+      "board": 1,
+      "position": 2
+    }
+  },
+  {
+    "model": "kanban.kanbancolumn",
+    "pk": 3,
+    "fields": {
+      "title": "Zrobione",
+      "board": 1,
+      "position": 3
+    }
+  },
+  {
+    "model": "kanban.kanbancolumn",
+    "pk": 4,
+    "fields": {
+      "title": "Backlog",
+      "board": 2,
+      "position": 1
+    }
+  },
+  {
+    "model": "kanban.kanbancolumn",
+    "pk": 5,
+    "fields": {
+      "title": "W trakcie",
+      "board": 2,
+      "position": 2
+    }
+  },
+  {
+    "model": "kanban.kanbancolumn",
+    "pk": 6,
+    "fields": {
+      "title": "Zrobione",
+      "board": 2,
+      "position": 3
+    }
+  },
+  {
+    "model": "kanban.task",
+    "pk": 1,
+    "fields": {
+      "title": "Zamówić worki i rękawice na sprzątanie parku",
+      "description": "Znaleźć dostawcę i zamówić 100 worków i 50 par rękawic.",
+      "column": 1,
+      "position": 1,
+      "due_date": "2024-02-10T00:00:00Z",
+      "assigned_to": 2,
+      "status": 1
+    }
+  },
+  {
+    "model": "kanban.task",
+    "pk": 2,
+    "fields": {
+      "title": "Przygotować harmonogram sadzenia w ogrodzie",
+      "description": "Rozplanować, jakie rośliny i kiedy będą sadzone.",
+      "column": 1,
+      "position": 2,
+      "due_date": "2024-03-05T00:00:00Z",
+      "assigned_to": 2,
+      "status": 1
+    }
+  },
+  {
+    "model": "kanban.task",
+    "pk": 3,
+    "fields": {
+      "title": "Promocja wydarzenia 'Sprzątanie Parku'",
+      "description": "Utworzyć posty na Facebooku i Instagramie.",
+      "column": 2,
+      "position": 1,
+      "due_date": "2024-02-15T00:00:00Z",
+      "assigned_to": 1,
+      "status": 2
+    }
+  },
+  {
+    "model": "kanban.task",
+    "pk": 4,
+    "fields": {
+      "title": "Podpisać umowę z dostawcą ziemi",
+      "description": "Sfinalizować umowę na dostawę ziemi do ogrodu na dachu.",
+      "column": 3,
+      "position": 1,
+      "due_date": "2024-02-20T00:00:00Z",
+      "assigned_to": 1,
+      "status": 3
+    }
+  },
+  {
+    "model": "kanban.task",
+    "pk": 5,
+    "fields": {
+      "title": "Zebrać wymagania dla strony schroniska",
+      "description": "Spotkanie z przedstawicielami schroniska w celu omówienia funkcjonalności.",
+      "column": 6,
+      "position": 1,
+      "due_date": "2024-02-08T00:00:00Z",
+      "assigned_to": 3,
+      "status": 3
+    }
+  },
+  {
+    "model": "kanban.task",
+    "pk": 6,
+    "fields": {
+      "title": "Zaprojektować makietę strony głównej",
+      "description": "Stworzyć projekt graficzny strony głównej w Figmie.",
+      "column": 5,
+      "position": 1,
+      "due_date": "2024-02-25T00:00:00Z",
+      "assigned_to": 4,
+      "status": 2
+    }
+  },
+  {
+    "model": "kanban.task",
+    "pk": 7,
+    "fields": {
+      "title": "Skonfigurować repozytorium Git",
+      "description": "Utworzyć repozytorium na GitHubie i ustawić podstawową strukturę projektu Django.",
+      "column": 5,
+      "position": 2,
+      "due_date": "2024-02-12T00:00:00Z",
+      "assigned_to": 3,
+      "status": 2
+    }
+  },
+  {
+    "model": "kanban.task",
+    "pk": 8,
+    "fields": {
+      "title": "Napisać testy dla modelu User",
+      "description": "",
+      "column": 4,
+      "position": 1,
+      "due_date": null,
+      "assigned_to": null,
+      "status": 1
+    }
+  }
+]

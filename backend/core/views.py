@@ -1,3 +1,7 @@
+from django.contrib.auth import get_user_model
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -7,6 +11,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .permissions import IsAuthenticatedAndActive
 from .serializers import LoginSerializer, UserSerializer
 from organizations.serializers import OrganizationSerializer
+
+User = get_user_model()
 
 
 def get_tokens_for_user(user):
@@ -65,3 +71,25 @@ class PasswordChangeView(APIView):
         user.set_password(new_password)
         user.save(update_fields=["password"])
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def register_user(request):
+    try:
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        email = request.POST.get('email')
+
+        if not username or not password or not email:
+            return JsonResponse({"error": "Username, password, and email are required."}, status=400)
+
+        if User.objects.filter(username=username).exists():
+            return JsonResponse({"error": "Username already exists."}, status=400)
+
+        user = User.objects.create_user(username=username, password=password, email=email)
+        user.save()
+
+        return JsonResponse({"message": "User registered successfully."}, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
