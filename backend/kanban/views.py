@@ -1,3 +1,5 @@
+import json
+
 from django.http import JsonResponse, QueryDict
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
@@ -55,7 +57,6 @@ def create_kanban_board(request):
         return JsonResponse({"error": "Organization not found"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
-
 
 
 @require_http_methods(["DELETE"])
