@@ -33,5 +33,6 @@ jobs:
           action: "upload"
           app_location: "./frontend/frontend"
           output_location: "dist"
+          production_branch: "main"
         env:
           SWA_CLI_APP_BUILD_COMMAND: "npm run build && cp staticwebapp.config.json dist/"
