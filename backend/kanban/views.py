@@ -4,6 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from .models import KanbanBoard, KanbanColumn, Task
 from organizations.models import Organization
+import json
 
 
 # Create your views here.
@@ -76,7 +77,7 @@ def update_kanban_board(request, board_id):
     try:
         board = KanbanBoard.objects.get(board_id=board_id)
 
-        data = QueryDict(request.body)
+        data = json.loads(request.body)
 
         title = data.get("title")
 
@@ -123,7 +124,7 @@ def get_column(request, column_id):
 def get_board_columns(request, board_id):
     try:
         board = KanbanBoard.objects.get(board_id=board_id)
-        columns = columns = KanbanColumn.objects.filter(board_id=board.board_id)
+        columns = KanbanColumn.objects.filter(board_id=board.board_id)
 
         columns_data = [
             {
@@ -194,7 +195,7 @@ def update_column(request, column_id):
     try:
         column = KanbanColumn.objects.get(column_id=column_id)
 
-        data = QueryDict(request.body)
+        data = json.loads(request.body)
 
         title = data.get("title")
         position = data.get("position")
@@ -336,7 +337,7 @@ def update_task(request, task_id):
     try:
         task = Task.objects.get(task_id=task_id)
 
-        data = QueryDict(request.body)
+        data = json.loads(request.body)
 
         title = data.get("title")
         description = data.get("description")
