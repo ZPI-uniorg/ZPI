@@ -8,6 +8,22 @@ from .models import KanbanBoard, KanbanColumn, Task
 from organizations.models import Organization
 import json
 
+@require_http_methods(["GET"])
+@csrf_exempt
+def get_kanban_boards(request):
+    try:
+        boards = KanbanBoard.objects.all()
+        boards_data = [
+            {
+                "board_id": board.board_id,
+                "title": board.title,
+                "organization_id": board.organization.id,
+            }
+            for board in boards
+        ]
+        return JsonResponse({"boards": boards_data}, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
 
 # Create your views here.
 @require_http_methods(["GET"])
