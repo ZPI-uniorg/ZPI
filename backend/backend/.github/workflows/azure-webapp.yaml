@@ -23,7 +23,13 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+<<<<<<<< HEAD:backend/backend/.github/workflows/azure-webapp.yaml
+
+      - name: Run collectstatic
+        run: python manage.py collectstatic --noinput
+========
         working-directory: backend
+>>>>>>>> origin/setup-supabase-connection:.github/workflows/deploy-azure-webapp.yml
 
       - name: Login to Azure
         uses: azure/login@v2
