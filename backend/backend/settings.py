@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'core',
     'organizations',
+    'organization_calendar',
+    'kanban',
 ]
 
 MIDDLEWARE = [

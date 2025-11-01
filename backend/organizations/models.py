@@ -71,3 +71,27 @@ class Membership(models.Model):
 
     def __str__(self):
         return f"{self.user} in {self.organization} ({self.role})"
+
+
+class Tag(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+    id = models.AutoField(primary_key=True)
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.name
+
+
+class TagRule(models.Model):
+    pass
+
+
+class Project(models.Model):
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    start_dte = models.DateField()
+    end_dte = models.DateField()
+    organization = models.ForeignKey(Organization, related_name="projects", on_delete=models.CASCADE)
+    tag = models.ForeignKey(Tag, related_name="projects", on_delete=models.CASCADE)
+    coordinator = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="coordinated_projects", on_delete=models.SET_NULL, null=True)

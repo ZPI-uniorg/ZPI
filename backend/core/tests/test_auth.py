@@ -77,3 +77,5 @@ class AuthTests(APITestCase):
         refresh_response = self.client.post(reverse("token-refresh"), {"refresh": tokens["refresh"]}, format="json")
         self.assertEqual(refresh_response.status_code, status.HTTP_200_OK)
         self.assertIn("access", refresh_response.data)
+
+
