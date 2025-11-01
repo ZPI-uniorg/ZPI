@@ -10,7 +10,7 @@ User = get_user_model()
 class OrganizationAPITests(TestCase):
     def setUp(self):
         self.client = Client()
-        self.user = User.objects.create_user(username='testuser', password='password')
+        self.user = User.objects.create_user(username='user1', password='password')
         self.organization = Organization.objects.create(name='Test Org', created_by=self.user)
 
     def test_get_organizations(self):
@@ -126,7 +126,7 @@ class MembershipAPITests(TestCase):
 class TagAPITests(TestCase):
     def setUp(self):
         self.client = Client()
-        self.user = User.objects.create_user(username='testuser', password='password')
+        self.user = User.objects.create_user(username='user1', password='password')
         self.organization = Organization.objects.create(name='Test Org', created_by=self.user)
         self.tag = Tag.objects.create(name='Test Tag', organization=self.organization)
 
@@ -163,7 +163,7 @@ class TagAPITests(TestCase):
 class ProjectAPITests(TestCase):
     def setUp(self):
         self.client = Client()
-        self.user = User.objects.create_user(username='testuser', password='password')
+        self.user = User.objects.create_user(username='user1', password='password')
         self.organization = Organization.objects.create(name='Test Org', created_by=self.user)
         self.tag = Tag.objects.create(name='Project Tag', organization=self.organization)
         self.project = Project.objects.create(

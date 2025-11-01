@@ -4,6 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from .models import Event
 from organizations.models import Organization
+import json
 
 
 # Create your views here.
@@ -111,7 +112,7 @@ def update_event(request, event_id):
     try:
         event = Event.objects.get(event_id=event_id)
 
-        data = QueryDict(request.body)
+        data = json.loads(request.body)
 
         name = data.get("name")
         description = data.get("description")
