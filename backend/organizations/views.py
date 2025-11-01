@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
 from django.db.models import Count
-from django.http import JsonResponse
+from django.http import JsonResponse, QueryDict
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -444,11 +444,13 @@ def update_project(request, project_id):
     try:
         project = Project.objects.get(id=project_id)
 
-        name = request.PUT.get('name')
-        description = request.PUT.get('description')
-        start_dte = request.PUT.get('start_dte')
-        end_dte = request.PUT.get('end_dte')
-        coordinator_username = request.PUT.get('coordinator_username')
+        data = QueryDict(request.body)
+
+        name = data.get('name')
+        description = data.get('description')
+        start_dte = data.get('start_dte')
+        end_dte = data.get('end_dte')
+        coordinator_username = data.get('coordinator_username')
 
         if name:
             project.name = name
