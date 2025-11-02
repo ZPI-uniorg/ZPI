@@ -122,6 +122,12 @@ class MembershipAPITests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Membership.objects.filter(id=self.membership.id).exists())
 
+    def test_get_all_organization_members(self):
+        response = self.client.get(reverse('get_all_organization_members', args=[self.organization.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()[0]['username'] == 'user1')
+        self.assertTrue(response.json()[0]['role'] == 'Member')
+
 
 class TagAPITests(TestCase):
     def setUp(self):
