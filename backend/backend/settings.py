@@ -27,7 +27,9 @@ SECRET_KEY = "django-insecure-s*(cn4l6w#!$kbqu8%5g0pes87fiemc$(#kmf&m(r-d611p(0u
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    "zpi-uniorg-backend-fua0anh6hgb5facf.polandcentral-01.azurewebsites.net"
+    "localhost:8000",
+    "127.0.0.0:8000",
+    "zpi-uniorg-backend-fua0anh6hgb5facf.polandcentral-01.azurewebsites.net",
 ]
 
 
