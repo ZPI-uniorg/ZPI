@@ -165,6 +165,7 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "https://zealous-pond-01ec7c503-7.westeurope.3.azurestaticapps.net",
+    "https://zealous-pond-01ec7c503.3.azurestaticapps.net",
 ]
 CORS_ALLOW_CREDENTIALS = True
 
