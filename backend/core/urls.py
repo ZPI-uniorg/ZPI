@@ -5,6 +5,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from organizations.views import (
     get_organizations, get_organization, create_organization, delete_organization, update_organization,
     get_membership, get_all_organization_memberships, create_membership, delete_membership, update_membership,
+    get_all_organization_members,
     get_tag, get_all_tags, create_tag, delete_tag,
     get_project, get_all_projects, create_project, delete_project, update_project,
 )
@@ -36,6 +37,7 @@ urlpatterns += [
     path('memberships/create/', create_membership, name='create_membership'),
     path('memberships/delete/<int:org_id>/<int:user_id>/', delete_membership, name='delete_membership'),
     path('memberships/update/<int:org_id>/<int:user_id>/', update_membership, name='update_membership'),
+    path('organizations/<int:org_id>/members/', get_all_organization_members, name='get_all_organization_members'),
     path('projects/', get_all_projects, name='get_all_projects'),
     path('projects/<int:project_id>/', get_project, name='get_project'),
     path('projects/create/', create_project, name='create_project'),

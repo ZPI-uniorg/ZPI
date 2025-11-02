@@ -294,6 +294,28 @@ def update_membership(request, org_id, user_id):
 
 @require_http_methods(["GET"])
 @csrf_exempt
+def get_all_organization_members(request, org_id):
+    try:
+        memberships = Membership.objects.filter(organization__id=org_id)
+        members = [
+            {
+                "user_id": membership.user.id,
+                "organization_id": membership.organization.id,
+                "role": membership.role,
+                "username": membership.user.username,
+                "first_name": membership.user.first_name,
+                "last_name": membership.user.last_name,
+                "email": membership.user.email
+            }
+            for membership in memberships
+        ]
+
+        return JsonResponse(members, safe=False, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+@require_http_methods(["GET"])
+@csrf_exempt
 def get_tag(request, tag_id):
     try:
         tag = Tag.objects.get(id=tag_id)
