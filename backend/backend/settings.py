@@ -28,7 +28,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     "localhost",
-    "127.0.0.0",
+    "127.0.0.1",
     "zpi-uniorg-backend-fua0anh6hgb5facf.polandcentral-01.azurewebsites.net",
 ]
 
