@@ -6,15 +6,17 @@ import DashboardPage from './pages/DashboardPage.jsx'
 import OrganizationsPage from './pages/OrganizationsPage.jsx'
 import ChangePasswordPage from './pages/ChangePasswordPage.jsx'
 import RegisterOrganizationPage from './pages/RegisterOrganizationPage.jsx'
+import OrganizationDashboardPage from "./pages/OrganizationDashboardPage.jsx";
 
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <Routes>
+          <Route path="/dashboard" element={<OrganizationDashboardPage/>}/>
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/register-organization" element={<RegisterOrganizationPage />} />
           <Route element={<ProtectedRoute />}>
+            <Route path="/register-organization" element={<RegisterOrganizationPage />} />
             <Route path="/" element={<DashboardPage />} />
             <Route path="/account/password" element={<ChangePasswordPage />} />
             <Route path="/organizations" element={<OrganizationsPage />} />
