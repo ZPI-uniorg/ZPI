@@ -1,12 +1,12 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import { AuthProvider } from './context/AuthContext.jsx'
-import ProtectedRoute from './components/ProtectedRoute.jsx'
-import LoginPage from './pages/LoginPage.jsx'
-import DashboardPage from './pages/DashboardPage.jsx'
-import OrganizationsPage from './pages/OrganizationsPage.jsx'
-import ChangePasswordPage from './pages/ChangePasswordPage.jsx'
-import RegisterOrganizationPage from './pages/RegisterOrganizationPage.jsx'
-import OrganizationDashboardPage from "./pages/OrganizationDashboardPage.jsx";
+import { AuthProvider } from './auth/AuthContext.jsx'
+import ProtectedRoute from './auth/ProtectedRoute.jsx'
+import LoginPage from './modules/login/pages/LoginPage.jsx'
+import ChangePasswordPage from './modules/login/pages/ChangePasswordPage.jsx'
+import RegisterOrganizationPage from './modules/organization/pages/RegisterOrganizationPage.jsx'
+import OrganizationsPage from './modules/organization/pages/OrganizationsPage.jsx'
+import DashboardPage from './modules/dashboard/pages/DashboardPage.jsx'
+import OrganizationDashboardPage from './modules/dashboard/pages/OrganizationDashboardPage.jsx'
 
 function App() {
   return (
@@ -15,12 +15,12 @@ function App() {
         <Routes>
           <Route path="/dashboard" element={<OrganizationDashboardPage/>}/>
           <Route path="/login" element={<LoginPage />} />
-          <Route element={<ProtectedRoute />}>
+          {/* <Route element={<ProtectedRoute />}> */}
             <Route path="/register-organization" element={<RegisterOrganizationPage />} />
             <Route path="/" element={<DashboardPage />} />
             <Route path="/account/password" element={<ChangePasswordPage />} />
             <Route path="/organizations" element={<OrganizationsPage />} />
-          </Route>
+          {/* </Route> */}
         </Routes>
       </AuthProvider>
     </BrowserRouter>
