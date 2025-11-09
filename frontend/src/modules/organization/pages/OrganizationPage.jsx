@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { FAKE_MEMBERS, TAGS } from "../../../api/fakeData.js";
+import { FAKE_MEMBERS, TAGS, PROJECTS } from "../../../api/fakeData.js";
+import { useNavigate } from "react-router-dom";
 
 export default function OrganizationPage() {
+  const navigate = useNavigate();
   const [members, setMembers] = useState(FAKE_MEMBERS);
   const [email, setEmail] = useState("");
   const [error, setError] = useState(null);
@@ -61,7 +63,16 @@ export default function OrganizationPage() {
 
   return (
     <div className="max-w-7xl mx-auto py-10 px-4">
-      <h1 className="text-2xl font-bold mb-6 text-slate-100">Członkowie organizacji</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-slate-100">Członkowie organizacji</h1>
+        <button
+          type="button"
+          className="border border-slate-500 px-4 py-2 rounded-lg text-slate-200 bg-transparent hover:bg-slate-700/40 transition"
+          onClick={() => navigate("/dashboard")}
+        >
+          Powrót do panelu
+        </button>
+      </div>
       <form
         onSubmit={handleAdd}
         className="flex items-end gap-3 mb-8 bg-slate-800 rounded-xl p-4 shadow"
@@ -107,7 +118,7 @@ export default function OrganizationPage() {
                 <td className="py-2 px-4">
                   {editingTagsId === member.id ? (
                     <div className="flex flex-wrap gap-1 max-h-[80px] overflow-y-auto">
-                      {TAGS.tags.map((tag) => (
+                     {[...TAGS, ...PROJECTS.map(p => p.name)].map((tag) => (
                         <button
                           key={tag}
                           type="button"
