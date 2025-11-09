@@ -3,6 +3,7 @@ import useAuth from "../../../auth/useAuth.js";
 import { SAMPLE } from "../constants/sampleOrganizationData.js";
 import TagList from "../components/TagList.jsx";
 import ChatPanel from "../components/ChatPanel.jsx";
+import MiniCalendar from "../components/MiniCalendar.jsx";
 
 export default function OrganizationDashboardPage() {
   const { user, organization: activeOrganization } = useAuth();
@@ -86,8 +87,8 @@ export default function OrganizationDashboardPage() {
             addChat={addChat}
           />
           <div className="flex flex-col basis-[45%] grow gap-6 h-full min-h-0">
-            <div className="flex-1 min-h-0 bg-[rgba(15,23,42,0.92)] rounded-[24px] p-[clamp(24px,3vw,40px)] shadow-[0_25px_50px_rgba(15,23,42,0.45)] flex items-center justify-center text-slate-300 border border-[rgba(148,163,184,0.35)] overflow-hidden">
-              Calendar
+            <div className="flex-1 min-h-0 bg-[rgba(15,23,42,0.92)] rounded-[24px] p-[clamp(24px,3vw,40px)] shadow-[0_25px_50px_rgba(15,23,42,0.45)] flex items-start justify-center text-slate-300 border border-[rgba(148,163,184,0.35)] overflow-hidden">
+              <MiniCalendar selectedTags={selectedTags} />
             </div>
             <div className="flex-1 min-h-0 bg-[rgba(15,23,42,0.92)] rounded-[24px] p-[clamp(24px,3vw,40px)] shadow-[0_25px_50px_rgba(15,23,42,0.45)] flex items-center justify-center text-slate-300 border border-[rgba(148,163,184,0.35)] overflow-hidden">
               Kanban
