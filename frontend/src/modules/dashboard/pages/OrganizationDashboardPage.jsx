@@ -25,8 +25,32 @@ export default function OrganizationDashboardPage() {
 
   const filteredChats = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return chats.filter((c) => !q || c.title.toLowerCase().includes(q));
-  }, [chats, query]);
+    let result = chats;
+
+    // Filtruj po zapytaniu tekstowym
+    if (q) {
+      result = result.filter((c) => c.title.toLowerCase().includes(q));
+    }
+
+    // Filtruj po wybranych tagach
+    if (selectedTags.length > 0) {
+      result = result.filter((c) => {
+        if (logic === "AND") {
+          // Czat musi mieć wszystkie wybrane tagi i żadnych innych
+          const chatTags = c.tags || [];
+          return (
+            selectedTags.every((tag) => chatTags.includes(tag)) &&
+            chatTags.every((tag) => selectedTags.includes(tag))
+          );
+        } else {
+          // Przynajmniej jeden wybrany tag musi być w czacie
+          return selectedTags.some((tag) => c.tags?.includes(tag));
+        }
+      });
+    }
+
+    return result;
+  }, [chats, query, selectedTags, logic]);
 
   const addChat = () =>
     setChats((prev) => [
@@ -105,7 +129,7 @@ export default function OrganizationDashboardPage() {
           />
           <div className="flex flex-col basis-[45%] grow gap-6 h-full min-h-0">
             <div className="flex-1 min-h-0 bg-[rgba(15,23,42,0.92)] rounded-[24px] p-[clamp(24px,3vw,40px)] shadow-[0_25px_50px_rgba(15,23,42,0.45)] flex items-start justify-center text-slate-300 border border-[rgba(148,163,184,0.35)] overflow-hidden">
-              <MiniCalendar selectedTags={selectedTags} />
+              <MiniCalendar selectedTags={selectedTags} logic={logic} />
             </div>
             <div className="flex-1 min-h-0 bg-[rgba(15,23,42,0.92)] rounded-[24px] p-[clamp(24px,3vw,40px)] shadow-[0_25px_50px_rgba(15,23,42,0.45)] flex items-center justify-center text-slate-300 border border-[rgba(148,163,184,0.35)] overflow-hidden">
               Kanban

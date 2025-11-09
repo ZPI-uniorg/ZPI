@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { EVENTS } from "../../../api/fakeData.js";
 
 const WEEKDAYS = ["Pn", "Wt", "Śr", "Cz", "Pt", "Sb", "Nd"];
@@ -49,7 +49,7 @@ function getEventsForDay(events, year, month, day, selectedTags) {
 	);
 }
 
-export default function MiniCalendar({ selectedTags }) {
+export default function MiniCalendar({ selectedTags, logic = "AND" }) {
 	const today = new Date();
 	const [date, setDate] = useState({ year: today.getFullYear(), month: today.getMonth() });
 	const handlePrev = () => {
@@ -66,6 +66,20 @@ export default function MiniCalendar({ selectedTags }) {
 	};
 	const { year, month } = date;
 	const matrix = getMonthMatrix(year, month);
+
+	// Filtrowanie zdarzeń po tagach
+	const filteredEvents =
+		selectedTags.length === 0
+			? EVENTS
+			: EVENTS.filter((ev) => {
+					if (logic === "AND") {
+						// Wszystkie wybrane tagi muszą być w wydarzeniu
+						return selectedTags.every((tag) => ev.tags?.includes(tag));
+					} else {
+						// Przynajmniej jeden wybrany tag musi być w wydarzeniu
+						return selectedTags.some((tag) => ev.tags?.includes(tag));
+					}
+			  });
 
 	return (
 		<div className="w-full">
@@ -98,7 +112,7 @@ export default function MiniCalendar({ selectedTags }) {
 				</div>
 				<div className="grid grid-cols-7 gap-1">
 					{matrix.flat().map((day, idx) => {
-						const events = day ? getEventsForDay(EVENTS, year, month, day, selectedTags) : [];
+						const events = day ? getEventsForDay(filteredEvents, year, month, day, selectedTags) : [];
 						return (
 							<div
 								key={idx}
