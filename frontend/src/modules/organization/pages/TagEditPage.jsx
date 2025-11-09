@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { FAKE_MEMBERS, TAGS, getTagMembers, setTagMembers, renameTag, deleteTag } from "../../../api/fakeData.js";
-import Autocomplete from "../components/Autocomplete.jsx";
+import Autocomplete from "../../shared/components/Autocomplete.jsx";
 
 export default function TagEditPage() {
   const navigate = useNavigate();

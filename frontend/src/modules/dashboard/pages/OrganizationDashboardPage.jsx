@@ -52,11 +52,7 @@ export default function OrganizationDashboardPage() {
     return result;
   }, [chats, query, selectedTags, logic]);
 
-  const addChat = () =>
-    setChats((prev) => [
-      ...prev,
-      { id: `tmp-${Date.now()}`, title: `Chat${prev.length + 1}`, tags: [] },
-    ]);
+  const addChat = () => navigate("/chat/new");
 
   const addTag = () => navigate("/organization/tag/new");
 

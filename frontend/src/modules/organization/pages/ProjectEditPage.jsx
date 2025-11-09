@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { FAKE_MEMBERS, PROJECTS } from "../../../api/fakeData.js";
-import Autocomplete from "../components/Autocomplete.jsx";
+import Autocomplete from "../../shared/components/Autocomplete.jsx";
 
 export default function ProjectEditPage() {
   const navigate = useNavigate();
