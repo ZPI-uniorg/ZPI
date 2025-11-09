@@ -1,5 +1,5 @@
 export const SAMPLE = {
-  tags: ["Projekt1", "Projekt2", "Tag1"],
+  tags: ["Projekt1", "Projekt2", "Tag1", "Tag2", "Tag3", "Tag4", "Tag5", "Tag6", "Tag7", "Tag8", "Tag9", "Tag10", "Tag11"],
   chats: [
     { id: "c1", title: "Chat1", tags: ["Projekt1"] },
     { id: "c2", title: "Chat2", tags: ["Projekt2"] },

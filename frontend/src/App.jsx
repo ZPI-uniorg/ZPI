@@ -7,6 +7,7 @@ import RegisterOrganizationPage from './modules/organization/pages/RegisterOrgan
 import OrganizationsPage from './modules/organization/pages/OrganizationsPage.jsx'
 import DashboardPage from './modules/dashboard/pages/DashboardPage.jsx'
 import OrganizationDashboardPage from './modules/dashboard/pages/OrganizationDashboardPage.jsx'
+import OrganizationPage from './modules/organization/pages/OrganizationPage.jsx'
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
             <Route path="/" element={<DashboardPage />} />
             <Route path="/account/password" element={<ChangePasswordPage />} />
             <Route path="/organizations" element={<OrganizationsPage />} />
+            <Route path="/organization" element={<OrganizationPage/>} />
           {/* </Route> */}
         </Routes>
       </AuthProvider>
