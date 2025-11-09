@@ -8,6 +8,8 @@ import OrganizationsPage from './modules/organization/pages/OrganizationsPage.js
 import DashboardPage from './modules/dashboard/pages/DashboardPage.jsx'
 import OrganizationDashboardPage from './modules/dashboard/pages/OrganizationDashboardPage.jsx'
 import OrganizationPage from './modules/organization/pages/OrganizationPage.jsx'
+import ProjectEditPage from './modules/organization/pages/ProjectEditPage.jsx'
+import TagEditPage from './modules/organization/pages/TagEditPage.jsx'
 
 function App() {
   return (
@@ -22,6 +24,8 @@ function App() {
             <Route path="/account/password" element={<ChangePasswordPage />} />
             <Route path="/organizations" element={<OrganizationsPage />} />
             <Route path="/organization" element={<OrganizationPage/>} />
+            <Route path="/organization/project/new" element={<ProjectEditPage/>} />
+            <Route path="/organization/tag/new" element={<TagEditPage/>} />
           {/* </Route> */}
         </Routes>
       </AuthProvider>

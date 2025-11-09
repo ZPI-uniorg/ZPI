@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import useAuth from "../../../auth/useAuth.js";
-import { TAGS, CHATS } from "../../../api/fakeData.js";
+import { TAGS, CHATS, PROJECTS } from "../../../api/fakeData.js";
 import TagList from "../components/TagList.jsx";
 import ChatPanel from "../components/ChatPanel.jsx";
 import MiniCalendar from "../components/MiniCalendar.jsx";
@@ -12,6 +12,7 @@ export default function OrganizationDashboardPage() {
   const navigate = useNavigate();
 
   const [tags, setTags] = useState(TAGS);
+  const [projects, setProjects] = useState(PROJECTS);
   const [chats, setChats] = useState(CHATS);
   const [query, setQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState([]);
@@ -33,9 +34,11 @@ export default function OrganizationDashboardPage() {
       { id: `tmp-${Date.now()}`, title: `Chat${prev.length + 1}`, tags: [] },
     ]);
 
-  const addTag = () => setTags((prev) => [...prev, `Tag${prev.length + 1}`]);
+  const addTag = () => navigate("/organization/tag/new");
 
-  const addProject = () => console.log("new project");
+  const addProject = () => navigate("/organization/project/new");
+
+  const allTagsAndProjects = [...tags, ...projects.map((p) => p.name)];
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-[clamp(24px,5vw,48px)] text-slate-100">
@@ -67,7 +70,8 @@ export default function OrganizationDashboardPage() {
           </div>
 
           <TagList
-            tags={tags}
+            tags={allTagsAndProjects}
+            projects={projects}
             selectedTags={selectedTags}
             logic={logic}
             setLogic={setLogic}

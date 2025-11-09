@@ -29,7 +29,12 @@ export const FAKE_MEMBERS = [
 ];
 
 export const TAGS = [
-  "Projekt1", "Projekt2", "Tag1", "Tag2", "Tag3", "Tag4", "Tag5", "Tag6", "Tag7", "Tag8", "Tag9", "Tag10", "Tag11"
+  "Tag1", "Tag2", "Tag3", "Tag4", "Tag5", "Tag6", "Tag7", "Tag8", "Tag9", "Tag10", "Tag11"
+];
+
+export const PROJECTS = [
+  { id: "p1", name: "Projekt1" },
+  { id: "p2", name: "Projekt2" },
 ];
 
 export const CHATS = [
@@ -64,3 +69,66 @@ export const EVENTS = [
     tags: ["Projekt1", "Projekt2"],
   },
 ];
+
+// Pomocnicze funkcje do zarządzania tagami członków
+export function getMemberTags(memberId) {
+  const member = FAKE_MEMBERS.find(m => m.id === memberId);
+  return member?.tags || [];
+}
+
+export function getTagMembers(tagName) {
+  return FAKE_MEMBERS.filter(m => m.tags?.includes(tagName));
+}
+
+export function addTagToMember(memberId, tagName) {
+  const member = FAKE_MEMBERS.find(m => m.id === memberId);
+  if (member && !member.tags?.includes(tagName)) {
+    if (!member.tags) member.tags = [];
+    member.tags.push(tagName);
+  }
+}
+
+export function removeTagFromMember(memberId, tagName) {
+  const member = FAKE_MEMBERS.find(m => m.id === memberId);
+  if (member?.tags) {
+    member.tags = member.tags.filter(t => t !== tagName);
+  }
+}
+
+export function setTagMembers(tagName, memberIds) {
+  // Usuń tag ze wszystkich członków
+  FAKE_MEMBERS.forEach(m => {
+    if (m.tags) {
+      m.tags = m.tags.filter(t => t !== tagName);
+    }
+  });
+  // Dodaj tag do wybranych członków
+  memberIds.forEach(id => {
+    addTagToMember(id, tagName);
+  });
+}
+
+export function renameTag(oldName, newName) {
+  FAKE_MEMBERS.forEach(m => {
+    if (m.tags?.includes(oldName)) {
+      const idx = m.tags.indexOf(oldName);
+      m.tags[idx] = newName;
+    }
+  });
+  const tagIdx = TAGS.indexOf(oldName);
+  if (tagIdx !== -1) {
+    TAGS[tagIdx] = newName;
+  }
+}
+
+export function deleteTag(tagName) {
+  FAKE_MEMBERS.forEach(m => {
+    if (m.tags) {
+      m.tags = m.tags.filter(t => t !== tagName);
+    }
+  });
+  const idx = TAGS.indexOf(tagName);
+  if (idx !== -1) {
+    TAGS.splice(idx, 1);
+  }
+}
