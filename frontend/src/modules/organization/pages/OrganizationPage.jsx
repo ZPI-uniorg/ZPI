@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { FAKE_MEMBERS } from "../constants/members.js";
-import { SAMPLE as TAGS } from "../../dashboard/constants/sampleOrganizationData.js";
+import { FAKE_MEMBERS, TAGS } from "../../../api/fakeData.js";
 
 export default function OrganizationPage() {
   const [members, setMembers] = useState(FAKE_MEMBERS);

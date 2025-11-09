@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import useAuth from "../../../auth/useAuth.js";
-import { SAMPLE } from "../constants/sampleOrganizationData.js";
+import { TAGS, CHATS } from "../../../api/fakeData.js";
 import TagList from "../components/TagList.jsx";
 import ChatPanel from "../components/ChatPanel.jsx";
 import MiniCalendar from "../components/MiniCalendar.jsx";
@@ -11,8 +11,8 @@ export default function OrganizationDashboardPage() {
   const { user, organization: activeOrganization } = useAuth();
   const navigate = useNavigate();
 
-  const [tags, setTags] = useState(SAMPLE.tags);
-  const [chats, setChats] = useState(SAMPLE.chats);
+  const [tags, setTags] = useState(TAGS);
+  const [chats, setChats] = useState(CHATS);
   const [query, setQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState([]);
   const [logic, setLogic] = useState("AND");

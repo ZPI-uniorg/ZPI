@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { EVENTS } from "../constants/calendarEvents.js";
+import { EVENTS } from "../../../api/fakeData.js";
 
 const WEEKDAYS = ["Pn", "Wt", "Śr", "Cz", "Pt", "Sb", "Nd"];
 const MONTHS = [
