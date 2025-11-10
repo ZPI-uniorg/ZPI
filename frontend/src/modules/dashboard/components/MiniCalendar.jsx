@@ -1,5 +1,7 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { EVENTS } from "../../../api/fakeData.js";
+import { Maximize2 } from "lucide-react";
 
 const WEEKDAYS = ["Pn", "Wt", "Śr", "Cz", "Pt", "Sb", "Nd"];
 const MONTHS = [
@@ -50,6 +52,7 @@ function getEventsForDay(events, year, month, day, selectedTags) {
 }
 
 export default function MiniCalendar({ selectedTags, logic = "AND" }) {
+	const navigate = useNavigate();
 	const today = new Date();
 	const [date, setDate] = useState({ year: today.getFullYear(), month: today.getMonth() });
 	const handlePrev = () => {
@@ -66,6 +69,16 @@ export default function MiniCalendar({ selectedTags, logic = "AND" }) {
 	};
 	const { year, month } = date;
 	const matrix = getMonthMatrix(year, month);
+
+	const isToday = (day) => {
+		if (!day) return false;
+		const todayDate = new Date();
+		return (
+			day === todayDate.getDate() &&
+			month === todayDate.getMonth() &&
+			year === todayDate.getFullYear()
+		);
+	};
 
 	// Filtrowanie zdarzeń po tagach
 	const filteredEvents =
@@ -84,22 +97,32 @@ export default function MiniCalendar({ selectedTags, logic = "AND" }) {
 	return (
 		<div className="w-full">
 			<div className="flex items-center justify-between mb-2">
+				<div className="flex items-center gap-2">
+					<button
+						onClick={handlePrev}
+						className="px-2 py-1 rounded hover:bg-slate-700/40 text-slate-300"
+						aria-label="Poprzedni miesiąc"
+					>
+						&lt;
+					</button>
+					<h3 className="text-lg font-semibold text-slate-200 min-w-[180px] text-center">
+						{MONTHS[month]} {year}
+					</h3>
+					<button
+						onClick={handleNext}
+						className="px-2 py-1 rounded hover:bg-slate-700/40 text-slate-300"
+						aria-label="Następny miesiąc"
+					>
+						&gt;
+					</button>
+				</div>
 				<button
-					onClick={handlePrev}
-					className="px-2 py-1 rounded hover:bg-slate-700/40 text-slate-300"
-					aria-label="Poprzedni miesiąc"
+					onClick={() => navigate("/calendar")}
+					className="p-1.5 rounded hover:bg-slate-700/40 text-slate-300"
+					aria-label="Pełny ekran"
+					title="Pełny ekran"
 				>
-					&lt;
-				</button>
-				<h3 className="text-lg font-semibold text-slate-200">
-					{MONTHS[month]} {year}
-				</h3>
-				<button
-					onClick={handleNext}
-					className="px-2 py-1 rounded hover:bg-slate-700/40 text-slate-300"
-					aria-label="Następny miesiąc"
-				>
-					&gt;
+					<Maximize2 className="w-4 h-4" />
 				</button>
 			</div>
 			<div className="flex flex-col gap-2">
@@ -113,14 +136,21 @@ export default function MiniCalendar({ selectedTags, logic = "AND" }) {
 				<div className="grid grid-cols-7 gap-1">
 					{matrix.flat().map((day, idx) => {
 						const events = day ? getEventsForDay(filteredEvents, year, month, day, selectedTags) : [];
+						const isTodayDay = isToday(day);
 						return (
 							<div
 								key={idx}
-								className={`min-h-[56px] rounded-lg px-1 py-1 flex flex-col items-start bg-slate-800/40 ${
-									day ? "text-slate-100" : "text-slate-500/40"
+								className={`min-h-[56px] rounded-lg px-1 py-1 flex flex-col items-start transition-colors ${
+									isTodayDay
+										? "bg-indigo-600/30 border border-indigo-500/50 text-slate-100 hover:bg-indigo-600/40 cursor-pointer"
+										: day
+										? "bg-slate-800/40 text-slate-100 hover:bg-slate-700/50 cursor-pointer"
+										: "bg-slate-800/40 text-slate-500/40"
 								}`}
 							>
-								<span className="text-xs font-bold">{day || ""}</span>
+								<span className={`text-xs font-bold ${isTodayDay ? "text-indigo-300" : ""}`}>
+									{day || ""}
+								</span>
 								<div className="flex flex-col gap-0.5 w-full">
 									{events.map((ev) => (
 										<div

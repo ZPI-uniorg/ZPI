@@ -11,6 +11,7 @@ import OrganizationPage from './modules/organization/pages/OrganizationPage.jsx'
 import ProjectEditPage from './modules/organization/pages/ProjectEditPage.jsx'
 import TagEditPage from './modules/organization/pages/TagEditPage.jsx'
 import ChatCreatePage from './modules/chats/pages/ChatCreatePage.jsx'
+import CalendarPage from './modules/calendar/pages/CalendarPage.jsx'
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
             <Route path="/organization/project/new" element={<ProjectEditPage/>} />
             <Route path="/organization/tag/new" element={<TagEditPage/>} />
             <Route path="/chat/new" element={<ChatCreatePage/>} />
+            <Route path="/calendar" element={<CalendarPage/>} />
           {/* </Route> */}
         </Routes>
       </AuthProvider>
