@@ -62,6 +62,7 @@ class Membership(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    permissions = models.ManyToManyField("Tag", related_name="permissions")
 
     class Meta:
         ordering = ["organization", "user__username"]
@@ -82,8 +83,10 @@ class Tag(models.Model):
         return self.name
 
 
-class TagRule(models.Model):
-    pass
+class CombinedTag(models.Model):
+    combined_tag_id = models.ForeignKey(Tag, related_name="combined_tags", on_delete=models.CASCADE)
+    basic_tag_id = models.ForeignKey(Tag, related_name="basic_tags", on_delete=models.CASCADE)
+
 
 
 class Project(models.Model):
