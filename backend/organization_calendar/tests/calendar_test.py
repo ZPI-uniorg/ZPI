@@ -7,7 +7,6 @@ from datetime import datetime, timedelta
 
 User = get_user_model()
 
-
 class EventAPITests(TestCase):
     def setUp(self):
         self.client = Client()
