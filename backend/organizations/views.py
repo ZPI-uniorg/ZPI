@@ -14,7 +14,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Membership, Organization, Tag, Project
+from .models import Membership, Organization, Tag, Project, CombinedTag
 from .serializers import (
     MembershipCreateSerializer,
     MembershipSerializer,
@@ -26,10 +26,9 @@ from .serializers import (
 
 User = get_user_model()
 
-
 @require_http_methods(["GET"])
 @csrf_exempt
-def get_organizations(request):
+def get_organizations_test(request):
     try:
         organizations = Organization.objects.all()
         org_list = [
@@ -51,7 +50,7 @@ def get_organizations(request):
 
 @require_http_methods(["GET"])
 @csrf_exempt
-def get_organization(request, org_id):
+def get_organization_test(request, org_id):
     try:
         org = Organization.objects.get(id=org_id)
         org_data = {
@@ -72,7 +71,7 @@ def get_organization(request, org_id):
 
 @require_http_methods(["POST"])
 @csrf_exempt
-def create_organization(request):
+def create_organization_test(request):
     try:
         name = request.POST.get('name')
         description = request.POST.get('description', '')
@@ -114,7 +113,7 @@ def create_organization(request):
 
 @require_http_methods(["DELETE"])
 @csrf_exempt
-def delete_organization(request, organization_id):
+def delete_organization_test(request, organization_id):
     try:
         org = Organization.objects.get(id=organization_id)
         org.delete()
@@ -128,7 +127,7 @@ def delete_organization(request, organization_id):
 
 @require_http_methods(["PUT"])
 @csrf_exempt
-def update_organization(request, organization_id):
+def update_organization_test(request, organization_id):
     try:
         org = Organization.objects.get(id=organization_id)
 
@@ -159,7 +158,7 @@ def update_organization(request, organization_id):
 
 @require_http_methods(["GET"])
 @csrf_exempt
-def get_all_organization_memberships(request, org_id):
+def get_all_organization_memberships_test(request, org_id):
     try:
         memberships = Membership.objects.filter(organization__id=org_id)
         membership_list = [
@@ -179,7 +178,7 @@ def get_all_organization_memberships(request, org_id):
 
 @require_http_methods(["GET"])
 @csrf_exempt
-def get_membership(request, org_id, user_id):
+def get_membership_test(request, org_id, user_id):
     try:
         membership = Membership.objects.get(organization__id=org_id, user__id=user_id)
         membership_data = {
@@ -198,7 +197,7 @@ def get_membership(request, org_id, user_id):
 
 @require_http_methods(["POST"])
 @csrf_exempt
-def create_membership(request):
+def create_membership_test(request):
     try:
         organization_id = request.POST.get('organization_id')
         user_id = request.POST.get('user_id')
@@ -247,7 +246,7 @@ def create_membership(request):
 
 @require_http_methods(["DELETE"])
 @csrf_exempt
-def delete_membership(request, org_id, user_id):
+def delete_membership_test(request, org_id, user_id):
     try:
         membership = Membership.objects.get(organization__id=org_id, user__id=user_id)
         membership.delete()
@@ -261,7 +260,7 @@ def delete_membership(request, org_id, user_id):
 
 @require_http_methods(["PUT"])
 @csrf_exempt
-def update_membership(request, org_id, user_id):
+def update_membership_test(request, org_id, user_id):
     try:
         membership = Membership.objects.get(organization__id=org_id, user__id=user_id)
 
@@ -294,7 +293,7 @@ def update_membership(request, org_id, user_id):
 
 @require_http_methods(["GET"])
 @csrf_exempt
-def get_all_organization_members(request, org_id):
+def get_all_organization_members_test(request, org_id):
     try:
         memberships = Membership.objects.filter(organization__id=org_id)
         members = [
@@ -316,7 +315,7 @@ def get_all_organization_members(request, org_id):
 
 @require_http_methods(["GET"])
 @csrf_exempt
-def get_tag(request, tag_id):
+def get_tag_test(request, tag_id):
     try:
         tag = Tag.objects.get(id=tag_id)
         tag_data = {
@@ -333,7 +332,7 @@ def get_tag(request, tag_id):
 
 @require_http_methods(["GET"])
 @csrf_exempt
-def get_all_tags(request):
+def get_all_tags_test(request):
     try:
         tags = Tag.objects.all()
         tag_list = [
@@ -351,7 +350,7 @@ def get_all_tags(request):
 
 @require_http_methods(["POST"])
 @csrf_exempt
-def create_tag(request):
+def create_tag_test(request):
     try:
         name = request.POST.get('name')
         organization_id = request.POST.get('organization_id')
@@ -387,7 +386,7 @@ def create_tag(request):
 
 @require_http_methods(["DELETE"])
 @csrf_exempt
-def delete_tag(request, tag_id):
+def delete_tag_test(request, tag_id):
     try:
         tag = Tag.objects.get(id=tag_id)
         tag.delete()
@@ -401,12 +400,12 @@ def delete_tag(request, tag_id):
 
 @require_http_methods(["GET"])
 @csrf_exempt
-def get_project(request, project_id):
+def get_project_test(request, project_id):
     try:
         project = Project.objects.get(id=project_id)
         project_data = {
             "id": project.id,
-            "name": project.name,
+            "name": project.title,
             "description": project.description,
             "start_dte": project.start_dte,
             "end_dte": project.end_dte,
@@ -423,13 +422,13 @@ def get_project(request, project_id):
 
 @require_http_methods(["GET"])
 @csrf_exempt
-def get_all_projects(request):
+def get_all_projects_test(request):
     try:
         projects = Project.objects.all()
         project_list = [
             {
                 "id": project.id,
-                "name": project.name,
+                "name": project.title,
                 "description": project.description,
                 "start_dte": project.start_dte,
                 "end_dte": project.end_dte,
@@ -446,7 +445,7 @@ def get_all_projects(request):
 
 @require_http_methods(["POST"])
 @csrf_exempt
-def create_project(request):
+def create_project_test(request):
     try:
         name = request.POST.get('name')
         description = request.POST.get('description', '')
@@ -477,7 +476,7 @@ def create_project(request):
 
         project_data = {
             "id": project.id,
-            "name": project.name,
+            "name": project.title,
             "description": project.description,
             "start_dte": project.start_dte,
             "end_dte": project.end_dte,
@@ -503,7 +502,7 @@ def create_project(request):
 
 @require_http_methods(["DELETE"])
 @csrf_exempt
-def delete_project(request, project_id):
+def delete_project_test(request, project_id):
     try:
         project = Project.objects.get(id=project_id)
         project.delete()
@@ -517,7 +516,7 @@ def delete_project(request, project_id):
 
 @require_http_methods(["PUT"])
 @csrf_exempt
-def update_project(request, project_id):
+def update_project_test(request, project_id):
     try:
         project = Project.objects.get(id=project_id)
 
@@ -554,3 +553,278 @@ def update_project(request, project_id):
         return JsonResponse({"error": f"Type error: {str(e)}"}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
+
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def register_organization(request):
+    try:
+        name = request.POST.get('name')
+        description = request.POST.get('description')
+
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        password_confirm = request.POST.get('password_confirm')
+
+        if password != password_confirm:
+            return JsonResponse({"error": "Passwords do not match"}, status=400)
+        if not all([name, username, email, password]):
+            return JsonResponse({"error": "Missing fields"}, status=400)
+
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password
+        )
+
+        organization = Organization.objects.create(
+            name=name,
+            description=description,
+            created_by=user
+        )
+
+        membership = Membership.objects.create(
+            organization=organization,
+            user=user,
+            role='admin'
+        )
+
+        return JsonResponse({"message": "Organization registered successfully"}, status=201)
+    except KeyError as e:
+        return JsonResponse({"error": f"Missing field: {str(e)}"}, status=400)
+    except ValueError as e:
+        return JsonResponse({"error": f"Invalid value: {str(e)}"}, status=400)
+    except TypeError as e:
+        return JsonResponse({"error": f"Type error: {str(e)}"}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@require_http_methods(["GET"])
+@csrf_exempt
+def get_user_organization(request, user_id):
+    try:
+        memberships = Membership.objects.filter(user__id=user_id)
+        organizations = [
+            {
+                "id": membership.organization.id,
+                "name": membership.organization.name,
+                "slug": membership.organization.slug,
+                "description": membership.organization.description,
+                "created_by_id": membership.organization.created_by.id,
+                "created_at": membership.organization.created_at,
+                "updated_at": membership.organization.updated_at,
+                "role": membership.role
+            }
+            for membership in memberships
+        ]
+
+        return JsonResponse(organizations, safe=False, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@require_http_methods(["PUT"])
+@csrf_exempt
+def edit_organization(request, organization_id):
+    try:
+        user_id = request.POST.get('user_id')
+        membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
+
+        if membership.role != 'admin':
+            return JsonResponse({"error": "Permission denied"}, status=403)
+
+        org = Organization.objects.get(id=organization_id)
+        name = request.POST.get('name')
+        description = request.POST.get('description')
+
+        if name:
+            org.name = name
+        if description:
+            org.description = description
+
+        org.save()
+
+        return JsonResponse({"message": "Organization updated successfully"}, status=200)
+    except Membership.DoesNotExist:
+        return JsonResponse({"error": "Membership not found"}, status=404)
+    except Organization.DoesNotExist:
+        return JsonResponse({"error": "Organization not found"}, status=404)
+    except KeyError as e:
+        return JsonResponse({"error": f"Missing field: {str(e)}"}, status=400)
+    except ValueError as e:
+        return JsonResponse({"error": f"Invalid value: {str(e)}"}, status=400)
+    except TypeError as e:
+        return JsonResponse({"error": f"Type error: {str(e)}"}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def invite_member(request, organization_id):
+    try:
+        user_id = request.POST.get('user_id')
+        membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
+
+        if membership.role != 'admin':
+            return JsonResponse({"error": "Permission denied"}, status=403)
+
+        invitee_username = request.POST.get('invitee_username')
+        invitee_email = request.POST.get('invitee_email')
+        role = request.POST.get('role', 'member')
+        invited_by = User.objects.get(id=user_id)
+        organization = Organization.objects.get(id=organization_id)
+        password = User.objects.make_random_password()
+
+        invitee = User.objects.create_user(
+            username=invitee_username,
+            email=invitee_email,
+            password=password
+        )
+
+        membership = Membership.objects.create(
+            organization=organization,
+            user=invitee,
+            role=role,
+            invited_by=invited_by
+        )
+
+        return JsonResponse({"message": "Member invited successfully", "password": password}, status=201)
+    except Membership.DoesNotExist:
+        return JsonResponse({"error": "Membership not found"}, status=404)
+    except Organization.DoesNotExist:
+        return JsonResponse({"error": "Organization not found"}, status=404)
+    except KeyError as e:
+        return JsonResponse({"error": f"Missing field: {str(e)}"}, status=400)
+    except ValueError as e:
+        return JsonResponse({"error": f"Invalid value: {str(e)}"}, status=400)
+    except TypeError as e:
+        return JsonResponse({"error": f"Type error: {str(e)}"}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@require_http_methods(["GET"])
+@csrf_exempt
+def get_organization_users(request, organization_id):
+    try:
+        user_id = request.GET.get('user_id')
+        membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
+
+        if membership.role not in ['admin', 'coordinator']:
+            return JsonResponse({"error": "Permission denied"}, status=403)
+
+        memberships = Membership.objects.filter(organization__id=organization_id)
+        users = [
+            {
+                "user_id": membership.user.id,
+                "username": membership.user.username,
+                "first_name": membership.user.first_name,
+                "last_name": membership.user.last_name,
+                "email": membership.user.email,
+                "role": membership.role
+            }
+            for membership in memberships
+        ]
+
+        return JsonResponse(users, safe=False, status=200)
+    except Membership.DoesNotExist:
+        return JsonResponse({"error": "Membership not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@require_http_methods(["DELETE"])
+@csrf_exempt
+def remove_organization_member(request, organization_id, member_id):
+    try:
+        user_id = request.GET.get('user_id')
+        membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
+
+        if membership.role != 'admin':
+            return JsonResponse({"error": "Permission denied"}, status=403)
+
+        member_membership = Membership.objects.get(organization__id=organization_id, user__id=member_id)
+        member_membership.delete()
+
+        return JsonResponse({"message": "Member removed successfully"}, status=200)
+    except Membership.DoesNotExist:
+        return JsonResponse({"error": "Membership not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@require_http_methods(["PUT"])
+@csrf_exempt
+def change_member_role(request, organization_id, member_id):
+    try:
+        user_id = request.POST.get('user_id')
+        membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
+
+        if membership.role != 'admin':
+            return JsonResponse({"error": "Permission denied"}, status=403)
+
+        new_role = request.POST.get('role')
+
+        if not new_role:
+            return JsonResponse({"error": "Missing role field"}, status=400)
+
+        member_membership = Membership.objects.get(organization__id=organization_id, user__id=member_id)
+        member_membership.role = new_role
+        member_membership.save()
+
+        return JsonResponse({"message": "Member role updated successfully"}, status=200)
+    except Membership.DoesNotExist:
+        return JsonResponse({"error": "Membership not found"}, status=404)
+    except KeyError as e:
+        return JsonResponse({"error": f"Missing field: {str(e)}"}, status=400)
+    except ValueError as e:
+        return JsonResponse({"error": f"Invalid value: {str(e)}"}, status=400)
+    except TypeError as e:
+        return JsonResponse({"error": f"Type error: {str(e)}"}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def edit_permissions(request, member_id):
+    try:
+        user_id = request.POST.get('user_id')
+        organization_id = request.POST.get('organization_id')
+        membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
+        tags = request.POST.getlist('tags[]')
+
+        if membership.role == 'member':
+            return JsonResponse({"error": "Permission denied"}, status=403)
+
+        if membership.role == 'coordinator':
+            allowed_tags = membership.permissions
+            for tag in tags:
+                if tag not in allowed_tags:
+                    return JsonResponse({"error": "Permission denied for some tags"}, status=403)
+
+        for tag in tags:
+            if CombinedTag.objects.filter(name=tag).exists():
+                return JsonResponse({"error": f"Cannot assign combined tag: {tag}"}, status=400)
+
+        member_membership = Membership.objects.get(organization__id=organization_id, user__id=member_id)
+        member_membership.permissions = tags
+        member_membership.save()
+
+        return JsonResponse({"message": "Member permissions updated successfully"}, status=200)
+    except Membership.DoesNotExist:
+        return JsonResponse({"error": "Membership not found"}, status=404)
+    except KeyError as e:
+        return JsonResponse({"error": f"Missing field: {str(e)}"}, status=400)
+    except ValueError as e:
+        return JsonResponse({"error": f"Invalid value: {str(e)}"}, status=400)
+    except TypeError as e:
+        return JsonResponse({"error": f"Type error: {str(e)}"}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
