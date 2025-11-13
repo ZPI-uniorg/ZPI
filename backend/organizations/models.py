@@ -62,7 +62,7 @@ class Membership(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    permissions = models.ManyToManyField("Tag", related_name="permissions")
+    permissions = models.ManyToManyField("Tag", related_name="permissions", blank=True)
 
     class Meta:
         ordering = ["organization", "user__username"]
@@ -91,7 +91,7 @@ class CombinedTag(models.Model):
 
 class Project(models.Model):
     id = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=255)
+    title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     start_dte = models.DateField()
     end_dte = models.DateField()
