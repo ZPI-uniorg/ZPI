@@ -828,3 +828,273 @@ def edit_permissions(request, member_id):
         return JsonResponse({"error": str(e)}, status=400)
 
 
+@require_http_methods(["GET"])
+@csrf_exempt
+def get_all_tags(request, organization_id):
+    try:
+        user_id = request.POST.get('user_id')
+        membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
+
+        if membership.role != 'admin':
+            return JsonResponse({"error": "Permission denied"}, status=403)
+
+        tags = Tag.objects.filter(organization__id=organization_id)
+        tag_list = [
+            {
+                "id": tag.id,
+                "name": tag.name,
+                "organization_id": tag.organization.id,
+            }
+            for tag in tags
+        ]
+        return JsonResponse(tag_list, safe=False, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@require_http_methods(["GET"])
+@csrf_exempt
+def get_tags(request, organization_id):
+    try:
+        user_id = request.POST.get('user_id')
+        membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
+
+        tags = membership.permissions
+
+        return JsonResponse(tags, safe=False, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def create_tag(request, organization_id):
+    try:
+        user_id = request.POST.get('user_id')
+        membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
+
+        if membership.role != 'admin':
+            return JsonResponse({"error": "Permission denied"}, status=403)
+
+        name = request.POST.get('name')
+
+        if not name:
+            return JsonResponse({"error": "Missing name field"}, status=400)
+
+        organization = Organization.objects.get(id=organization_id)
+
+        tag = Tag.objects.create(
+            name=name,
+            organization=organization
+        )
+
+        tag_data = {
+            "id": tag.id,
+            "name": tag.name,
+            "organization_id": tag.organization.id,
+        }
+
+        return JsonResponse(tag_data, status=201)
+    except Organization.DoesNotExist:
+        return JsonResponse({"error": "Organization not found"}, status=404)
+    except KeyError as e:
+        return JsonResponse({"error": f"Missing field: {str(e)}"}, status=400)
+    except ValueError as e:
+        return JsonResponse({"error": f"Invalid value: {str(e)}"}, status=400)
+    except TypeError as e:
+        return JsonResponse({"error": f"Type error: {str(e)}"}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@require_http_methods(["DELETE"])
+@csrf_exempt
+def delete_tag(request, organization_id, tag_id):
+    try:
+        user_id = request.POST.get('user_id')
+        membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
+
+        if membership.role != 'admin':
+            return JsonResponse({"error": "Permission denied"}, status=403)
+
+        tag = Tag.objects.get(id=tag_id, organization__id=organization_id)
+        tag.delete()
+
+        return JsonResponse({"message": "Tag deleted successfully"}, status=200)
+    except Membership.DoesNotExist:
+        return JsonResponse({"error": "Membership not found"}, status=404)
+    except Tag.DoesNotExist:
+        return JsonResponse({"error": "Tag not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def create_project(request):
+    try:
+        user_id = request.POST.get('user_id')
+        organization_id = request.POST.get('organization_id')
+        membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
+
+        if membership.role not in ['admin', 'coordinator']:
+            return JsonResponse({"error": "Permission denied"}, status=403)
+
+        name = request.POST.get('name')
+        description = request.POST.get('description', '')
+        start_dte = request.POST.get('start_dte')
+        end_dte = request.POST.get('end_dte')
+        tag_name = name
+
+        if not all([name, start_dte, end_dte, tag_name]):
+            return JsonResponse({"error": "Missing fields"}, status=400)
+
+        organization = Organization.objects.get(id=organization_id)
+        tag = Tag.objects.create(
+            name=tag_name,
+            organization=organization
+        )
+
+        project = Project.objects.create(
+            name=name,
+            description=description,
+            start_dte=start_dte,
+            end_dte=end_dte,
+            organization=organization,
+            tag=tag,
+            coordinator=membership.user if membership.role == 'coordinator' else None
+        )
+
+        project_data = {
+            "id": project.id,
+            "name": project.title,
+            "description": project.description,
+            "start_dte": project.start_dte,
+            "end_dte": project.end_dte,
+            "organization_id": project.organization.id,
+            "tag_id": project.tag.id,
+            "coordinator_id": project.coordinator.id if project.coordinator else None,
+        }
+
+        return JsonResponse(project_data, status=201)
+    except Membership.DoesNotExist:
+        return JsonResponse({"error": "Membership not found"}, status=404)
+    except Organization.DoesNotExist:
+        return JsonResponse({"error": "Organization not found"}, status=404)
+    except KeyError as e:
+        return JsonResponse({"error": f"Missing field: {str(e)}"}, status=400)
+    except ValueError as e:
+        return JsonResponse({"error": f"Invalid value: {str(e)}"}, status=400)
+    except TypeError as e:
+        return JsonResponse({"error": f"Type error: {str(e)}"}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@require_http_methods(["PUT"])
+@csrf_exempt
+def update_project(request, project_id):
+    try:
+        user_id = request.POST.get('user_id')
+        project = Project.objects.get(id=project_id)
+        membership = Membership.objects.get(organization__id=project.organization.id, user__id=user_id)
+
+        if membership.role not in ['admin', 'coordinator']:
+            return JsonResponse({"error": "Permission denied"}, status=403)
+
+        if membership.role == 'coordinator' and project.coordinator != membership.user:
+            return JsonResponse({"error": "Permission denied"}, status=403)
+
+        name = request.POST.get('name')
+        description = request.POST.get('description')
+        start_dte = request.POST.get('start_dte')
+        end_dte = request.POST.get('end_dte')
+        coordinator_username = request.POST.get('coordinator_username')
+
+        if name:
+            project.name = name
+        if description:
+            project.description = description
+        if start_dte:
+            project.start_dte = start_dte
+        if end_dte:
+            project.end_dte = end_dte
+        if coordinator_username:
+            coordinator = User.objects.get(username=coordinator_username)
+            project.coordinator = coordinator
+
+        project.save()
+
+        return JsonResponse({"message": "Project updated successfully"}, status=200)
+    except Project.DoesNotExist:
+        return JsonResponse({"error": "Project not found"}, status=404)
+    except Membership.DoesNotExist:
+        return JsonResponse({"error": "Membership not found"}, status=404)
+    except User.DoesNotExist:
+        return JsonResponse({"error": "Coordinator user not found"}, status=404)
+    except KeyError as e:
+        return JsonResponse({"error": f"Missing field: {str(e)}"}, status=400)
+    except ValueError as e:
+        return JsonResponse({"error": f"Invalid value: {str(e)}"}, status=400)
+    except TypeError as e:
+        return JsonResponse({"error": f"Type error: {str(e)}"}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@require_http_methods(["GET"])
+@csrf_exempt
+def get_projects(request, organization_id):
+    try:
+        user_id = request.POST.get('user_id')
+        membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
+
+        if membership.role != 'admin':
+            return JsonResponse({"error": "Permission denied"}, status=403)
+
+        projects = Project.objects.filter(organization__id=organization_id)
+        project_list = [
+            {
+                "id": project.id,
+                "name": project.title,
+                "description": project.description,
+                "start_dte": project.start_dte,
+                "end_dte": project.end_dte,
+                "organization_id": project.organization.id,
+                "tag_id": project.tag.id,
+                "coordinator_id": project.coordinator.id if project.coordinator else None,
+            }
+            for project in projects
+        ]
+        return JsonResponse(project_list, safe=False, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@require_http_methods(["GET"])
+@csrf_exempt
+def get_user_projects(request, organization_id, user_id):
+    try:
+        membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
+
+        tags = membership.permissions
+
+        projects = Project.objects.filter(organization__id=organization_id, tag__name__in=tags)
+
+        project_list = [
+            {
+                "id": project.id,
+                "name": project.title,
+                "description": project.description,
+                "start_dte": project.start_dte,
+                "end_dte": project.end_dte,
+                "organization_id": project.organization.id,
+                "tag_id": project.tag.id,
+                "coordinator_id": project.coordinator.id if project.coordinator else None,
+            }
+            for project in projects
+        ]
+        return JsonResponse(project_list, safe=False, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
