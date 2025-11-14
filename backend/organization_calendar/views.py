@@ -10,7 +10,7 @@ import json
 # Create your views here.
 @require_http_methods(["GET"])
 @csrf_exempt
-def get_event(request, event_id):
+def get_event_test(request, event_id):
     try:
         event = Event.objects.get(event_id=event_id)
 
@@ -32,7 +32,7 @@ def get_event(request, event_id):
 
 @require_http_methods(["GET"])
 @csrf_exempt
-def get_all_events(request):
+def get_all_events_test(request):
     try:
         events = Event.objects.all()
         events_data = []
@@ -56,7 +56,7 @@ def get_all_events(request):
 
 @require_http_methods(["POST"])
 @csrf_exempt
-def create_event(request):
+def create_event_test(request):
     try:
         name = request.POST.get("name")
         description = request.POST.get("description")
@@ -95,7 +95,7 @@ def create_event(request):
 
 @require_http_methods(["DELETE"])
 @csrf_exempt
-def delete_event(request, event_id):
+def delete_event_test(request, event_id):
     try:
         event = Event.objects.get(event_id=event_id)
         event.delete()
@@ -108,7 +108,7 @@ def delete_event(request, event_id):
 
 @require_http_methods(["PUT"])
 @csrf_exempt
-def update_event(request, event_id):
+def update_event_test(request, event_id):
     try:
         event = Event.objects.get(event_id=event_id)
 
@@ -144,3 +144,5 @@ def update_event(request, event_id):
         return JsonResponse({"error": "Event not found"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
+
+
