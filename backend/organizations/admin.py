@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Membership, Organization, Tag, Project
+from .models import Membership, Organization, Tag, Project, CombinedTag
 
 
 @admin.register(Organization)
@@ -20,3 +20,4 @@ class MembershipAdmin(admin.ModelAdmin):
 
 admin.site.register(Tag)
 admin.site.register(Project)
+admin.site.register(CombinedTag)

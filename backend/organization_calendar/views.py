@@ -3,14 +3,14 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from .models import Event
-from organizations.models import Organization
+from organizations.models import Organization, Membership
 import json
 
 
 # Create your views here.
 @require_http_methods(["GET"])
 @csrf_exempt
-def get_event(request, event_id):
+def get_event_test(request, event_id):
     try:
         event = Event.objects.get(event_id=event_id)
 
@@ -32,7 +32,7 @@ def get_event(request, event_id):
 
 @require_http_methods(["GET"])
 @csrf_exempt
-def get_all_events(request):
+def get_all_events_test(request):
     try:
         events = Event.objects.all()
         events_data = []
@@ -56,7 +56,7 @@ def get_all_events(request):
 
 @require_http_methods(["POST"])
 @csrf_exempt
-def create_event(request):
+def create_event_test(request):
     try:
         name = request.POST.get("name")
         description = request.POST.get("description")
@@ -95,7 +95,7 @@ def create_event(request):
 
 @require_http_methods(["DELETE"])
 @csrf_exempt
-def delete_event(request, event_id):
+def delete_event_test(request, event_id):
     try:
         event = Event.objects.get(event_id=event_id)
         event.delete()
@@ -108,7 +108,7 @@ def delete_event(request, event_id):
 
 @require_http_methods(["PUT"])
 @csrf_exempt
-def update_event(request, event_id):
+def update_event_test(request, event_id):
     try:
         event = Event.objects.get(event_id=event_id)
 
@@ -144,3 +144,104 @@ def update_event(request, event_id):
         return JsonResponse({"error": "Event not found"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
+
+
+@require_http_methods(["GET"])
+@csrf_exempt
+def get_all_events(request, organization_id):
+    try:
+        user_id = request.GET.get("user_id")
+        membership = Membership.objects.get(user__id=user_id, organization__id=organization_id)
+
+        if membership.role != 'admin':
+            return JsonResponse({"error": "Unauthorized access"}, status=403)
+
+        organization = Organization.objects.get(id=organization_id)
+        events = Event.objects.filter(organization=organization)
+        events_data = []
+
+        for event in events:
+            events_data.append(
+                {
+                    "event_id": event.event_id,
+                    "name": event.name,
+                    "description": event.description,
+                    "start_time": event.start_time,
+                    "end_time": event.end_time,
+                    "organization_id": event.organization.id,
+                }
+            )
+
+        return JsonResponse(events_data, safe=False, status=200)
+    except Organization.DoesNotExist:
+        return JsonResponse({"error": "Organization not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@require_http_methods(["GET"])
+@csrf_exempt
+def get_user_events(request, organization_id, user_id):
+    try:
+        membership = Membership.objects.get(user__id=user_id, organization__id=organization_id)
+
+        if not membership:
+            return JsonResponse({"error": "Unauthorized access"}, status=403)
+
+        organization = Organization.objects.get(id=organization_id)
+        events = Event.objects.filter(organization=organization, permissions__in=membership.permissions)
+        events_data = []
+
+        for event in events:
+            events_data.append(
+                {
+                    "event_id": event.event_id,
+                    "name": event.name,
+                    "description": event.description,
+                    "start_time": event.start_time,
+                    "end_time": event.end_time,
+                    "organization_id": event.organization.id,
+                }
+            )
+
+        return JsonResponse(events_data, safe=False, status=200)
+    except Organization.DoesNotExist:
+        return JsonResponse({"error": "Organization not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def get_events_by_tag(request, organization_id, tag_id):
+    try:
+        user_id = request.POST.get("user_id")
+        membership = Membership.objects.get(user__id=user_id, organization__id=organization_id)
+
+        if membership.role != 'admin':
+            if tag_id not in membership.permissions:
+                return JsonResponse({"error": "Unauthorized access"}, status=403)
+
+        organization = Organization.objects.get(id=organization_id)
+        events = Event.objects.filter(organization=organization, permissions=tag_id)
+        events_data = []
+
+        for event in events:
+            events_data.append(
+                {
+                    "event_id": event.event_id,
+                    "name": event.name,
+                    "description": event.description,
+                    "start_time": event.start_time,
+                    "end_time": event.end_time,
+                    "organization_id": event.organization.id,
+                }
+            )
+
+        return JsonResponse(events_data, safe=False, status=200)
+    except Organization.DoesNotExist:
+        return JsonResponse({"error": "Organization not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
