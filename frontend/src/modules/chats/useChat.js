@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { CHATS } from "../../api/fakeData.js";
 
-// Simple in-memory channels with fallback persistence.
-const DEFAULT_CHANNELS = ["general", "dev", "design", "random"];
+// Channels sourced from shared test data
+const DEFAULT_CHANNELS =
+  Array.isArray(CHATS) && CHATS.length
+    ? CHATS.map((c) => c.title)
+    : ["general"];
 
 function loadStored(channel) {
   try {
@@ -30,7 +34,10 @@ const WS_URL =
       }/ws/chat`
     : "";
 
-export function useChat(initialChannel = "general", currentUser = "Me") {
+export function useChat(
+  initialChannel = DEFAULT_CHANNELS[0],
+  currentUser = "Me"
+) {
   const [channel, setChannel] = useState(initialChannel);
   const [messages, setMessages] = useState(() => loadStored(initialChannel));
   const [onlineUsers, setOnlineUsers] = useState([

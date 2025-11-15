@@ -10,12 +10,12 @@ export default function ChannelSidebar({ channels, active, onSelect, users }) {
             <li key={c}>
               <button
                 onClick={() => onSelect(c)}
-                className={
-                  "w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition " +
-                  (c === active
-                    ? "bg-slate-700/60 text-slate-100"
-                    : "text-slate-300 hover:bg-slate-700/40")
-                }
+                className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition cursor-pointer ${
+                  c === active
+                    ? "bg-slate-700/60 text-slate-100 shadow-md"
+                    : "text-slate-300 hover:bg-slate-700/40 hover:text-slate-100"
+                }`}
+                aria-current={c === active ? "page" : undefined}
               >
                 {c}
               </button>

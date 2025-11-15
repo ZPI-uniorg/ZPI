@@ -38,6 +38,7 @@ function App() {
             <Route path="/organization/tag/new" element={<TagEditPage />} />
             <Route path="/chat/new" element={<ChatCreatePage />} />
             <Route path="/chat" element={<ChatPage />} />
+            <Route path="/chats" element={<ChatPage />} />
             <Route path="/calendar" element={<CalendarPage />} />
             {/* </Route> */}
           </Routes>

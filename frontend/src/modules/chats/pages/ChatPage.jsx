@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { X } from "lucide-react";
 import ChannelSidebar from "../../chats/ChannelSidebar.jsx";
 import MessageList from "../../chats/MessageList.jsx";
 import { useChat } from "../../chats/useChat.js";
@@ -6,6 +8,7 @@ import useAuth from "../../../auth/useAuth.js";
 
 export default function ChatPage() {
   const { user } = useAuth() || {};
+  const navigate = useNavigate();
   const currentUser = user?.username || "Me";
   const {
     channel,
@@ -15,22 +18,24 @@ export default function ChatPage() {
     sendMessage,
     switchChannel,
     status,
-  } = useChat("general", currentUser);
+  } = useChat(undefined, currentUser);
   const [draft, setDraft] = useState("");
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    sendMessage(draft);
-    setDraft("");
+    if (!disabled && draft.trim()) {
+      sendMessage(draft);
+      setDraft("");
+    }
   };
 
   const disabled = status === "connecting";
   return (
     <div className="min-h-screen bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-4 md:p-6">
-      <div className="max-w-[1400px] mx-auto h-[calc(100vh-2rem)] flex flex-col gap-4">
+      <div className="max-w-[1400px] mx-auto h-[calc(100vh-2rem)] md:h-[calc(100vh-3rem)] flex flex-col gap-4">
         <header className="flex items-center justify-between px-2">
           <h1 className="text-2xl font-semibold text-slate-100">{channel}</h1>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <span className="px-3 py-1 rounded-full text-xs font-medium bg-slate-700 text-slate-200">
               Online: {onlineUsers.length}
             </span>
@@ -46,6 +51,14 @@ export default function ChatPage() {
             >
               {status}
             </span>
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="p-2 rounded-lg hover:bg-slate-700/40 text-slate-300 transition"
+              aria-label="Zamknij"
+              title="Powrót do dashboardu"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
         </header>
         <div className="flex-1 bg-slate-900/95 rounded-2xl shadow-[0_30px_60px_rgba(15,23,42,0.45)] border border-slate-700 p-4 overflow-hidden flex">
@@ -67,6 +80,22 @@ export default function ChatPage() {
                   placeholder={`Napisz wiadomość`}
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (
+                      e.key === "Enter" &&
+                      !e.ctrlKey &&
+                      !e.metaKey &&
+                      !e.shiftKey &&
+                      !e.altKey
+                    ) {
+                      e.preventDefault();
+                      if (!disabled && draft.trim()) {
+                        sendMessage(draft);
+                        setDraft("");
+                      }
+                    }
+                    // Ctrl+Enter or Cmd+Enter: allow default to insert a newline
+                  }}
                   className="flex-1 resize-none rounded-xl px-4 py-3 text-sm border border-slate-600 bg-slate-800 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 disabled:opacity-50"
                   disabled={disabled}
                 />
