@@ -84,6 +84,14 @@ export const EVENTS = [
     end_time: "16:30",
     tags: ["Projekt1", "Projekt2"],
   },
+  {
+    id: 5,
+    title: "Zakończenie życia",
+    date: "2025-11-18",
+    start_time: "15:30",
+    end_time: "16:30",
+    tags: ["Projekt1", "Projekt2"],
+  },
 ];
 
 export const KANBAN_BOARDS = {
