@@ -1,20 +1,18 @@
-import json
-
 from django.contrib.auth import get_user_model
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from django.db.models import Count
-from django.http import JsonResponse, QueryDict
-from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
 from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.views import APIView
 
-from .models import Membership, Organization, Tag, Project
+from core.serializers import UserSerializer
+from core.views import get_tokens_for_user
+
+from .models import Membership, Organization
 from .serializers import (
     MembershipCreateSerializer,
     MembershipSerializer,
@@ -27,530 +25,208 @@ from .serializers import (
 User = get_user_model()
 
 
-@require_http_methods(["GET"])
-@csrf_exempt
-def get_organizations(request):
-    try:
-        organizations = Organization.objects.all()
-        org_list = [
-            {
-                "id": org.id,
-                "name": org.name,
-                "slug": org.slug,
-                "description": org.description,
-                "created_by_id": org.created_by.id,
-                "created_at": org.created_at,
-                "updated_at": org.updated_at,
-            }
-            for org in organizations
-        ]
-        return JsonResponse(org_list, safe=False, status=200)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
+class OrganizationViewSet(viewsets.ModelViewSet):
+    queryset = Organization.objects.all()
+    serializer_class = OrganizationSerializer
+    permission_classes = [IsAuthenticated]
 
-
-@require_http_methods(["GET"])
-@csrf_exempt
-def get_organization(request, org_id):
-    try:
-        org = Organization.objects.get(id=org_id)
-        org_data = {
-            "id": org.id,
-            "name": org.name,
-            "slug": org.slug,
-            "description": org.description,
-            "created_by_id": org.created_by.id,
-            "created_at": org.created_at,
-            "updated_at": org.updated_at,
-        }
-        return JsonResponse(org_data, status=200)
-    except Organization.DoesNotExist:
-        return JsonResponse({"error": "Organization not found"}, status=404)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
-
-
-@require_http_methods(["POST"])
-@csrf_exempt
-def create_organization(request):
-    try:
-        name = request.POST.get('name')
-        description = request.POST.get('description', '')
-        created_by_username = request.POST.get('created_by_username')
-
-        if not name or not created_by_username:
-            return JsonResponse({"error": "Missing fields"}, status=400)
-
-        created_by = User.objects.get(username=created_by_username)
-
-        organization = Organization.objects.create(
-            name=name,
-            description=description,
-            created_by=created_by
+    def get_queryset(self):
+        user = self.request.user
+        return (
+            Organization.objects.filter(memberships__user=user)
+            .annotate(member_count=Count("memberships", distinct=True))
+            .prefetch_related("memberships__user")
+            .select_related("created_by")
+            .distinct()
         )
 
-        org_data = {
-            "id": organization.id,
-            "name": organization.name,
-            "slug": organization.slug,
-            "description": organization.description,
-            "created_by_id": organization.created_by.id,
-            "created_at": organization.created_at,
-            "updated_at": organization.updated_at,
-        }
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["actor"] = self.request.user
+        return context
 
-        return JsonResponse(org_data, status=201)
-    except User.DoesNotExist:
-        return JsonResponse({"error": "User not found"}, status=404)
-    except KeyError as e:
-        return JsonResponse({"error": f"Missing field: {str(e)}"}, status=400)
-    except ValueError as e:
-        return JsonResponse({"error": f"Invalid value: {str(e)}"}, status=400)
-    except TypeError as e:
-        return JsonResponse({"error": f"Type error: {str(e)}"}, status=400)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
+    def create(self, request, *args, **kwargs):
+        serializer = OrganizationCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        with transaction.atomic():
+            organization = serializer.save(created_by=request.user)
+            Membership.objects.create(
+                organization=organization,
+                user=request.user,
+                role=Membership.Role.ADMIN,
+            )
+        output = OrganizationSerializer(
+            organization,
+            context=self.get_serializer_context(),
+        )
+        headers = self.get_success_headers(output.data)
+        return Response(output.data, status=status.HTTP_201_CREATED, headers=headers)
 
+    @action(detail=True, methods=["get", "post"], url_path="members", url_name="members")
+    def members(self, request, pk=None):
+        organization = self.get_object()
+        requester_membership = self._get_membership(organization, request.user)
+        if requester_membership is None:
+            raise PermissionDenied("You are not a member of this organization.")
 
-@require_http_methods(["DELETE"])
-@csrf_exempt
-def delete_organization(request, organization_id):
-    try:
-        org = Organization.objects.get(id=organization_id)
-        org.delete()
+        if request.method.lower() == "get":
+            memberships = organization.memberships.select_related("user").order_by("user__username")
+            serializer = MembershipSerializer(memberships, many=True)
+            return Response(serializer.data)
 
-        return JsonResponse({"message": "Organization deleted successfully"}, status=200)
-    except Organization.DoesNotExist:
-        return JsonResponse({"error": "Organization not found"}, status=404)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        if requester_membership.role != Membership.Role.ADMIN:
+            raise PermissionDenied("Only organization administrators can add members.")
 
+        create_serializer = MembershipCreateSerializer(data=request.data)
+        create_serializer.is_valid(raise_exception=True)
+        membership, created = self._create_membership(
+            organization,
+            request.user,
+            create_serializer.validated_data,
+        )
+        response_serializer = MembershipSerializer(membership)
+        status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+        return Response(response_serializer.data, status=status_code)
 
-@require_http_methods(["PUT"])
-@csrf_exempt
-def update_organization(request, organization_id):
-    try:
-        org = Organization.objects.get(id=organization_id)
+    @action(
+        detail=True,
+        methods=["get", "patch", "delete"],
+        url_path=r"members/(?P<membership_pk>[^/.]+)",
+        url_name="member-detail",
+    )
+    def member_detail(self, request, pk=None, membership_pk=None):
+        organization = self.get_object()
+        membership = get_object_or_404(
+            Membership.objects.select_related("user"),
+            pk=membership_pk,
+            organization=organization,
+        )
+        requester_membership = self._get_membership(organization, request.user)
+        if requester_membership is None:
+            raise PermissionDenied("You are not a member of this organization.")
 
-        data = json.loads(request.body)
+        if request.method.lower() == "get":
+            serializer = MembershipSerializer(membership)
+            return Response(serializer.data)
 
-        name = data.get('name')
-        description = data.get('description')
+        if request.method.lower() == "patch":
+            if requester_membership.role != Membership.Role.ADMIN:
+                raise PermissionDenied("Only administrators can update member roles.")
+            update_serializer = MembershipUpdateSerializer(
+                membership,
+                data=request.data,
+                partial=True,
+            )
+            update_serializer.is_valid(raise_exception=True)
+            new_role = update_serializer.validated_data.get("role")
+            if new_role and membership.role != new_role:
+                self._validate_role_change(organization, membership, new_role)
+                membership.role = new_role
+                membership.save(update_fields=["role", "updated_at"])
+            refreshed = MembershipSerializer(membership)
+            return Response(refreshed.data, status=status.HTTP_200_OK)
 
-        if name:
-            org.name = name
-        if description:
-            org.description = description
+        if request.method.lower() == "delete":
+            if requester_membership.pk != membership.pk and requester_membership.role != Membership.Role.ADMIN:
+                raise PermissionDenied("Only administrators can remove other members.")
+            self._validate_removal(organization, membership)
+            membership.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
-        org.save()
+        raise ValidationError({"detail": "Unsupported method."})
 
-        return JsonResponse({"message": "Organization updated successfully"}, status=200)
-    except Organization.DoesNotExist:
-        return JsonResponse({"error": "Organization not found"}, status=404)
-    except KeyError as e:
-        return JsonResponse({"error": f"Missing field: {str(e)}"}, status=400)
-    except ValueError as e:
-        return JsonResponse({"error": f"Invalid value: {str(e)}"}, status=400)
-    except TypeError as e:
-        return JsonResponse({"error": f"Type error: {str(e)}"}, status=400)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
+    def _get_membership(self, organization, user):
+        return (
+            organization.memberships.select_related("user")
+            .filter(user=user)
+            .first()
+        )
 
+    def _create_membership(self, organization, inviter, validated_data):
+        existing_user = validated_data.get("user_id")
+        username = validated_data.get("username")
+        role = validated_data.get("role", Membership.Role.MEMBER)
 
-@require_http_methods(["GET"])
-@csrf_exempt
-def get_all_organization_memberships(request, org_id):
-    try:
-        memberships = Membership.objects.filter(organization__id=org_id)
-        membership_list = [
-            {
-                "user_id": membership.user.id,
-                "organization_id": membership.organization.id,
-                "role": membership.role,
-                "invited_by_id": membership.invited_by.id if membership.invited_by else None,
-                "created_at": membership.created_at,
-            }
-            for membership in memberships
-        ]
-        return JsonResponse(membership_list, safe=False, status=200)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
-
-
-@require_http_methods(["GET"])
-@csrf_exempt
-def get_membership(request, org_id, user_id):
-    try:
-        membership = Membership.objects.get(organization__id=org_id, user__id=user_id)
-        membership_data = {
-            "user_id": membership.user.id,
-            "organization_id": membership.organization.id,
-            "role": membership.role,
-            "invited_by_id": membership.invited_by.id if membership.invited_by else None,
-            "created_at": membership.created_at,
-        }
-        return JsonResponse(membership_data, status=200)
-    except Membership.DoesNotExist:
-        return JsonResponse({"error": "Membership not found"}, status=404)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
-
-
-@require_http_methods(["POST"])
-@csrf_exempt
-def create_membership(request):
-    try:
-        organization_id = request.POST.get('organization_id')
-        user_id = request.POST.get('user_id')
-        role = request.POST.get('role')
-        invited_by_id = request.POST.get('invited_by_id')
-
-        if not all([organization_id, user_id, role]):
-            return JsonResponse({"error": "Missing fields"}, status=400)
-
-        organization = Organization.objects.get(id=organization_id)
-        user = User.objects.get(id=user_id)
-        invited_by = User.objects.get(id=invited_by_id) if invited_by_id else None
+        if existing_user:
+            user = existing_user
+            if organization.memberships.filter(user=user).exists():
+                raise ValidationError({"detail": "User is already a member of this organization."})
+            created = False
+        else:
+            if organization.memberships.filter(user__username__iexact=username).exists():
+                raise ValidationError({"detail": "Username is already used by a member of this organization."})
+            user = User.objects.create_user(
+                username=username,
+                password=validated_data["password"],
+                email=validated_data.get("email"),
+                first_name=validated_data.get("first_name", ""),
+                last_name=validated_data.get("last_name", ""),
+            )
+            created = True
 
         membership = Membership.objects.create(
             organization=organization,
             user=user,
             role=role,
-            invited_by=invited_by
+            invited_by=inviter,
         )
+        return membership, created
 
-        membership_data = {
-            "user_id": membership.user.id,
-            "organization_id": membership.organization.id,
-            "role": membership.role,
-            "invited_by_id": membership.invited_by.id if membership.invited_by else None,
-            "created_at": membership.created_at,
-        }
+    def _validate_role_change(self, organization, membership, new_role):
+        if membership.role == Membership.Role.ADMIN and new_role != Membership.Role.ADMIN:
+            if not organization.memberships.exclude(pk=membership.pk).filter(role=Membership.Role.ADMIN).exists():
+                raise ValidationError({"detail": "Cannot remove the last administrator from the organization."})
 
-        return JsonResponse(membership_data, status=201)
-    except Organization.DoesNotExist:
-        return JsonResponse({"error": "Organization not found"}, status=404)
-    except User.DoesNotExist:
-        return JsonResponse({"error": "User not found"}, status=404)
-    except IntegrityError:
-        return JsonResponse({"error": "Membership already exists"}, status=400)
-    except KeyError as e:
-        return JsonResponse({"error": f"Missing field: {str(e)}"}, status=400)
-    except ValueError as e:
-        return JsonResponse({"error": f"Invalid value: {str(e)}"}, status=400)
-    except TypeError as e:
-        return JsonResponse({"error": f"Type error: {str(e)}"}, status=400)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
+    def _validate_removal(self, organization, membership):
+        if membership.role == Membership.Role.ADMIN:
+            has_other_admin = organization.memberships.exclude(pk=membership.pk).filter(
+                role=Membership.Role.ADMIN
+            ).exists()
+            if not has_other_admin:
+                raise ValidationError({"detail": "Cannot remove the last administrator from the organization."})
 
 
+class OrganizationRegistrationView(APIView):
+    permission_classes = [AllowAny]
 
-@require_http_methods(["DELETE"])
-@csrf_exempt
-def delete_membership(request, org_id, user_id):
-    try:
-        membership = Membership.objects.get(organization__id=org_id, user__id=user_id)
-        membership.delete()
+    def post(self, request):
+        serializer = OrganizationRegistrationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-        return JsonResponse({"message": "Membership deleted successfully"}, status=200)
-    except Membership.DoesNotExist:
-        return JsonResponse({"error": "Membership not found"}, status=404)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        org_data = serializer.validated_data["organization"]
+        admin_data = serializer.validated_data["admin"]
 
+        with transaction.atomic():
+            admin_user = User.objects.create_user(
+                username=admin_data["username"],
+                password=admin_data["password"],
+                email=admin_data.get("email"),
+                first_name=admin_data.get("first_name", ""),
+                last_name=admin_data.get("last_name", ""),
+            )
+            organization = Organization.objects.create(
+                name=org_data["name"],
+                description=org_data.get("description", ""),
+                created_by=admin_user,
+            )
+            Membership.objects.create(
+                organization=organization,
+                user=admin_user,
+                role=Membership.Role.ADMIN,
+            )
 
-@require_http_methods(["PUT"])
-@csrf_exempt
-def update_membership(request, org_id, user_id):
-    try:
-        membership = Membership.objects.get(organization__id=org_id, user__id=user_id)
+        token = get_tokens_for_user(admin_user)
+        organization_payload = OrganizationSerializer(
+            organization,
+            context={"request": request, "actor": admin_user},
+        ).data
+        user_payload = UserSerializer(admin_user).data
 
-        data = json.loads(request.body)
-
-        role = data.get('role')
-        invited_by_id = data.get('invited_by_id')
-
-        if role:
-            membership.role = role
-        if invited_by_id:
-            invited_by = User.objects.get(id=invited_by_id)
-            membership.invited_by = invited_by
-
-        membership.save()
-
-        return JsonResponse({"message": "Membership updated successfully"}, status=200)
-    except Membership.DoesNotExist:
-        return JsonResponse({"error": "Membership not found"}, status=404)
-    except User.DoesNotExist:
-        return JsonResponse({"error": "Invited by user not found"}, status=404)
-    except KeyError as e:
-        return JsonResponse({"error": f"Missing field: {str(e)}"}, status=400)
-    except ValueError as e:
-        return JsonResponse({"error": f"Invalid value: {str(e)}"}, status=400)
-    except TypeError as e:
-        return JsonResponse({"error": f"Type error: {str(e)}"}, status=400)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
-
-@require_http_methods(["GET"])
-@csrf_exempt
-def get_all_organization_members(request, org_id):
-    try:
-        memberships = Membership.objects.filter(organization__id=org_id)
-        members = [
+        return Response(
             {
-                "user_id": membership.user.id,
-                "organization_id": membership.organization.id,
-                "role": membership.role,
-                "username": membership.user.username,
-                "first_name": membership.user.first_name,
-                "last_name": membership.user.last_name,
-                "email": membership.user.email
-            }
-            for membership in memberships
-        ]
-
-        return JsonResponse(members, safe=False, status=200)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
-
-@require_http_methods(["GET"])
-@csrf_exempt
-def get_tag(request, tag_id):
-    try:
-        tag = Tag.objects.get(id=tag_id)
-        tag_data = {
-            "id": tag.id,
-            "name": tag.name,
-            "organization_id": tag.organization.id,
-        }
-        return JsonResponse(tag_data, status=200)
-    except Tag.DoesNotExist:
-        return JsonResponse({"error": "Tag not found"}, status=404)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
-
-
-@require_http_methods(["GET"])
-@csrf_exempt
-def get_all_tags(request):
-    try:
-        tags = Tag.objects.all()
-        tag_list = [
-            {
-                "id": tag.id,
-                "name": tag.name,
-                "organization_id": tag.organization.id,
-            }
-            for tag in tags
-        ]
-        return JsonResponse(tag_list, safe=False, status=200)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
-
-
-@require_http_methods(["POST"])
-@csrf_exempt
-def create_tag(request):
-    try:
-        name = request.POST.get('name')
-        organization_id = request.POST.get('organization_id')
-
-        if not name or not organization_id:
-            return JsonResponse({"error": "Missing fields"}, status=400)
-
-        organization = Organization.objects.get(id=organization_id)
-
-        tag = Tag.objects.create(
-            name=name,
-            organization=organization
+                "token": token,
+                "organization": organization_payload,
+                "user": user_payload,
+            },
+            status=status.HTTP_201_CREATED,
         )
-
-        tag_data = {
-            "id": tag.id,
-            "name": tag.name,
-            "organization_id": tag.organization.id,
-        }
-
-        return JsonResponse(tag_data, status=201)
-    except Organization.DoesNotExist:
-        return JsonResponse({"error": "Organization not found"}, status=404)
-    except KeyError as e:
-        return JsonResponse({"error": f"Missing field: {str(e)}"}, status=400)
-    except ValueError as e:
-        return JsonResponse({"error": f"Invalid value: {str(e)}"}, status=400)
-    except TypeError as e:
-        return JsonResponse({"error": f"Type error: {str(e)}"}, status=400)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
-
-
-@require_http_methods(["DELETE"])
-@csrf_exempt
-def delete_tag(request, tag_id):
-    try:
-        tag = Tag.objects.get(id=tag_id)
-        tag.delete()
-
-        return JsonResponse({"message": "Tag deleted successfully"}, status=200)
-    except Tag.DoesNotExist:
-        return JsonResponse({"error": "Tag not found"}, status=404)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
-
-
-@require_http_methods(["GET"])
-@csrf_exempt
-def get_project(request, project_id):
-    try:
-        project = Project.objects.get(id=project_id)
-        project_data = {
-            "id": project.id,
-            "name": project.name,
-            "description": project.description,
-            "start_dte": project.start_dte,
-            "end_dte": project.end_dte,
-            "organization_id": project.organization.id,
-            "tag_id": project.tag.id,
-            "coordinator_id": project.coordinator.id if project.coordinator else None,
-        }
-        return JsonResponse(project_data, status=200)
-    except Project.DoesNotExist:
-        return JsonResponse({"error": "Project not found"}, status=404)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
-
-
-@require_http_methods(["GET"])
-@csrf_exempt
-def get_all_projects(request):
-    try:
-        projects = Project.objects.all()
-        project_list = [
-            {
-                "id": project.id,
-                "name": project.name,
-                "description": project.description,
-                "start_dte": project.start_dte,
-                "end_dte": project.end_dte,
-                "organization_id": project.organization.id,
-                "tag_id": project.tag.id,
-                "coordinator_id": project.coordinator.id if project.coordinator else None,
-            }
-            for project in projects
-        ]
-        return JsonResponse(project_list, safe=False, status=200)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
-
-
-@require_http_methods(["POST"])
-@csrf_exempt
-def create_project(request):
-    try:
-        name = request.POST.get('name')
-        description = request.POST.get('description', '')
-        start_dte = request.POST.get('start_dte')
-        end_dte = request.POST.get('end_dte')
-        organization_id = request.POST.get('organization_id')
-        coordinator_username = request.POST.get('coordinator_username')
-
-        if not all([name, start_dte, end_dte, organization_id, coordinator_username]):
-            return JsonResponse({"error": "Missing fields"}, status=400)
-
-        organization = Organization.objects.get(id=organization_id)
-        tag = Tag.objects.create(
-            name=name,
-            organization=organization
-        )
-        coordinator = User.objects.get(username=coordinator_username)
-
-        project = Project.objects.create(
-            name=name,
-            description=description,
-            start_dte=start_dte,
-            end_dte=end_dte,
-            organization=organization,
-            tag=tag,
-            coordinator=coordinator
-        )
-
-        project_data = {
-            "id": project.id,
-            "name": project.name,
-            "description": project.description,
-            "start_dte": project.start_dte,
-            "end_dte": project.end_dte,
-            "organization_id": project.organization.id,
-            "tag_id": project.tag.id,
-            "coordinator": project.coordinator.get_username() if project.coordinator else None,
-        }
-
-        return JsonResponse(project_data, status=201)
-    except Organization.DoesNotExist:
-        return JsonResponse({"error": "Organization not found"}, status=404)
-    except Tag.DoesNotExist:
-        return JsonResponse({"error": "Tag not found"}, status=404)
-    except KeyError as e:
-        return JsonResponse({"error": f"Missing field: {str(e)}"}, status=400)
-    except ValueError as e:
-        return JsonResponse({"error": f"Invalid value: {str(e)}"}, status=400)
-    except TypeError as e:
-        return JsonResponse({"error": f"Type error: {str(e)}"}, status=400)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
-
-
-@require_http_methods(["DELETE"])
-@csrf_exempt
-def delete_project(request, project_id):
-    try:
-        project = Project.objects.get(id=project_id)
-        project.delete()
-
-        return JsonResponse({"message": "Project deleted successfully"}, status=200)
-    except Project.DoesNotExist:
-        return JsonResponse({"error": "Project not found"}, status=404)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
-
-
-@require_http_methods(["PUT"])
-@csrf_exempt
-def update_project(request, project_id):
-    try:
-        project = Project.objects.get(id=project_id)
-
-        data = json.loads(request.body)
-
-        name = data.get('name')
-        description = data.get('description')
-        start_dte = data.get('start_dte')
-        end_dte = data.get('end_dte')
-        coordinator_username = data.get('coordinator_username')
-
-        if name:
-            project.name = name
-        if description:
-            project.description = description
-        if start_dte:
-            project.start_dte = start_dte
-        if end_dte:
-            project.end_dte = end_dte
-        if coordinator_username:
-            coordinator = User.objects.get(username=coordinator_username)
-            project.coordinator = coordinator
-
-        project.save()
-
-        return JsonResponse({"message": "Project updated successfully"}, status=200)
-    except Project.DoesNotExist:
-        return JsonResponse({"error": "Project not found"}, status=404)
-    except KeyError as e:
-        return JsonResponse({"error": f"Missing field: {str(e)}"}, status=400)
-    except ValueError as e:
-        return JsonResponse({"error": f"Invalid value: {str(e)}"}, status=400)
-    except TypeError as e:
-        return JsonResponse({"error": f"Type error: {str(e)}"}, status=400)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
