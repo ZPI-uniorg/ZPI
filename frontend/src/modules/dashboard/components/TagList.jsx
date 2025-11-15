@@ -1,5 +1,5 @@
 import React from "react";
-import { Pencil } from "lucide-react";
+import { Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export default function TagList({ tags, projects = [], selectedTags, logic, setLogic, toggleTag }) {
@@ -75,7 +75,7 @@ export default function TagList({ tags, projects = [], selectedTags, logic, setL
                   title={projects.some((p) => p.name === t) ? "Edytuj projekt" : "Edytuj tag"}
                   onClick={() => handleEdit(t)}
                 >
-                  <Pencil className="w-4 h-4 text-slate-400" />
+                  <Settings className="w-4 h-4 text-slate-400" />
                 </button>
               </label>
             </li>
