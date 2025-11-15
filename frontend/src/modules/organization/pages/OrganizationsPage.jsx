@@ -70,10 +70,14 @@ function OrganizationsPage() {
   const isAdmin = selectedOrganization?.role === "admin";
 
   const loadOrganizations = useCallback(async () => {
+    if (!user?.username) {
+      setOrganizations([]);
+      return;
+    }
     setOrganizationsLoading(true);
     setOrganizationsError(null);
     try {
-      const data = await listOrganizations();
+      const data = await listOrganizations(user.username);
       setOrganizations(data);
       const preferredOrg =
         activeOrganization &&
@@ -94,12 +98,14 @@ function OrganizationsPage() {
       }
     } catch (error) {
       setOrganizationsError(
-        error.response?.data?.detail ?? "Nie udało się pobrać organizacji."
+        error.response?.data?.error ??
+          error.response?.data?.detail ??
+          "Nie udało się pobrać organizacji."
       );
     } finally {
       setOrganizationsLoading(false);
     }
-  }, [selectedOrgId, activeOrganization]);
+  }, [selectedOrgId, activeOrganization, user?.username]);
 
   useEffect(() => {
     if (!activeOrganization) {
@@ -118,20 +124,35 @@ function OrganizationsPage() {
       setMembers([]);
       return;
     }
+    if (!user?.username) {
+      setMembers([]);
+      return;
+    }
     setMembersLoading(true);
     setMemberError(null);
     try {
-      const data = await getOrganizationMembers(organizationId);
-      setMembers(data);
+      const data = await getOrganizationMembers(organizationId, user.username);
+      const normalized = data.map((member) => ({
+        id: member.user_id,
+        user: member.user_id,
+        username: member.username,
+        first_name: member.first_name ?? "",
+        last_name: member.last_name ?? "",
+        email: member.email ?? "",
+        role: member.role,
+        permissions: member.permissions ?? [],
+      }));
+      setMembers(normalized);
     } catch (error) {
       setMemberError(
-        error.response?.data?.detail ??
+        error.response?.data?.error ??
+          error.response?.data?.detail ??
           "Nie udało się pobrać członków organizacji."
       );
     } finally {
       setMembersLoading(false);
     }
-  }, []);
+  }, [user?.username]);
 
   useEffect(() => {
     loadOrganizations();
@@ -160,28 +181,35 @@ function OrganizationsPage() {
 
   const handleAddMember = async (event) => {
     event.preventDefault();
-    if (!selectedOrgId) return;
+    if (!selectedOrgId || !user?.username) return;
+    const submission = {
+      username: memberForm.username.trim(),
+      password: memberForm.password,
+      email: memberForm.email.trim(),
+      first_name: memberForm.first_name.trim(),
+      last_name: memberForm.last_name.trim(),
+      role: memberForm.role,
+    };
     setMemberSubmitting(true);
     setMemberError(null);
     setMemberSuccess(null);
     setLastCreatedCredentials(null);
 
-    const payload = {
-      username: memberForm.username,
-      password: memberForm.password,
-      first_name: memberForm.first_name,
-      last_name: memberForm.last_name,
-      email: memberForm.email,
-      role: memberForm.role,
-    };
-
     try {
-      await addOrganizationMember(selectedOrgId, payload);
+      const response = await addOrganizationMember(
+        selectedOrgId,
+        user.username,
+        submission
+      );
       await loadMembers(selectedOrgId);
-      setMemberSuccess("Nowy użytkownik został dodany do organizacji.");
+      setMemberSuccess(
+        response?.message ?? "Nowy użytkownik został dodany do organizacji."
+      );
       setLastCreatedCredentials({
-        username: payload.username,
-        password: payload.password,
+        username: response?.member?.username ?? submission.username,
+        email: response?.member?.email ?? submission.email,
+        password: response?.password ?? null,
+        passwordRetained: response?.password_retained ?? false,
       });
       setMemberForm((prev) => ({
         ...emptyMemberForm,
@@ -189,7 +217,9 @@ function OrganizationsPage() {
       }));
     } catch (error) {
       setMemberError(
-        error.response?.data?.detail ?? "Nie udało się dodać członka."
+        error.response?.data?.error ??
+          error.response?.data?.detail ??
+          "Nie udało się dodać członka."
       );
     } finally {
       setMemberSubmitting(false);
@@ -197,28 +227,32 @@ function OrganizationsPage() {
   };
 
   const handleRoleChange = async (memberId, newRole) => {
-    if (!selectedOrgId) return;
+    if (!selectedOrgId || !user?.username) return;
     try {
-      await updateOrganizationMember(selectedOrgId, memberId, {
+      await updateOrganizationMember(selectedOrgId, memberId, user.username, {
         role: newRole,
       });
       await loadMembers(selectedOrgId);
     } catch (error) {
       setMemberError(
-        error.response?.data?.detail ?? "Nie udało się zaktualizować roli."
+        error.response?.data?.error ??
+          error.response?.data?.detail ??
+          "Nie udało się zaktualizować roli."
       );
     }
   };
 
   const handleRemoveMember = async (memberId) => {
-    if (!selectedOrgId) return;
+    if (!selectedOrgId || !user?.username) return;
     if (!window.confirm("Czy na pewno chcesz usunąć tego członka?")) return;
     try {
-      await removeOrganizationMember(selectedOrgId, memberId);
+      await removeOrganizationMember(selectedOrgId, memberId, user.username);
       await loadMembers(selectedOrgId);
     } catch (error) {
       setMemberError(
-        error.response?.data?.detail ?? "Nie udało się usunąć członka."
+        error.response?.data?.error ??
+          error.response?.data?.detail ??
+          "Nie udało się usunąć członka."
       );
     }
   };
@@ -273,7 +307,7 @@ function OrganizationsPage() {
               selectedOrganization.role}
           </span>
           <span className="text-slate-300 text-sm">
-            {selectedOrganization.member_count} członków
+            {members.length} członków
           </span>
           <span className="text-slate-300 text-sm">
             Administrator: {user?.first_name || user?.username}
@@ -306,15 +340,35 @@ function OrganizationsPage() {
             Zapisz te dane i przekaż użytkownikowi. Hasło nie będzie widoczne
             ponownie.
           </p>
-          <div className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-2 items-center">
+          <div className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-3 items-center">
             <span className="text-slate-300">Login:</span>
-            <code className="bg-slate-900 text-slate-100 rounded px-2 py-1">
-              {lastCreatedCredentials.username}
-            </code>
-            <span className="text-slate-300">Hasło:</span>
-            <code className="bg-slate-900 text-slate-100 rounded px-2 py-1">
-              {lastCreatedCredentials.password}
-            </code>
+            <input
+              readOnly
+              value={lastCreatedCredentials.username}
+              className="rounded px-2 py-1 border border-slate-700 bg-slate-900 text-slate-100"
+            />
+            <span className="text-slate-300">Email:</span>
+            <input
+              readOnly
+              value={lastCreatedCredentials.email || ""}
+              className="rounded px-2 py-1 border border-slate-700 bg-slate-900 text-slate-100"
+            />
+            {lastCreatedCredentials.password ? (
+              <>
+                <span className="text-slate-300">Hasło:</span>
+                <input
+                  readOnly
+                  value={lastCreatedCredentials.password}
+                  className="rounded px-2 py-1 border border-slate-700 bg-slate-900 text-slate-100"
+                />
+              </>
+            ) : (
+              <span className="col-span-2 text-slate-400 text-sm">
+                {lastCreatedCredentials.passwordRetained
+                  ? "Hasło pozostało bez zmian dla istniejącego użytkownika."
+                  : "Podczas dodawania nie ustawiono nowego hasła."}
+              </span>
+            )}
           </div>
         </div>
       )}
@@ -364,7 +418,7 @@ function OrganizationsPage() {
                         <select
                           value={member.role}
                           onChange={(event) =>
-                            handleRoleChange(member.id, event.target.value)
+                            handleRoleChange(member.username, event.target.value)
                           }
                           disabled={member.user === user?.id}
                           className="rounded px-2 py-1 border border-slate-600 bg-slate-900 text-slate-100"
@@ -386,7 +440,7 @@ function OrganizationsPage() {
                         <button
                           type="button"
                           className="text-red-400 hover:underline px-2"
-                          onClick={() => handleRemoveMember(member.id)}
+                          onClick={() => handleRemoveMember(member.username)}
                         >
                           Usuń
                         </button>
@@ -434,7 +488,7 @@ function OrganizationsPage() {
             </div>
 
             <label className="flex flex-col gap-2">
-              <span className="text-slate-200 font-medium">Email</span>
+              <span className="text-slate-200 font-medium">Email nowego członka</span>
               <input
                 name="email"
                 type="email"
@@ -446,7 +500,7 @@ function OrganizationsPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <label className="flex flex-col gap-2">
-                <span className="text-slate-200 font-medium">Login</span>
+                <span className="text-slate-200 font-medium">Login nowego członka</span>
                 <input
                   name="username"
                   value={memberForm.username}

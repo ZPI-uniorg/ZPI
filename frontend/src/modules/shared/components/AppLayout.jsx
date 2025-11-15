@@ -87,7 +87,7 @@ function AppLayout() {
             ) : null}
             <button
               type="button"
-              onClick={() => navigate('/organization')}
+              onClick={() => navigate('/organizations')}
               className="p-2 rounded-lg hover:bg-slate-700/40 transition text-slate-300"
               title="Ustawienia organizacji"
             >

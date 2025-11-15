@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { FAKE_MEMBERS, PROJECTS } from "../../../api/fakeData.js";
+import { FAKE_MEMBERS, PROJECTS, KANBAN_BOARDS } from "../../../api/fakeData.js";
 import Autocomplete from "../../shared/components/Autocomplete.jsx";
 
 export default function ProjectEditPage() {
@@ -63,6 +63,9 @@ export default function ProjectEditPage() {
         members,
       };
       PROJECTS.push(newProject);
+      if (!KANBAN_BOARDS[newProject.id]) {
+        KANBAN_BOARDS[newProject.id] = { columns: [] };
+      }
     }
     
     navigate("/dashboard");
@@ -73,6 +76,9 @@ export default function ProjectEditPage() {
     const idx = PROJECTS.findIndex(p => p.id === editingProject.id);
     if (idx !== -1) {
       PROJECTS.splice(idx, 1);
+    }
+    if (KANBAN_BOARDS[editingProject.id]) {
+      delete KANBAN_BOARDS[editingProject.id];
     }
     navigate("/dashboard");
   };

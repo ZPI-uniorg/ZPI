@@ -12,18 +12,27 @@ export default function KanbanPage() {
 
   const [index, setIndex] = useState(() => {
     if (!initialProjectId) return 0;
-    const i = PROJECTS.findIndex(p => p.id === initialProjectId);
+    const i = PROJECTS.findIndex((p) => p.id === initialProjectId);
     return i >= 0 ? i : 0;
   });
 
   const [draggedItem, setDraggedItem] = useState(null);
   const [draggedFrom, setDraggedFrom] = useState(null);
 
-  const project = PROJECTS[index] || null;
+  const totalProjects = PROJECTS.length;
+  const safeIndex = totalProjects === 0 ? 0 : Math.min(index, totalProjects - 1);
+  const project = PROJECTS[safeIndex] || null;
   const board = project ? KANBAN_BOARDS[project.id] : null;
 
-  const prev = () => setIndex(i => (i - 1 + PROJECTS.length) % PROJECTS.length);
-  const next = () => setIndex(i => (i + 1) % PROJECTS.length);
+  const prev = () => {
+    if (totalProjects === 0) return;
+    setIndex((i) => (i - 1 + totalProjects) % totalProjects);
+  };
+
+  const next = () => {
+    if (totalProjects === 0) return;
+    setIndex((i) => (i + 1) % totalProjects);
+  };
 
   useEffect(() => {
     const scrollContainer = scrollRef.current;

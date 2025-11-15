@@ -30,7 +30,7 @@ function generatePassword(len = 12) {
 
 function RegisterOrganizationPage() {
   const navigate = useNavigate();
-  const { isAuthenticated, establishSession } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   const [organization, setOrganization] = useState(initialOrganization);
   const [admin, setAdmin] = useState(initialAdmin);
@@ -97,14 +97,16 @@ function RegisterOrganizationPage() {
         };
 
         const response = await registerOrganization(payload);
-        establishSession(response);
         setStatus({
           type: "success",
-          message: `Organizacja ${response.organization.name} została utworzona.`,
+          message:
+            response?.message ??
+            `Organizacja ${payload.organization.name} została utworzona.`,
         });
-        setTimeout(() => navigate("/organizations"), 600);
+        setTimeout(() => navigate("/login"), 800);
       } catch (error) {
         const detail =
+          error.response?.data?.error ??
           error.response?.data?.detail ??
           error.response?.data?.admin?.username?.[0] ??
           error.response?.data?.admin?.email?.[0] ??
@@ -117,7 +119,7 @@ function RegisterOrganizationPage() {
         setSubmitting(false);
       }
     },
-    [admin, establishSession, isSubmitDisabled, navigate, organization]
+    [admin, isSubmitDisabled, navigate, organization]
   );
 
   return (
