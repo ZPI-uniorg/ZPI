@@ -8,6 +8,15 @@ Poniższe scenariusze opisują przepływy end-to-end obejmujące główne funkcj
 - **Koordynator**: Może tworzyć, edytować i usuwać zadania dla swoich projektów, oraz zarządzać zadaniami członków przypisanych do tych projektów.
 - **Zwykły członek**: Może tworzyć, edytować i usuwać tylko swoje własne zadania w projektach, do których ma dostęp.
 
+## Pola zadania
+
+Każde zadanie posiada następujące pola:
+- **ID**: Unikalny identyfikator zadania (np. ALPHA-001, AUTO-GENERATED)
+- **Opis**: Treść/tytuł zadania z opisem co należy zrobić
+- **Data utworzenia**: Automatycznie ustawiana data dodania zadania
+- **Deadline**: Data końcowa/termin wykonania zadania
+- **Przydzielona osoba**: Użytkownik odpowiedzialny za wykonanie zadania
+
 ---
 
 ## Historia 1 – Tworzenie zadania dla siebie
@@ -17,16 +26,14 @@ Poniższe scenariusze opisują przepływy end-to-end obejmujące główne funkcj
 1. **Otwórz moduł Kanban**
    - Z głównej nawigacji wybierz **Kanban** lub **Tablica** lub wejdź w projekt i wybierz **Widok kanban**.
    - Potwierdź, że widok pokazuje kolumny: **Backlog**, **Do zrobienia**, **W trakcie**, **Zrobione** (lub podobne).
-2. **Utwórz nowe zadanie**
+3. **Utwórz nowe zadanie**
    - Kliknij przycisk **Nowe zadanie** lub **+ Dodaj** w kolumnie **Backlog**.
    - Wypełnij formularz:
-     - Tytuł: `Implementacja logowania`
-     - Opis: `Dodanie formularza logowania z walidacją`
+     - Opis: `Implementacja logowania - dodanie formularza logowania z walidacją`
      - Projekt: Wybierz dostępny projekt (np. **Alpha Launch**)
      - Przydzielone do: Zaznacz siebie jako przydzielonego użytkownika
-     - Priorytet: **Średni**
      - Deadline: `2025-01-30`
-   - Opcjonalnie dodaj tagi/etykiety.
+   - ID będzie automatycznie wygenerowane po zapisaniu.
 3. **Zapisz zadanie**
    - Kliknij **Zapisz** / **Utwórz**.
    - Zweryfikuj powiadomienie (toast) o pomyślnym utworzeniu.
@@ -51,11 +58,9 @@ Poniższe scenariusze opisują przepływy end-to-end obejmujące główne funkcj
 3. **Utwórz nowe zadanie dla członka**
    - Kliknij **Nowe zadanie**.
    - Wypełnij formularz:
-     - Tytuł: `Testy jednostkowe dla modułu auth`
-     - Opis: `Napisz testy dla funkcji logowania`
+     - Opis: `Testy jednostkowe dla modułu auth - napisz testy dla funkcji logowania`
      - Projekt: **Alpha Launch**
      - Przydzielone do: Wybierz członka zespołu (np. **John Doe**)
-     - Priorytet: **Wysoki**
      - Deadline: `2025-01-28`
 4. **Zapisz zadanie**
    - Kliknij **Zapisz**.
@@ -109,11 +114,9 @@ Poniższe scenariusze opisują przepływy end-to-end obejmujące główne funkcj
    - Kliknij na karcie zadania przydzielonego do Ciebie (np. **Implementacja logowania**).
    - Potwierdź, że otworzy się panel lub modal szczegółów.
 3. **Edytuj zadanie**
-   - Kliknij przycisk **Edytuj** lub ikonę ołówka.
+   - Kliknij **Edytuj** lub ikonę ołówka.
    - Zmień następujące pola:
-     - Tytuł: `Implementacja logowania - wersja 2`
-     - Priorytet: zmień z **Średni** na **Wysoki**
-     - Opis: dodaj więcej szczegółów
+     - Opis: `Implementacja logowania - wersja 2 z dodatkowymi szczegółami`
      - Deadline: zmień na `2025-02-05`
 4. **Zapisz zmiany**
    - Kliknij **Zapisz** / **Aktualizuj**.
@@ -142,9 +145,8 @@ Poniższe scenariusze opisują przepływy end-to-end obejmujące główne funkcj
 4. **Edytuj zadanie**
    - Kliknij **Edytuj**.
    - Zmień:
-     - Priorytet: zmień na **Krytyczny**
-     - Status: zmień na **W trakcie** (jeśli możliwe w edycji)
      - Opis: dodaj notatki/opisy dla członka
+     - Status: zmień na **W trakcie** (jeśli możliwe w edycji)
 5. **Zapisz zmiany**
    - Kliknij **Zapisz**.
    - Potwierdź aktualizację.
@@ -312,16 +314,16 @@ Poniższe scenariusze opisują przepływy end-to-end obejmujące główne funkcj
    - Przejdź do kanban projektu.
 2. **Sprawdzenie informacji na karcie zadania**
    - Każda karta powinna wyświetlać:
-     - **Tytuł zadania**
+     - **ID zadania** (identyfikator/numer)
+     - **Opis** (główna treść zadania)
      - **Przydzielony do** (avatar/inicjały użytkownika)
-     - **Priorytet** (ikona lub kolor)
+     - **Data utworzenia** (data dodania zadania)
      - **Deadline** (data, jeśli jest zbliżająca się, może być zaznaczona na czerwono)
-     - **Etykiety** (kolorowe tagi)
-     - **Liczba komentarzy** (jeśli dostępne)
 3. **Hover na kartę (opcjonalnie)**
    - Przesunięcie myszy nad kartę powinna pokazać:
-     - Pełny opis lub podgląd
-     - Więcej szczegółów
+     - Pełny opis
+     - Data utworzenia
+     - Data deadline
 4. **Kliknięcie na kartę**
    - Otwarcie pełnych szczegółów w panelu bocznym.
 5. **Zbierz dowody**
