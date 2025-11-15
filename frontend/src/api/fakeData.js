@@ -86,6 +86,69 @@ export const EVENTS = [
   },
 ];
 
+export const KANBAN_BOARDS = {
+  p1: {
+    columns: [
+      { 
+        id: 'todo', 
+        name: 'Do zrobienia', 
+        items: [
+          { id: 't1', taskId: 'ORG-1', title: 'Analiza wymagań pstrymagań dymagań mimagań gimagań srymagań sragań gejagań heteroagań również daj tu trzy kropki', assignee: { first_name: 'Jan', last_name: 'Kowalski' } },
+          { id: 't8', taskId: 'ORG-8', title: 'Przygotowanie dokumentacji', assignee: null }
+        ] 
+      },
+      { 
+        id: 'inprogress', 
+        name: 'W toku', 
+        items: [
+          { id: 't2', taskId: 'ORG-2', title: 'Implementacja modułu A', assignee: { first_name: 'Anna', last_name: 'Nowak' } }
+        ] 
+      },
+      { 
+        id: 'review', 
+        name: 'Review', 
+        items: [
+          { id: 't3', taskId: 'ORG-3', title: 'Code review modułu A', assignee: { first_name: 'Piotr', last_name: 'Zieliński' } }
+        ] 
+      },
+      { 
+        id: 'done', 
+        name: 'Gotowe', 
+        items: [
+          { id: 't4', taskId: 'ORG-4', title: 'Konfiguracja repozytorium', assignee: { first_name: 'Jan', last_name: 'Kowalski' } }
+        ] 
+      },
+    ],
+  },
+  p2: {
+    columns: [
+      { 
+        id: 'backlog', 
+        name: 'Backlog', 
+        items: [
+          { id: 't5', taskId: 'ORG-5', title: 'Plan demo', assignee: null }
+        ] 
+      },
+      { id: 'todo', name: 'Do zrobienia', items: [] },
+      { 
+        id: 'inprogress', 
+        name: 'W toku', 
+        items: [
+          { id: 't6', taskId: 'ORG-6', title: 'Przygotowanie prezentacji', assignee: { first_name: 'Anna', last_name: 'Nowak' } }
+        ] 
+      },
+      { id: 'testing', name: 'Testy', items: [] },
+      { 
+        id: 'done', 
+        name: 'Gotowe', 
+        items: [
+          { id: 't7', taskId: 'ORG-7', title: 'Utworzenie zespołu', assignee: { first_name: 'Piotr', last_name: 'Zieliński' } }
+        ] 
+      },
+    ],
+  },
+};
+
 // Pomocnicze funkcje do zarządzania tagami członków
 export function getMemberTags(memberId) {
   const member = FAKE_MEMBERS.find(m => m.id === memberId);
