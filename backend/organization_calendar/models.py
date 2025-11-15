@@ -12,3 +12,7 @@ class Event(models.Model):
         related_name="events",
         on_delete=models.CASCADE,
     )
+    permissions = models.ManyToManyField(
+        "organizations.Tag",
+        related_name="event_permissions",
+    )

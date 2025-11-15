@@ -7,14 +7,14 @@ export default function ChatPanel({ chats, query, setQuery, addChat }) {
   return (
     <section className="basis-[30%] grow h-full bg-[rgba(15,23,42,0.92)] rounded-[24px] p-5 shadow-[0_25px_50px_rgba(15,23,42,0.45)] text-slate-300 border border-[rgba(148,163,184,0.35)] flex flex-col min-h-0 overflow-hidden">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="m-0 text-slate-200 font-semibold">Chaty</h3>
+        <h3 className="m-0 text-base font-semibold text-slate-200">Chaty</h3>
         <button
-          onClick={() => navigate("/chats")}
-          className="p-1.5 rounded hover:bg-slate-700/40 text-slate-300"
+          onClick={() => navigate("/chat")}
+          className="p-1 rounded hover:bg-slate-700/40 text-slate-300"
           aria-label="Pełny ekran"
           title="Pełny ekran"
         >
-          <Maximize2 className="w-4 h-4" />
+          <Maximize2 className="w-3.5 h-3.5" />
         </button>
       </div>
       <div className="mb-4">
@@ -35,15 +35,15 @@ export default function ChatPanel({ chats, query, setQuery, addChat }) {
               key={c.id}
               className="flex items-center gap-3 p-3 rounded-xl border border-slate-600/30 hover:border-slate-400/50 hover:bg-slate-800/30 transition-colors"
             >
-              <div className="w-10 h-10 rounded-full bg-slate-700/60 flex items-center justify-center text-[11px] font-medium">
+              <div className="w-10 h-10 rounded-full bg-slate-700/60 flex items-center justify-center text-[10px] font-medium">
                 {c.title.slice(0, 2).toUpperCase()}
               </div>
               <div className="flex-1">
-                <p className="font-medium text-[15px] md:text-base">
-                  {c.title}
-                </p>
+                <p className="font-medium text-sm">{c.title}</p>
                 {c.tags?.length ? (
-                  <p className="text-xs text-slate-400">{c.tags.join(", ")}</p>
+                  <p className="text-[11px] text-slate-400">
+                    {c.tags.join(", ")}
+                  </p>
                 ) : null}
               </div>
             </div>

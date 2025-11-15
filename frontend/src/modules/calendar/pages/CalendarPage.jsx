@@ -74,8 +74,8 @@ export default function CalendarPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-4">
-      <div className="max-w-[98vw] mx-auto h-[calc(100vh-2rem)] flex flex-col">
+    <div className="h-full overflow-auto bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-4">
+      <div className="max-w-[98vw] mx-auto min-h-full flex flex-col">
         <div className="flex items-center justify-between mb-4 px-2">
           <div className="flex items-center gap-3">
             <button

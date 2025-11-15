@@ -95,22 +95,22 @@ export default function MiniCalendar({ selectedTags, logic = "AND" }) {
 			  });
 
 	return (
-		<div className="w-full">
-			<div className="flex items-center justify-between mb-2">
+		<div className="w-full h-full flex flex-col">
+			<div className="flex items-center justify-between mb-1">
 				<div className="flex items-center gap-2">
 					<button
 						onClick={handlePrev}
-						className="px-2 py-1 rounded hover:bg-slate-700/40 text-slate-300"
+						className="px-2 py-0.5 rounded hover:bg-slate-700/40 text-slate-300 text-sm"
 						aria-label="Poprzedni miesiąc"
 					>
 						&lt;
 					</button>
-					<h3 className="text-lg font-semibold text-slate-200 min-w-[180px] text-center">
+					<h3 className="text-base font-semibold text-slate-200 min-w-[160px] text-center">
 						{MONTHS[month]} {year}
 					</h3>
 					<button
 						onClick={handleNext}
-						className="px-2 py-1 rounded hover:bg-slate-700/40 text-slate-300"
+						className="px-2 py-0.5 rounded hover:bg-slate-700/40 text-slate-300 text-sm"
 						aria-label="Następny miesiąc"
 					>
 						&gt;
@@ -118,29 +118,29 @@ export default function MiniCalendar({ selectedTags, logic = "AND" }) {
 				</div>
 				<button
 					onClick={() => navigate("/calendar")}
-					className="p-1.5 rounded hover:bg-slate-700/40 text-slate-300"
+					className="p-1 rounded hover:bg-slate-700/40 text-slate-300"
 					aria-label="Pełny ekran"
 					title="Pełny ekran"
 				>
-					<Maximize2 className="w-4 h-4" />
+					<Maximize2 className="w-3.5 h-3.5" />
 				</button>
 			</div>
-			<div className="flex flex-col gap-2">
-				<div className="grid grid-cols-7 mb-1 text-xs text-slate-400 font-semibold">
+			<div className="flex flex-col gap-1 flex-1 min-h-0">
+				<div className="grid grid-cols-7 text-[10px] text-slate-400 font-semibold mb-1">
 					{WEEKDAYS.map((d) => (
 						<div key={d} className="text-center">
 							{d}
 						</div>
 					))}
 				</div>
-				<div className="grid grid-cols-7 gap-1">
+				<div className="grid grid-cols-7 grid-rows-6 gap-0.5 flex-1">
 					{matrix.flat().map((day, idx) => {
 						const events = day ? getEventsForDay(filteredEvents, year, month, day, selectedTags) : [];
 						const isTodayDay = isToday(day);
 						return (
 							<div
 								key={idx}
-								className={`min-h-[56px] rounded-lg px-1 py-1 flex flex-col items-start transition-colors ${
+								className={`rounded-lg px-0.5 py-0.5 flex flex-col items-start transition-colors overflow-hidden relative ${
 									isTodayDay
 										? "bg-indigo-600/30 border border-indigo-500/50 text-slate-100 hover:bg-indigo-600/40 cursor-pointer"
 										: day
@@ -148,26 +148,24 @@ export default function MiniCalendar({ selectedTags, logic = "AND" }) {
 										: "bg-slate-800/40 text-slate-500/40"
 								}`}
 							>
-								<span className={`text-xs font-bold ${isTodayDay ? "text-indigo-300" : ""}`}>
+								<span className={`text-[10px] font-bold leading-tight ${isTodayDay ? "text-indigo-300" : ""}`}>
 									{day || ""}
 								</span>
-								<div className="flex flex-col gap-0.5 w-full">
-									{events.map((ev) => (
+								<div className="absolute top-[14px] left-0.5 right-0.5 bottom-0.5 flex flex-col gap-0.5 overflow-hidden">
+									{events.slice(0, 2).map((ev) => (
 										<div
 											key={ev.id}
-											className="w-full truncate text-xs bg-violet-600/80 text-white px-1 rounded mb-0.5"
+											className="w-full truncate text-[9px] bg-violet-600/80 text-white px-0.5 rounded leading-tight h-[12px] flex-shrink-0"
 											title={ev.title}
 										>
 											{ev.title}
-											<span className="ml-1 text-[10px]">
-												{ev.tags.map((tag) => (
-													<span key={tag} className="ml-1 bg-fuchsia-700/70 px-1 rounded text-white">
-														{tag}
-													</span>
-												))}
-											</span>
 										</div>
 									))}
+									{events.length > 2 && (
+										<div className="text-[8px] text-slate-400 px-0.5 h-[10px] flex-shrink-0">
+											+{events.length - 2}
+										</div>
+									)}
 								</div>
 							</div>
 						);

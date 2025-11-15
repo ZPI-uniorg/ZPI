@@ -36,8 +36,8 @@ export default function ChatPage() {
   const status =
     loadingChats || loadingMessages ? "loading" : error ? "error" : "online";
   return (
-    <div className="min-h-screen bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-4 md:p-6">
-      <div className="max-w-[1400px] mx-auto h-[calc(100vh-2rem)] md:h-[calc(100vh-3rem)] flex flex-col gap-4">
+    <div className="h-full overflow-auto bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-4 md:p-6">
+      <div className="max-w-[1400px] mx-auto min-h-full flex flex-col gap-4">
         <header className="flex items-center justify-between px-2">
           <h1 className="text-2xl font-semibold text-slate-100">
             {activeChat?.title || "Chat"}
