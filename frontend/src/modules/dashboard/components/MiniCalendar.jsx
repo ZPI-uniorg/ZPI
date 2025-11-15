@@ -94,6 +94,17 @@ export default function MiniCalendar({ selectedTags, logic = "AND" }) {
 					}
 			  });
 
+	const handleDayClick = (day) => {
+		if (!day) return;
+		const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+		navigate("/calendar/event/new", { state: { date: dateStr } });
+	};
+
+	const handleEventClick = (e, event) => {
+		e.stopPropagation();
+		navigate("/calendar/event/edit", { state: { event } });
+	};
+
 	return (
 		<div className="w-full h-full flex flex-col">
 			<div className="flex items-center justify-between mb-1">
@@ -147,6 +158,7 @@ export default function MiniCalendar({ selectedTags, logic = "AND" }) {
 										? "bg-slate-800/40 text-slate-100 hover:bg-slate-700/50 cursor-pointer"
 										: "bg-slate-800/40 text-slate-500/40"
 								}`}
+								onClick={() => handleDayClick(day)}
 							>
 								<span className={`text-[10px] font-bold leading-tight ${isTodayDay ? "text-indigo-300" : ""}`}>
 									{day || ""}
@@ -155,8 +167,9 @@ export default function MiniCalendar({ selectedTags, logic = "AND" }) {
 									{events.slice(0, 2).map((ev) => (
 										<div
 											key={ev.id}
-											className="w-full truncate text-[9px] bg-violet-600/80 text-white px-0.5 rounded leading-tight h-[12px] flex-shrink-0"
+											className="w-full truncate text-[9px] bg-violet-600/80 text-white px-0.5 rounded leading-tight h-[12px] flex-shrink-0 hover:bg-violet-500 transition"
 											title={ev.title}
+											onClick={(e) => handleEventClick(e, ev)}
 										>
 											{ev.title}
 										</div>

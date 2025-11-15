@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
 const WEEKDAYS = ["Pon", "Wt", "Śr", "Czw", "Pt", "Sob", "Ndz"];
 
@@ -30,6 +31,7 @@ function getEventsForDay(events, year, month, day) {
 }
 
 export default function CalendarMonthView({ year, month, events }) {
+  const navigate = useNavigate();
   const today = new Date();
   const matrix = getMonthMatrix(year, month);
 
@@ -40,6 +42,17 @@ export default function CalendarMonthView({ year, month, events }) {
       month === today.getMonth() &&
       year === today.getFullYear()
     );
+  };
+
+  const handleDayClick = (day) => {
+    if (!day) return;
+    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    navigate("/calendar/event/new", { state: { date: dateStr } });
+  };
+
+  const handleEventClick = (e, event) => {
+    e.stopPropagation();
+    navigate("/calendar/event/edit", { state: { event } });
   };
 
   return (
@@ -66,6 +79,7 @@ export default function CalendarMonthView({ year, month, events }) {
                       ? "bg-indigo-900/20"
                       : ""
                   } ${day ? "hover:bg-slate-800/70 cursor-pointer" : ""}`}
+                  onClick={() => handleDayClick(day)}
                 >
                   <div className={`text-xs font-semibold mb-1 ${
                     isTodayDay 
@@ -82,6 +96,7 @@ export default function CalendarMonthView({ year, month, events }) {
                         key={ev.id}
                         className="group text-[11px] bg-violet-600/90 text-white px-1.5 py-1 rounded cursor-pointer hover:bg-violet-500 transition"
                         title={ev.title}
+                        onClick={(e) => handleEventClick(e, ev)}
                       >
                         <div className="font-medium truncate">{ev.title}</div>
                         <div className="flex flex-wrap gap-0.5 mt-0.5">

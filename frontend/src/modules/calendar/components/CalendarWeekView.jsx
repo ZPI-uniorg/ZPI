@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
 const WEEKDAYS_FULL = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"];
 const MONTHS = [
@@ -31,7 +32,18 @@ function calculateEventHeight(event) {
 }
 
 export default function CalendarWeekView({ weekDays, events }) {
+  const navigate = useNavigate();
   const today = new Date();
+
+  const handleHourClick = (dateStr, hour) => {
+    const timeStr = `${String(hour).padStart(2, "0")}:00`;
+    navigate("/calendar/event/new", { state: { date: dateStr, time: timeStr } });
+  };
+
+  const handleEventClick = (e, event) => {
+    e.stopPropagation();
+    navigate("/calendar/event/edit", { state: { event } });
+  };
 
   return (
     <div className="flex-1 bg-slate-900/95 rounded-2xl shadow-[0_30px_60px_rgba(15,23,42,0.45)] border border-slate-700 p-4 overflow-hidden flex flex-col">
@@ -75,6 +87,7 @@ export default function CalendarWeekView({ weekDays, events }) {
                     className={`bg-slate-900/95 relative transition-colors hover:bg-slate-800/70 cursor-pointer ${
                       isToday ? "bg-indigo-900/10" : ""
                     }`}
+                    onClick={() => handleHourClick(dateStr, actualHour)}
                   >
                     {dayEvents.map((ev) => {
                       const position = calculateEventHeight(ev);
@@ -84,6 +97,7 @@ export default function CalendarWeekView({ weekDays, events }) {
                           className="absolute left-1 right-1 text-[10px] bg-violet-600/90 text-white px-2 py-1 rounded cursor-pointer hover:bg-violet-500 transition overflow-hidden z-10"
                           style={{ top: position.top, height: position.height, minHeight: '20px' }}
                           title={`${ev.title} - ${ev.start_time} - ${ev.end_time}`}
+                          onClick={(e) => handleEventClick(e, ev)}
                         >
                           <div className="font-semibold truncate">{ev.start_time} {ev.title}</div>
                           <div className="flex flex-wrap gap-0.5 mt-0.5">

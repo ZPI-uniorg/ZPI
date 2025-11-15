@@ -17,6 +17,7 @@ import AppLayout from './modules/shared/components/AppLayout.jsx'
 import ProfilePage from './modules/account/pages/ProfilePage.jsx'
 import KanbanPage from './modules/kanban/pages/KanbanPage.jsx'
 import TaskEditPage from './modules/kanban/pages/TaskEditPage.jsx'
+import EventEditPage from './modules/calendar/pages/EventEditPage.jsx'
 
 function App() {
   return (
@@ -42,6 +43,8 @@ function App() {
                 <Route path="/kanban" element={<KanbanPage/>} />
                 <Route path="/kanban/task/new" element={<TaskEditPage/>} />
                 <Route path="/kanban/task/edit" element={<TaskEditPage/>} />
+                <Route path="/calendar/event/new" element={<EventEditPage />} />
+                <Route path="/calendar/event/edit" element={<EventEditPage />} />
                 <Route path="profile" element={<ProfilePage />} />
               </Route>
             </Route>
