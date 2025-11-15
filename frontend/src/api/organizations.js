@@ -1,35 +1,69 @@
 import apiClient from './client'
 
-export async function listOrganizations() {
-  const response = await apiClient.get('organizations/')
-  return response.data
-}
-
-export async function createOrganization(payload) {
-  const response = await apiClient.post('organizations/', payload)
-  return response.data
+function toFormData(payload) {
+  const params = new URLSearchParams()
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      params.append(key, String(value))
+    }
+  })
+  return params
 }
 
 export async function registerOrganization(payload) {
-  const response = await apiClient.post('organizations/register/', payload)
+  const params = toFormData({
+    name: payload.organization?.name ?? '',
+    description: payload.organization?.description ?? '',
+    username: payload.admin?.username ?? '',
+    email: payload.admin?.email ?? '',
+    password: payload.admin?.password ?? '',
+    password_confirm: payload.admin?.confirmPassword ?? payload.admin?.password ?? '',
+    first_name: payload.admin?.first_name ?? '',
+    last_name: payload.admin?.last_name ?? '',
+  })
+  const response = await apiClient.post('register-organization/', params)
   return response.data
 }
 
-export async function getOrganizationMembers(organizationId) {
-  const response = await apiClient.get(`organizations/${organizationId}/members/`)
+export async function listOrganizations(username) {
+  if (!username) {
+    throw new Error('Username is required to fetch organizations')
+  }
+  const response = await apiClient.get(`organization/${encodeURIComponent(username)}/`)
   return response.data
 }
 
-export async function addOrganizationMember(organizationId, payload) {
-  const response = await apiClient.post(`organizations/${organizationId}/members/`, payload)
+export async function getOrganizationMembers(organizationId, actorUsername) {
+  const response = await apiClient.get(`members/${organizationId}/`, {
+    params: { username: actorUsername },
+  })
   return response.data
 }
 
-export async function updateOrganizationMember(organizationId, memberId, payload) {
-  const response = await apiClient.patch(`organizations/${organizationId}/members/${memberId}/`, payload)
+export async function addOrganizationMember(organizationId, adminUsername, payload) {
+  const params = toFormData({
+    username: adminUsername,
+    invitee_username: payload.username,
+    invitee_email: payload.email,
+    first_name: payload.first_name,
+    last_name: payload.last_name,
+    role: payload.role,
+    password: payload.password,
+  })
+  const response = await apiClient.post(`invite-member/${organizationId}/`, params)
   return response.data
 }
 
-export async function removeOrganizationMember(organizationId, memberId) {
-  await apiClient.delete(`organizations/${organizationId}/members/${memberId}/`)
+export async function updateOrganizationMember(organizationId, memberUsername, adminUsername, payload) {
+  const response = await apiClient.put(`members/change-role/${organizationId}/${encodeURIComponent(memberUsername)}/`, {
+    admin_username: adminUsername,
+    new_role: payload.role,
+  })
+  return response.data
+}
+
+export async function removeOrganizationMember(organizationId, memberUsername, adminUsername) {
+  await apiClient.delete(`members/delete/${organizationId}/${encodeURIComponent(memberUsername)}/`, {
+    data: { admin_username: adminUsername },
+  })
 }

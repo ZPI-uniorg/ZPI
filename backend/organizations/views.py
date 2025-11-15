@@ -1,5 +1,6 @@
 from datetime import datetime
 import json
+import secrets
 
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
@@ -670,33 +671,106 @@ def edit_organization(request, organization_id):
 @csrf_exempt
 def invite_member(request, organization_id):
     try:
-        username = request.POST.get('username')
-        membership = Membership.objects.get(organization__id=organization_id, user__username=username)
+        if request.content_type == "application/json":
+            data = json.loads(request.body or "{}")
+        else:
+            data = request.POST
 
-        if membership.role != 'admin':
+        username = data.get("username")
+        if not username:
+            return JsonResponse({"error": "Missing field: username"}, status=400)
+
+        membership = Membership.objects.get(
+            organization__id=organization_id,
+            user__username=username,
+        )
+
+        if membership.role != "admin":
             return JsonResponse({"error": "Permission denied"}, status=403)
 
-        invitee_username = request.POST.get('invitee_username')
-        invitee_email = request.POST.get('invitee_email')
-        role = request.POST.get('role', 'member')
+        invitee_username = data.get("invitee_username")
+        invitee_email = data.get("invitee_email", "")
+        first_name = data.get("first_name", "")
+        last_name = data.get("last_name", "")
+        role = data.get("role", "member")
+        raw_password = data.get("password")
+
+        if not invitee_username:
+            return JsonResponse({"error": "Missing field: invitee_username"}, status=400)
+
         invited_by = User.objects.get(username=username)
         organization = Organization.objects.get(id=organization_id)
-        password = "NoweHasloKiedysToZmienie"
 
-        invitee = User.objects.create_user(
-            username=invitee_username,
-            email=invitee_email,
-            password=password
-        )
+        generated_password = raw_password or secrets.token_urlsafe(12)
+        user_created = False
+
+        invitee = User.objects.filter(username=invitee_username).first()
+
+        if invitee is None:
+            invitee = User.objects.create_user(
+                username=invitee_username,
+                email=invitee_email,
+                password=generated_password,
+                first_name=first_name,
+                last_name=last_name,
+            )
+            user_created = True
+        else:
+            if Membership.objects.filter(
+                organization=organization,
+                user=invitee,
+            ).exists():
+                return JsonResponse({"error": "User is already a member of this organization"}, status=400)
+
+            # Update existing user details if provided
+            updated = False
+            if invitee_email and invitee.email != invitee_email:
+                invitee.email = invitee_email
+                updated = True
+            if first_name and invitee.first_name != first_name:
+                invitee.first_name = first_name
+                updated = True
+            if last_name and invitee.last_name != last_name:
+                invitee.last_name = last_name
+                updated = True
+            if raw_password:
+                invitee.set_password(raw_password)
+                updated = True
+                generated_password = raw_password
+            else:
+                generated_password = None
+
+            if updated:
+                invitee.save()
 
         membership = Membership.objects.create(
             organization=organization,
             user=invitee,
             role=role,
-            invited_by=invited_by
+            invited_by=invited_by,
         )
 
-        return JsonResponse({"message": "Member invited successfully", "password": password}, status=201)
+        response_payload = {
+            "message": "Member invited successfully",
+            "member": {
+                "user_id": invitee.id,
+                "username": invitee.username,
+                "first_name": invitee.first_name,
+                "last_name": invitee.last_name,
+                "email": invitee.email,
+                "role": membership.role,
+            },
+        }
+
+        if generated_password:
+            response_payload["password"] = generated_password
+
+        response_payload["user_created"] = user_created
+
+        if not generated_password and not raw_password and not user_created:
+            response_payload["password_retained"] = True
+
+        return JsonResponse(response_payload, status=201)
     except Membership.DoesNotExist:
         return JsonResponse({"error": "Membership not found"}, status=404)
     except Organization.DoesNotExist:
@@ -1105,8 +1179,15 @@ def update_project(request, organization_id, project_id):
 @csrf_exempt
 def get_projects(request, organization_id):
     try:
-        user_id = request.POST.get('user_id')
-        membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
+        username = request.GET.get('username') or request.POST.get('username')
+
+        if not username:
+            return JsonResponse({"error": "Missing field: username"}, status=400)
+
+        membership = Membership.objects.get(
+            organization__id=organization_id,
+            user__username=username,
+        )
 
         if membership.role != 'admin':
             return JsonResponse({"error": "Permission denied"}, status=403)
@@ -1126,6 +1207,8 @@ def get_projects(request, organization_id):
             for project in projects
         ]
         return JsonResponse(project_list, safe=False, status=200)
+    except Membership.DoesNotExist:
+        return JsonResponse({"error": "Membership not found"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
