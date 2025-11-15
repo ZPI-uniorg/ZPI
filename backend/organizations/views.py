@@ -818,10 +818,10 @@ def edit_permissions(request, organization_id, username):
                     return JsonResponse({"error": "Permission denied for some tags"}, status=403)
 
         for tag in tags_names:
-
-            tag_id = Tag.objects.filter(name=tag, organization__id=organization_id).first().id
-            if CombinedTag.objects.filter(combined_tag_id=tag_id).exists():
-                return JsonResponse({"error": "Cannot assign combined tag to user"}, status=403)
+            if not Tag.objects.filter(name=tag, organization__id=organization_id).exists():
+                return JsonResponse({"error": f"Tag '{tag}' does not exist"}, status=404)
+            if Tag.objects.filter(name=tag, organization__id=organization_id).first().combined:
+                return JsonResponse({"error": f"Tag '{tag}' is a combined tag and cannot be assigned directly"}, status=400)
 
         member_membership = Membership.objects.get(organization__id=organization_id, user__username=username)
         member_membership.permissions.set(Tag.objects.filter(name__in=tags_names, organization__id=organization_id))
@@ -901,6 +901,9 @@ def create_tag(request, organization_id):
             return JsonResponse({"error": "Permission denied"}, status=403)
 
         name = request.POST.get('name')
+
+        if '+' in name:
+            return JsonResponse({"error": "Combined tags cannot be created directly"}, status=400)
 
         if not name:
             return JsonResponse({"error": "Missing name field"}, status=400)
