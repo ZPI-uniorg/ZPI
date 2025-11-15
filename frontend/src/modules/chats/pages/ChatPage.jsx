@@ -11,14 +11,16 @@ export default function ChatPage() {
   const navigate = useNavigate();
   const currentUser = user?.username || "Me";
   const {
-    channel,
-    channels,
+    chats,
+    activeChatId,
+    setActiveChat,
     messages,
-    onlineUsers,
     sendMessage,
-    switchChannel,
-    status,
-  } = useChat(undefined, currentUser);
+    loadingChats,
+    loadingMessages,
+    sending,
+    error,
+  } = useChat();
   const [draft, setDraft] = useState("");
 
   const handleSubmit = (e) => {
@@ -29,15 +31,20 @@ export default function ChatPage() {
     }
   };
 
-  const disabled = status === "connecting";
+  const disabled = loadingMessages || sending;
+  const activeChat = chats.find((c) => c.id === activeChatId);
+  const status =
+    loadingChats || loadingMessages ? "loading" : error ? "error" : "online";
   return (
     <div className="min-h-screen bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-4 md:p-6">
       <div className="max-w-[1400px] mx-auto h-[calc(100vh-2rem)] md:h-[calc(100vh-3rem)] flex flex-col gap-4">
         <header className="flex items-center justify-between px-2">
-          <h1 className="text-2xl font-semibold text-slate-100">{channel}</h1>
+          <h1 className="text-2xl font-semibold text-slate-100">
+            {activeChat?.title || "Chat"}
+          </h1>
           <div className="flex items-center gap-3">
             <span className="px-3 py-1 rounded-full text-xs font-medium bg-slate-700 text-slate-200">
-              Online: {onlineUsers.length}
+              Czaty: {chats.length}
             </span>
             <span
               className={
@@ -63,13 +70,12 @@ export default function ChatPage() {
         </header>
         <div className="flex-1 bg-slate-900/95 rounded-2xl shadow-[0_30px_60px_rgba(15,23,42,0.45)] border border-slate-700 p-4 overflow-hidden flex">
           <ChannelSidebar
-            channels={channels}
-            active={channel}
-            onSelect={switchChannel}
-            users={onlineUsers}
+            chats={chats}
+            activeChatId={activeChatId}
+            onSelect={setActiveChat}
           />
           <section className="flex-1 flex flex-col">
-            <MessageList messages={messages} />
+            <MessageList messages={messages} currentUser={currentUser} />
             <form
               onSubmit={handleSubmit}
               className="border-t border-slate-700 pt-4 flex flex-col gap-3 mx-3 "
@@ -121,9 +127,8 @@ export default function ChatPage() {
                 >
                   {status}
                 </span>
-                {status !== "online" && (
-                  <span>Próba połączenia z serwerem…</span>
-                )}
+                {status === "loading" && <span>Pobieranie danych…</span>}
+                {error && <span className="text-red-400">{error}</span>}
               </p>
             </form>
           </section>

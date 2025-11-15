@@ -1,4 +1,4 @@
-export default function ChannelSidebar({ channels, active, onSelect, users }) {
+export default function ChannelSidebar({ chats, activeChatId, onSelect }) {
   return (
     <aside className="hidden md:flex w-64 flex-col gap-6 pr-4 border-r border-slate-700/60">
       <div>
@@ -6,35 +6,19 @@ export default function ChannelSidebar({ channels, active, onSelect, users }) {
           Chaty
         </p>
         <ul className="flex flex-col gap-1">
-          {channels.map((c) => (
-            <li key={c}>
+          {chats.map((chat) => (
+            <li key={chat.id}>
               <button
-                onClick={() => onSelect(c)}
+                onClick={() => onSelect(chat.id)}
                 className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition cursor-pointer ${
-                  c === active
-                    ? "bg-slate-700/60 text-slate-100 shadow-md"
+                  chat.id === activeChatId
+                    ? "bg-slate-700/60 text-slate-100 shadow-md border border-indigo-500/40"
                     : "text-slate-300 hover:bg-slate-700/40 hover:text-slate-100"
                 }`}
-                aria-current={c === active ? "page" : undefined}
+                aria-current={chat.id === activeChatId ? "page" : undefined}
               >
-                {c}
+                {chat.title || chat.name || `Chat ${chat.id}`}
               </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div>
-        <p className="text-xs uppercase tracking-wide text-slate-400 mb-2">
-          Użytkownicy
-        </p>
-        <ul className="flex flex-col gap-1">
-          {users.map((u) => (
-            <li
-              key={u}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-700/40 transition"
-            >
-              <span className="h-2 w-2 rounded-full bg-green-500" />
-              <span className="text-sm">{u}</span>
             </li>
           ))}
         </ul>

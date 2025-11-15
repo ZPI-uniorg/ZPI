@@ -1,174 +1,227 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { CHATS } from "../../api/fakeData.js";
+import { useState, useEffect, useRef } from "react";
+import apiClient from "../../api/client";
 
-// Channels sourced from shared test data
-const DEFAULT_CHANNELS =
-  Array.isArray(CHATS) && CHATS.length
-    ? CHATS.map((c) => c.title)
-    : ["general"];
-
-function loadStored(channel) {
-  try {
-    const raw = sessionStorage.getItem("chat:" + channel);
-    if (!raw) return [];
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
-}
-
-function store(channel, messages) {
-  try {
-    sessionStorage.setItem(
-      "chat:" + channel,
-      JSON.stringify(messages.slice(-200))
-    );
-  } catch {}
-}
-
-// Attempt WebSocket endpoint (adjust if backend provides a different URL).
-const WS_URL =
-  typeof window !== "undefined"
-    ? `${window.location.protocol === "https:" ? "wss" : "ws"}://${
-        window.location.host
-      }/ws/chat`
-    : "";
-
-export function useChat(
-  initialChannel = DEFAULT_CHANNELS[0],
-  currentUser = "Me"
-) {
-  const [channel, setChannel] = useState(initialChannel);
-  const [messages, setMessages] = useState(() => loadStored(initialChannel));
-  const [onlineUsers, setOnlineUsers] = useState([
-    "Anna",
-    "Bartek",
-    "Kasia",
-    "Piotr",
-  ]);
-  const [status, setStatus] = useState("connecting");
+// Backend-integrated chat hook: fetch chats, select a chat, list + send messages.
+export function useChat() {
+  const [chats, setChats] = useState([]);
+  const [activeChatId, setActiveChatId] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [loadingChats, setLoadingChats] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState(null);
   const wsRef = useRef(null);
+  const [wsConnected, setWsConnected] = useState(false);
 
-  // Load messages when channel changes.
+  // Fetch chats on mount.
   useEffect(() => {
-    setMessages(loadStored(channel));
-  }, [channel]);
-
-  // Initialize WebSocket (best-effort). If it doesn't connect quickly, fall back to local-only mode.
-  useEffect(() => {
-    let active = true;
-    try {
-      const ws = new WebSocket(
-        WS_URL + "?channel=" + encodeURIComponent(channel)
-      );
-      wsRef.current = ws;
-      const fallback = setTimeout(() => {
-        if (!active) return;
-        if (ws.readyState !== WebSocket.OPEN) {
-          // Local mode (no real backend); mark as online so UI is usable.
-          setStatus("online");
+    let ignore = false;
+    async function fetchChats() {
+      setLoadingChats(true);
+      setError(null);
+      try {
+        const res = await apiClient.get("/chats/");
+        if (!ignore) {
+          setChats(res.data);
+          if (!activeChatId && res.data.length > 0)
+            setActiveChatId(res.data[0].id);
+          // Auto-create a default chat if none exist so user can start sending messages.
+          if (!activeChatId && res.data.length === 0) {
+            try {
+              const createRes = await apiClient.post("/chats/", {
+                title: "General",
+                participant_ids: [],
+              });
+              const created = createRes.data;
+              setChats([created]);
+              setActiveChatId(created.id);
+            } catch (createErr) {
+              // Surface creation error but do not block UI.
+              setError(
+                (prev) =>
+                  prev || createErr.message || "Failed to create default chat"
+              );
+            }
+          }
         }
-      }, 1000);
-      ws.onopen = () => {
-        if (!active) return;
-        clearTimeout(fallback);
-        setStatus("online");
-      };
-      ws.onerror = () => {
-        if (!active) return;
-        clearTimeout(fallback);
-        // Treat error as local mode instead of permanent error.
-        setStatus("online");
-      };
-      ws.onclose = () => {
-        if (!active) return;
-        clearTimeout(fallback);
-        // Keep previously loaded messages; remain in local mode.
-        if (status === "connecting") setStatus("online");
-      };
+      } catch (e) {
+        if (!ignore) setError(e.message || "Failed to load chats");
+      } finally {
+        if (!ignore) setLoadingChats(false);
+      }
+    }
+    fetchChats();
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  // Fetch messages when active chat changes.
+  useEffect(() => {
+    if (!activeChatId) return;
+    let ignore = false;
+    async function fetchChatDetail() {
+      setLoadingMessages(true);
+      setError(null);
+      try {
+        // Append auto_join=1 during dev so user is added as participant automatically.
+        const res = await apiClient.get(`/chats/${activeChatId}/?auto_join=1`);
+        if (!ignore) {
+          setMessages(res.data.messages || []);
+          setChats((prev) =>
+            prev.map((c) => (c.id === res.data.id ? { ...c, ...res.data } : c))
+          );
+        }
+      } catch (e) {
+        if (!ignore) setError(e.message || "Failed to load messages");
+      } finally {
+        if (!ignore) setLoadingMessages(false);
+      }
+    }
+    fetchChatDetail();
+    return () => {
+      ignore = true;
+    };
+  }, [activeChatId]);
+
+  // Lightweight realtime: poll active chat messages every 1s while tab visible.
+  useEffect(() => {
+    if (!activeChatId) return;
+    let stopped = false;
+    let intervalId = null;
+
+    const poll = async () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const res = await apiClient.get(`/chats/${activeChatId}/?auto_join=1`);
+        const next = res.data.messages || [];
+        // Update only when changed to avoid re-renders.
+        setMessages((prev) => {
+          const prevLast = prev.length ? prev[prev.length - 1].id : null;
+          const nextLast = next.length ? next[next.length - 1].id : null;
+          if (prev.length !== next.length || prevLast !== nextLast) {
+            return next;
+          }
+          return prev;
+        });
+        setChats((prev) =>
+          prev.map((c) => (c.id === res.data.id ? { ...c, ...res.data } : c))
+        );
+      } catch (_) {
+        // Ignore polling errors
+      }
+    };
+
+    // Poll only if WS is not connected
+    if (!wsConnected) {
+      intervalId = setInterval(poll, 1000);
+    }
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        poll();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      stopped = true;
+      if (intervalId) clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [activeChatId, wsConnected]);
+
+  // WebSocket connection for active chat
+  useEffect(() => {
+    if (!activeChatId) return;
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const url = `${protocol}://${window.location.host}/ws/chats/${activeChatId}/`;
+    try {
+      const ws = new WebSocket(url);
+      wsRef.current = ws;
+      ws.onopen = () => setWsConnected(true);
+      ws.onclose = () => setWsConnected(false);
+      ws.onerror = () => setWsConnected(false);
       ws.onmessage = (ev) => {
         try {
           const data = JSON.parse(ev.data);
-          if (data.type === "chat.message") {
+          if (data.type === "chat.message" && data.payload) {
             setMessages((prev) => {
-              const next = [...prev, data.payload];
-              store(channel, next);
-              return next;
+              // Avoid duplicate append if same id already present
+              if (prev.some((m) => m.id === data.payload.id)) return prev;
+              return [...prev, data.payload];
             });
-          } else if (data.type === "chat.presence") {
-            if (Array.isArray(data.payload?.users))
-              setOnlineUsers(data.payload.users);
           }
         } catch {}
       };
       return () => {
-        active = false;
-        clearTimeout(fallback);
         ws.close();
       };
-    } catch {
-      // WebSocket construction failed outright; go straight to local mode.
-      setStatus("online");
-      return () => {};
+    } catch (e) {
+      setWsConnected(false);
     }
-  }, [channel]);
+  }, [activeChatId]);
 
-  // Fallback simulated presence ping.
-  useEffect(() => {
-    if (status === "online") return; // local or remote online - no spoofed presence needed
-    const id = setInterval(() => {
-      setOnlineUsers((u) => u);
-    }, 15000);
-    return () => clearInterval(id);
-  }, [status]);
+  const setActiveChat = (id) => {
+    if (id === activeChatId) return;
+    setActiveChatId(id);
+  };
 
-  const sendMessage = useCallback(
-    (text) => {
-      if (!text.trim()) return;
-      const msg = {
-        id: Date.now(),
-        author: currentUser,
-        mine: true,
-        time: new Date().toLocaleTimeString("pl-PL", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        text: text.trim(),
-      };
-      // Optimistic append.
-      setMessages((prev) => {
-        const next = [...prev, msg];
-        store(channel, next);
-        return next;
+  const sendMessage = async (content) => {
+    if (!activeChatId || !content.trim()) return;
+    setSending(true);
+    setError(null);
+    const optimistic = {
+      id: `temp-${Date.now()}`,
+      sender: { id: "me", username: "You" },
+      content,
+      created_at: new Date().toISOString(),
+      optimistic: true,
+    };
+    setMessages((prev) => [...prev, optimistic]);
+    try {
+      const res = await apiClient.post(`/chats/${activeChatId}/messages/`, {
+        content,
       });
-      // Try to send over socket.
+      const saved = res.data;
+      setMessages((prev) => prev.map((m) => (m === optimistic ? saved : m)));
+      setChats((prev) =>
+        prev.map((c) =>
+          c.id === activeChatId ? { ...c, last_message: saved } : c
+        )
+      );
+      // Re-fetch chat detail to ensure server ordering & any additional fields.
       try {
-        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-          wsRef.current.send(
-            JSON.stringify({ type: "chat.message", payload: msg })
-          );
-        }
-      } catch {}
-    },
-    [channel, currentUser]
-  );
-
-  const switchChannel = useCallback(
-    (newChannel) => {
-      if (newChannel === channel) return;
-      setChannel(newChannel);
-    },
-    [channel]
-  );
+        const detail = await apiClient.get(
+          `/chats/${activeChatId}/?auto_join=1`
+        );
+        setMessages(detail.data.messages || []);
+        setChats((prev) =>
+          prev.map((c) =>
+            c.id === activeChatId ? { ...c, ...detail.data } : c
+          )
+        );
+      } catch (detailErr) {
+        // Non-fatal if detail fetch fails; keep optimistic merge.
+      }
+    } catch (e) {
+      setMessages((prev) => prev.filter((m) => m !== optimistic));
+      setError(e.message || "Failed to send message");
+    } finally {
+      setSending(false);
+    }
+  };
 
   return {
-    channel,
+    chats,
+    activeChatId,
+    setActiveChat,
     messages,
-    onlineUsers,
-    status,
     sendMessage,
-    switchChannel,
-    channels: DEFAULT_CHANNELS,
+    loadingChats,
+    loadingMessages,
+    sending,
+    error,
   };
 }
 
