@@ -3,7 +3,7 @@ import useAuth from '../../../auth/useAuth.js'
 import { Settings, Filter } from 'lucide-react'
 import { useEffect, useState, useRef } from 'react'
 import TagList from '../../dashboard/components/TagList.jsx'
-import { TAGS, PROJECTS } from '../../../api/fakeData.js'
+import { getAllProjects, getUserProjects } from '../../../api/projects.js'
 
 const NAV_LINKS = [
   { to: '/dashboard', label: 'Pulpit organizacji' },
@@ -20,8 +20,8 @@ function AppLayout() {
 
   // globalny stan filtrów
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const [tags, setTags] = useState(TAGS)
-  const [projects, setProjects] = useState(PROJECTS)
+  const [tags, setTags] = useState([])
+  const [projects, setProjects] = useState([])
   const [selectedTags, setSelectedTags] = useState([])
   const [logic, setLogic] = useState('AND')
 
@@ -64,6 +64,57 @@ function AppLayout() {
   }
   const toggleTag = (t) =>
     setSelectedTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]))
+
+  useEffect(() => {
+    if (!organization?.id || !user?.username) {
+      setProjects([])
+      return
+    }
+
+    let ignore = false
+
+    async function loadProjects() {
+      try {
+        const fetcher = organization.role === 'admin' ? getAllProjects : getUserProjects
+        const data = await fetcher(organization.id, user.username)
+        if (!ignore) {
+          setProjects(Array.isArray(data) ? data : [])
+        }
+      } catch (error) {
+        if (!ignore) {
+          setProjects([])
+        }
+      }
+    }
+
+    loadProjects()
+
+    return () => {
+      ignore = true
+    }
+  }, [organization?.id, organization?.role, user?.username, location.key])
+
+  useEffect(() => {
+    const collectedTags = new Set()
+    projects.forEach((project) => {
+      if (Array.isArray(project?.tags)) {
+        project.tags.forEach((tag) => {
+          if (typeof tag === 'string' && tag.trim()) {
+            collectedTags.add(tag.trim())
+          } else if (tag && typeof tag.name === 'string' && tag.name.trim()) {
+            collectedTags.add(tag.name.trim())
+          }
+        })
+      }
+    })
+    const projectNames = projects
+      .map((p) => (typeof p?.name === 'string' ? p.name.trim() : ''))
+      .filter(Boolean)
+    const normalizedTags = Array.from(collectedTags)
+    setTags(normalizedTags)
+    const validFilters = new Set([...normalizedTags, ...projectNames])
+    setSelectedTags((prev) => prev.filter((tag) => validFilters.has(tag)))
+  }, [projects])
 
   const getLinkClassName = ({ isActive }) => {
     const base =
@@ -183,12 +234,12 @@ function AppLayout() {
 
         <div ref={tagListRootRef} className="flex h-[calc(100%-64px-72px)] flex-col overflow-hidden px-5 py-4">
           <TagList
-            tags={[...tags, ...projects.map((p) => p.name)]}
+            tags={[...tags, ...projects.map((p) => p.name).filter(Boolean)]}
             projects={projects}
             selectedTags={selectedTags}
             logic={logic}
             setLogic={setLogic}
-            toggleTag={setSelectedTags.length ? undefined : undefined /* ...existing code keeps props; UI ukryte przez efekt */}
+            toggleTag={toggleTag}
           />
         </div>
 

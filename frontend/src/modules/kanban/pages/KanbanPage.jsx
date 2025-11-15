@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { PROJECTS, KANBAN_BOARDS } from "../../../api/fakeData.js";
+import useAuth from "../../../auth/useAuth.js";
+import { getAllProjects, getUserProjects } from "../../../api/projects.js";
+import { KANBAN_BOARDS } from "../../../api/fakeData.js";
 import { ChevronLeft, ChevronRight, X, Plus } from "lucide-react";
 
 export default function KanbanPage() {
@@ -9,19 +11,58 @@ export default function KanbanPage() {
   const initialProjectId = location.state?.projectId;
   const scrollRef = useRef(null);
   const scrollAnimationRef = useRef(null);
+  const { user, organization } = useAuth();
 
-  const [index, setIndex] = useState(() => {
-    if (!initialProjectId) return 0;
-    const i = PROJECTS.findIndex((p) => p.id === initialProjectId);
-    return i >= 0 ? i : 0;
-  });
+  const [projects, setProjects] = useState([]);
+  const [index, setIndex] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const [draggedItem, setDraggedItem] = useState(null);
   const [draggedFrom, setDraggedFrom] = useState(null);
 
-  const totalProjects = PROJECTS.length;
+  useEffect(() => {
+    if (!organization?.id || !user?.username) {
+      setProjects([]);
+      return;
+    }
+
+    async function loadProjects() {
+      setLoading(true);
+      setError(null);
+      try {
+        const fetcher = organization.role === "admin" ? getAllProjects : getUserProjects;
+        const data = await fetcher(organization.id, user.username);
+        setProjects(data ?? []);
+      } catch (err) {
+        setError(
+          err.response?.data?.error ??
+            err.response?.data?.detail ??
+            "Nie udało się pobrać projektów."
+        );
+        setProjects([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadProjects();
+  }, [organization?.id, organization?.role, user?.username]);
+
+  useEffect(() => {
+    if (!initialProjectId) {
+      setIndex(0);
+      return;
+    }
+    const idx = projects.findIndex(
+      (p) => String(p.id) === String(initialProjectId)
+    );
+    setIndex(idx >= 0 ? idx : 0);
+  }, [initialProjectId, projects]);
+
+  const totalProjects = projects.length;
   const safeIndex = totalProjects === 0 ? 0 : Math.min(index, totalProjects - 1);
-  const project = PROJECTS[safeIndex] || null;
+  const project = totalProjects === 0 ? null : projects[safeIndex] || null;
   const board = project ? KANBAN_BOARDS[project.id] : null;
 
   const prev = () => {
@@ -122,10 +163,26 @@ export default function KanbanPage() {
     setDraggedFrom(null);
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-8 flex items-center justify-center text-slate-400">
+        Ładowanie projektów…
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-8 flex items-center justify-center text-red-400">
+        {error}
+      </div>
+    );
+  }
+
   if (!project || !board) {
     return (
       <div className="min-h-screen bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-8 flex items-center justify-center text-slate-400">
-        Brak danych kanbana
+        {totalProjects === 0 ? "Brak projektów w organizacji." : "Brak danych kanbana"}
       </div>
     );
   }

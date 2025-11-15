@@ -1,24 +1,53 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import useAuth from "../../../auth/useAuth.js";
-import { TAGS, CHATS, PROJECTS } from "../../../api/fakeData.js";
 import { KANBAN_BOARDS } from "../../../api/fakeData.js";
-import TagList from "../components/TagList.jsx";
 import ChatPanel from "../components/ChatPanel.jsx";
 import MiniCalendar from "../components/MiniCalendar.jsx";
 import KanbanPreview from "../components/KanbanPreview.jsx";
 import { useNavigate } from "react-router-dom";
+import { getAllProjects, getUserProjects } from "../../../api/projects.js";
 
 export default function OrganizationDashboardPage() {
   const { user, organization: activeOrganization } = useAuth();
   const navigate = useNavigate();
 
-  const [tags, setTags] = useState(TAGS);
-  const [projects, setProjects] = useState(PROJECTS);
-  const [chats, setChats] = useState(CHATS);
+  const [projects, setProjects] = useState([]);
+  const [chats] = useState([]);
   const [query, setQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState([]);
   const [logic, setLogic] = useState("AND");
   const [kanbanIndex, setKanbanIndex] = useState(0);
+  const [projectsError, setProjectsError] = useState(null);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!activeOrganization?.id || !user?.username) {
+      setProjects([]);
+      return;
+    }
+
+    async function loadProjects() {
+      setProjectsLoading(true);
+      setProjectsError(null);
+      try {
+        const fetcher = activeOrganization.role === "admin" ? getAllProjects : getUserProjects;
+        const data = await fetcher(activeOrganization.id, user.username);
+        setProjects(data ?? []);
+        setKanbanIndex(0);
+      } catch (err) {
+        setProjectsError(
+          err.response?.data?.error ??
+            err.response?.data?.detail ??
+            "Nie udało się pobrać projektów."
+        );
+        setProjects([]);
+      } finally {
+        setProjectsLoading(false);
+      }
+    }
+
+    loadProjects();
+  }, [activeOrganization?.id, activeOrganization?.role, user?.username]);
 
   const filteredChats = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -53,7 +82,6 @@ export default function OrganizationDashboardPage() {
   const addTag = () => navigate("/organization/tag/new");
   const addProject = () => navigate("/organization/project/new");
 
-  const allTagsAndProjects = [...tags, ...projects.map((p) => p.name)];
   const projectList = projects; // tylko projekty (nie tagi)
   const currentProject = projectList[kanbanIndex] || null;
   const currentBoard = currentProject ? KANBAN_BOARDS[currentProject.id] : null;
@@ -92,6 +120,18 @@ export default function OrganizationDashboardPage() {
           </div>
         </div>
       </div>
+      {projectsError && (
+        <div className="max-w-[90vw] mx-auto mt-4 w-full">
+          <p className="text-red-400 bg-red-500/10 border border-red-500/40 rounded-lg px-4 py-3 text-sm">
+            {projectsError}
+          </p>
+        </div>
+      )}
+      {projectsLoading && (
+        <div className="max-w-[90vw] mx-auto mt-4 w-full">
+          <p className="text-slate-400 text-sm">Ładowanie projektów…</p>
+        </div>
+      )}
     </div>
   );
 }
