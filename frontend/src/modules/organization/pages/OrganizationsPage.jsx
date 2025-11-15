@@ -1,154 +1,170 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   addOrganizationMember,
   getOrganizationMembers,
   listOrganizations,
   removeOrganizationMember,
   updateOrganizationMember,
-} from '../../../api/organizations.js'
-import useAuth from '../../../auth/useAuth.js'
+} from "../../../api/organizations.js";
+import useAuth from "../../../auth/useAuth.js";
 
 const emptyMemberForm = {
-  first_name: '',
-  last_name: '',
-  email: '',
-  username: '',
-  password: '',
-  role: 'member',
-}
+  first_name: "",
+  last_name: "",
+  email: "",
+  username: "",
+  password: "",
+  role: "member",
+};
 
 const ROLE_LABELS = {
-  admin: 'Administrator',
-  coordinator: 'Koordynator',
-  member: 'Członek',
-}
+  admin: "Administrator",
+  coordinator: "Koordynator",
+  member: "Członek",
+};
 
 function generatePassword(length = 12) {
-  const charset = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ0123456789@$!%*#?&'
-  let password = ''
-  const cryptoObj = window.crypto || window.msCrypto
+  const charset =
+    "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ0123456789@$!%*#?&";
+  let password = "";
+  const cryptoObj = window.crypto || window.msCrypto;
   if (cryptoObj?.getRandomValues) {
-    const randomValues = new Uint32Array(length)
-    cryptoObj.getRandomValues(randomValues)
+    const randomValues = new Uint32Array(length);
+    cryptoObj.getRandomValues(randomValues);
     for (let i = 0; i < length; i += 1) {
-      password += charset[randomValues[i] % charset.length]
+      password += charset[randomValues[i] % charset.length];
     }
   } else {
     for (let i = 0; i < length; i += 1) {
-      const randomIndex = Math.floor(Math.random() * charset.length)
-      password += charset[randomIndex]
+      const randomIndex = Math.floor(Math.random() * charset.length);
+      password += charset[randomIndex];
     }
   }
-  return password
+  return password;
 }
 
-function generateUsername(prefix = 'member') {
-  const suffix = Math.random().toString(36).slice(2, 8)
-  return `${prefix}-${suffix}`
+function generateUsername(prefix = "member") {
+  const suffix = Math.random().toString(36).slice(2, 8);
+  return `${prefix}-${suffix}`;
 }
 
 function OrganizationsPage() {
-  const { user, organization: activeOrganization } = useAuth()
-  const [organizations, setOrganizations] = useState([])
-  const [organizationsLoading, setOrganizationsLoading] = useState(false)
-  const [organizationsError, setOrganizationsError] = useState(null)
-  const [selectedOrgId, setSelectedOrgId] = useState(null)
-  const [members, setMembers] = useState([])
-  const [membersLoading, setMembersLoading] = useState(false)
-  const [memberError, setMemberError] = useState(null)
-  const [memberForm, setMemberForm] = useState(emptyMemberForm)
-  const [memberSubmitting, setMemberSubmitting] = useState(false)
-  const [lastCreatedCredentials, setLastCreatedCredentials] = useState(null)
-  const [memberSuccess, setMemberSuccess] = useState(null)
+  const { user, organization: activeOrganization } = useAuth();
+  const [organizations, setOrganizations] = useState([]);
+  const [organizationsLoading, setOrganizationsLoading] = useState(false);
+  const [organizationsError, setOrganizationsError] = useState(null);
+  const [selectedOrgId, setSelectedOrgId] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [memberError, setMemberError] = useState(null);
+  const [memberForm, setMemberForm] = useState(emptyMemberForm);
+  const [memberSubmitting, setMemberSubmitting] = useState(false);
+  const [lastCreatedCredentials, setLastCreatedCredentials] = useState(null);
+  const [memberSuccess, setMemberSuccess] = useState(null);
 
   const selectedOrganization = useMemo(
     () => organizations.find((org) => org.id === selectedOrgId) ?? null,
-    [organizations, selectedOrgId],
-  )
+    [organizations, selectedOrgId]
+  );
 
-  const isAdmin = selectedOrganization?.role === 'admin'
+  const isAdmin = selectedOrganization?.role === "admin";
 
   const loadOrganizations = useCallback(async () => {
-    setOrganizationsLoading(true)
-    setOrganizationsError(null)
+    setOrganizationsLoading(true);
+    setOrganizationsError(null);
     try {
-      const data = await listOrganizations()
-      setOrganizations(data)
+      const data = await listOrganizations();
+      setOrganizations(data);
       const preferredOrg =
-        activeOrganization && data.find((org) => org.id === activeOrganization.id || org.slug === activeOrganization.slug)
+        activeOrganization &&
+        data.find(
+          (org) =>
+            org.id === activeOrganization.id ||
+            org.slug === activeOrganization.slug
+        );
       if (preferredOrg) {
-        setSelectedOrgId(preferredOrg.id)
+        setSelectedOrgId(preferredOrg.id);
       } else if (!selectedOrgId && data.length > 0) {
-        setSelectedOrgId(data[0].id)
-      } else if (selectedOrgId && !data.some((org) => org.id === selectedOrgId)) {
-        setSelectedOrgId(data[0]?.id ?? null)
+        setSelectedOrgId(data[0].id);
+      } else if (
+        selectedOrgId &&
+        !data.some((org) => org.id === selectedOrgId)
+      ) {
+        setSelectedOrgId(data[0]?.id ?? null);
       }
     } catch (error) {
-      setOrganizationsError(error.response?.data?.detail ?? 'Nie udało się pobrać organizacji.')
+      setOrganizationsError(
+        error.response?.data?.detail ?? "Nie udało się pobrać organizacji."
+      );
     } finally {
-      setOrganizationsLoading(false)
+      setOrganizationsLoading(false);
     }
-  }, [selectedOrgId, activeOrganization])
+  }, [selectedOrgId, activeOrganization]);
 
   useEffect(() => {
     if (!activeOrganization) {
-      return
+      return;
     }
     setSelectedOrgId((current) => {
       if (current) {
-        return current
+        return current;
       }
-      return activeOrganization.id ?? current
-    })
-  }, [activeOrganization])
+      return activeOrganization.id ?? current;
+    });
+  }, [activeOrganization]);
 
   const loadMembers = useCallback(async (organizationId) => {
     if (!organizationId) {
-      setMembers([])
-      return
+      setMembers([]);
+      return;
     }
-    setMembersLoading(true)
-    setMemberError(null)
+    setMembersLoading(true);
+    setMemberError(null);
     try {
-      const data = await getOrganizationMembers(organizationId)
-      setMembers(data)
+      const data = await getOrganizationMembers(organizationId);
+      setMembers(data);
     } catch (error) {
-      setMemberError(error.response?.data?.detail ?? 'Nie udało się pobrać członków organizacji.')
+      setMemberError(
+        error.response?.data?.detail ??
+          "Nie udało się pobrać członków organizacji."
+      );
     } finally {
-      setMembersLoading(false)
+      setMembersLoading(false);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    loadOrganizations()
-  }, [loadOrganizations])
+    loadOrganizations();
+  }, [loadOrganizations]);
 
   useEffect(() => {
     if (selectedOrgId) {
-      loadMembers(selectedOrgId)
+      loadMembers(selectedOrgId);
     }
-  }, [selectedOrgId, loadMembers])
+  }, [selectedOrgId, loadMembers]);
 
   const handleMemberFormChange = (event) => {
-    const { name, value } = event.target
-    setMemberForm((prev) => ({ ...prev, [name]: value }))
-  }
+    const { name, value } = event.target;
+    setMemberForm((prev) => ({ ...prev, [name]: value }));
+  };
 
   const handleGenerateCredentials = () => {
     setMemberForm((prev) => ({
       ...prev,
-      username: prev.username || generateUsername(selectedOrganization?.slug ?? 'member'),
+      username:
+        prev.username ||
+        generateUsername(selectedOrganization?.slug ?? "member"),
       password: generatePassword(),
-    }))
-  }
+    }));
+  };
 
   const handleAddMember = async (event) => {
-    event.preventDefault()
-    if (!selectedOrgId) return
-    setMemberSubmitting(true)
-    setMemberError(null)
-    setMemberSuccess(null)
-    setLastCreatedCredentials(null)
+    event.preventDefault();
+    if (!selectedOrgId) return;
+    setMemberSubmitting(true);
+    setMemberError(null);
+    setMemberSuccess(null);
+    setLastCreatedCredentials(null);
 
     const payload = {
       username: memberForm.username,
@@ -157,199 +173,291 @@ function OrganizationsPage() {
       last_name: memberForm.last_name,
       email: memberForm.email,
       role: memberForm.role,
-    }
+    };
 
     try {
-      await addOrganizationMember(selectedOrgId, payload)
-      await loadMembers(selectedOrgId)
-      setMemberSuccess('Nowy użytkownik został dodany do organizacji.')
-      setLastCreatedCredentials({ username: payload.username, password: payload.password })
+      await addOrganizationMember(selectedOrgId, payload);
+      await loadMembers(selectedOrgId);
+      setMemberSuccess("Nowy użytkownik został dodany do organizacji.");
+      setLastCreatedCredentials({
+        username: payload.username,
+        password: payload.password,
+      });
       setMemberForm((prev) => ({
         ...emptyMemberForm,
         role: prev.role,
-      }))
+      }));
     } catch (error) {
-      setMemberError(error.response?.data?.detail ?? 'Nie udało się dodać członka.')
+      setMemberError(
+        error.response?.data?.detail ?? "Nie udało się dodać członka."
+      );
     } finally {
-      setMemberSubmitting(false)
+      setMemberSubmitting(false);
     }
-  }
+  };
 
   const handleRoleChange = async (memberId, newRole) => {
-    if (!selectedOrgId) return
+    if (!selectedOrgId) return;
     try {
-      await updateOrganizationMember(selectedOrgId, memberId, { role: newRole })
-      await loadMembers(selectedOrgId)
+      await updateOrganizationMember(selectedOrgId, memberId, {
+        role: newRole,
+      });
+      await loadMembers(selectedOrgId);
     } catch (error) {
-      setMemberError(error.response?.data?.detail ?? 'Nie udało się zaktualizować roli.')
+      setMemberError(
+        error.response?.data?.detail ?? "Nie udało się zaktualizować roli."
+      );
     }
-  }
+  };
 
   const handleRemoveMember = async (memberId) => {
-    if (!selectedOrgId) return
-    if (!window.confirm('Czy na pewno chcesz usunąć tego członka?')) return
+    if (!selectedOrgId) return;
+    if (!window.confirm("Czy na pewno chcesz usunąć tego członka?")) return;
     try {
-      await removeOrganizationMember(selectedOrgId, memberId)
-      await loadMembers(selectedOrgId)
+      await removeOrganizationMember(selectedOrgId, memberId);
+      await loadMembers(selectedOrgId);
     } catch (error) {
-      setMemberError(error.response?.data?.detail ?? 'Nie udało się usunąć członka.')
+      setMemberError(
+        error.response?.data?.detail ?? "Nie udało się usunąć członka."
+      );
     }
-  }
+  };
 
   if (organizationsLoading && !selectedOrganization) {
     return (
-      <div className="organizations-page">
-        <div className="card loading-card">
-          <p>Ładujemy dane organizacji…</p>
+      <div className="max-w-7xl mx-auto py-10 px-4">
+        <div className="bg-slate-800 rounded-xl p-6 shadow">
+          <p className="text-slate-200">Ładujemy dane organizacji…</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (!selectedOrganization) {
     return (
-      <div className="organizations-page">
-        <div className="card empty-state">
-          <h2>Brak powiązanej organizacji</h2>
+      <div className="max-w-7xl mx-auto py-10 px-4">
+        <div className="bg-slate-800 rounded-xl p-6 shadow">
+          <h2 className="text-xl font-semibold text-slate-100 mb-2">
+            Brak powiązanej organizacji
+          </h2>
           {organizationsError ? (
-            <p>{organizationsError}</p>
+            <p className="text-slate-200">{organizationsError}</p>
           ) : (
-            <p>Twoje konto nie jest jeszcze przypisane do żadnej organizacji. Skontaktuj się z administratorem.</p>
+            <p className="text-slate-300">
+              Twoje konto nie jest jeszcze przypisane do żadnej organizacji.
+              Skontaktuj się z administratorem.
+            </p>
           )}
         </div>
       </div>
-    )
+    );
   }
 
   return (
-    <div className="organizations-page">
-      <section className="card organization-summary">
+    <div className="max-w-7xl mx-auto py-10 px-4">
+      <section className="bg-slate-800 rounded-xl p-6 shadow mb-6 flex items-start justify-between gap-6">
         <div>
-          <p className="eyebrow">Organizacja</p>
-          <h1>{selectedOrganization.name}</h1>
-          <p className="description">{selectedOrganization.description || 'Brak opisu organizacji.'}</p>
+          <p className="text-slate-400 text-sm uppercase tracking-wide">
+            Organizacja
+          </p>
+          <h1 className="text-2xl font-bold text-slate-100">
+            {selectedOrganization.name}
+          </h1>
+          <p className="text-slate-300 mt-1">
+            {selectedOrganization.description || "Brak opisu organizacji."}
+          </p>
         </div>
-        <div className="summary-meta">
-          <span className="badge">{ROLE_LABELS[selectedOrganization.role] ?? selectedOrganization.role}</span>
-          <span className="meta">{selectedOrganization.member_count} członków</span>
-          <span className="meta">Administrator: {user?.first_name || user?.username}</span>
+        <div className="flex flex-col items-end gap-2 shrink-0">
+          <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-slate-700 text-slate-200 text-xs font-medium">
+            {ROLE_LABELS[selectedOrganization.role] ??
+              selectedOrganization.role}
+          </span>
+          <span className="text-slate-300 text-sm">
+            {selectedOrganization.member_count} członków
+          </span>
+          <span className="text-slate-300 text-sm">
+            Administrator: {user?.first_name || user?.username}
+          </span>
         </div>
       </section>
 
-      {organizationsError && <p className="status error">{organizationsError}</p>}
-      {memberError && <p className="status error">{memberError}</p>}
-      {memberSuccess && <p className="status success">{memberSuccess}</p>}
+      {organizationsError && (
+        <p className="mb-4 text-red-400 bg-red-500/10 border border-red-400/30 rounded px-4 py-3">
+          {organizationsError}
+        </p>
+      )}
+      {memberError && (
+        <p className="mb-4 text-red-400 bg-red-500/10 border border-red-400/30 rounded px-4 py-3">
+          {memberError}
+        </p>
+      )}
+      {memberSuccess && (
+        <p className="mb-4 text-green-400 bg-green-500/10 border border-green-400/30 rounded px-4 py-3">
+          {memberSuccess}
+        </p>
+      )}
 
       {lastCreatedCredentials && (
-        <div className="card credentials-callout">
-          <h2>Dane nowego użytkownika</h2>
-          <p>Zapisz te dane i przekaż użytkownikowi. Hasło nie będzie widoczne ponownie.</p>
-          <div className="credentials-grid">
-            <span>Login:</span>
-            <code>{lastCreatedCredentials.username}</code>
-            <span>Hasło:</span>
-            <code>{lastCreatedCredentials.password}</code>
+        <div className="bg-slate-800 rounded-xl p-6 shadow mb-6">
+          <h2 className="text-lg font-semibold text-slate-100">
+            Dane nowego użytkownika
+          </h2>
+          <p className="text-slate-300 mb-3">
+            Zapisz te dane i przekaż użytkownikowi. Hasło nie będzie widoczne
+            ponownie.
+          </p>
+          <div className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-2 items-center">
+            <span className="text-slate-300">Login:</span>
+            <code className="bg-slate-900 text-slate-100 rounded px-2 py-1">
+              {lastCreatedCredentials.username}
+            </code>
+            <span className="text-slate-300">Hasło:</span>
+            <code className="bg-slate-900 text-slate-100 rounded px-2 py-1">
+              {lastCreatedCredentials.password}
+            </code>
           </div>
         </div>
       )}
 
-      <section className="card members">
-        <header>
-          <h2>Członkowie</h2>
-          <span>{members.length} osób</span>
+      <section className="bg-slate-800 rounded-xl shadow p-6 mb-6">
+        <header className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold text-slate-100">Członkowie</h2>
+          <span className="text-slate-300">{members.length} osób</span>
         </header>
         {membersLoading ? (
-          <p>Ładowanie członków…</p>
+          <p className="text-slate-300">Ładowanie członków…</p>
         ) : members.length === 0 ? (
-          <p>Brak członków w tej organizacji.</p>
+          <p className="text-slate-300">Brak członków w tej organizacji.</p>
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Użytkownik</th>
-                <th>Kontakt</th>
-                <th>Rola</th>
-                <th>Akcje</th>
-              </tr>
-            </thead>
-            <tbody>
-              {members.map((member) => (
-                <tr key={member.id}>
-                  <td>
-                    <strong>{member.username}</strong>
-                    <br />
-                    <small>
-                      {member.first_name} {member.last_name}
-                    </small>
-                  </td>
-                  <td>
-                    <small>{member.email || '—'}</small>
-                  </td>
-                  <td>
-                    {isAdmin ? (
-                      <select
-                        value={member.role}
-                        onChange={(event) => handleRoleChange(member.id, event.target.value)}
-                        disabled={member.user === user?.id}
-                      >
-                        {Object.entries(ROLE_LABELS).map(([value, label]) => (
-                          <option value={value} key={value}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span>{ROLE_LABELS[member.role] ?? member.role}</span>
-                    )}
-                  </td>
-                  <td>
-                    {isAdmin && member.user !== user?.id ? (
-                      <button type="button" className="link" onClick={() => handleRemoveMember(member.id)}>
-                        Usuń
-                      </button>
-                    ) : (
-                      <span className="muted">—</span>
-                    )}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px] text-left">
+              <thead>
+                <tr className="text-slate-300">
+                  <th className="py-2 px-4">Użytkownik</th>
+                  <th className="py-2 px-4">Kontakt</th>
+                  <th className="py-2 px-4">Rola</th>
+                  <th className="py-2 px-4">Akcje</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {members.map((member) => (
+                  <tr
+                    key={member.id}
+                    className="border-t border-slate-700 align-top"
+                  >
+                    <td className="py-2 px-4">
+                      <strong className="text-slate-100">
+                        {member.username}
+                      </strong>
+                      <br />
+                      <small className="text-slate-300">
+                        {member.first_name} {member.last_name}
+                      </small>
+                    </td>
+                    <td className="py-2 px-4">
+                      <small className="text-slate-300">
+                        {member.email || "—"}
+                      </small>
+                    </td>
+                    <td className="py-2 px-4">
+                      {isAdmin ? (
+                        <select
+                          value={member.role}
+                          onChange={(event) =>
+                            handleRoleChange(member.id, event.target.value)
+                          }
+                          disabled={member.user === user?.id}
+                          className="rounded px-2 py-1 border border-slate-600 bg-slate-900 text-slate-100"
+                        >
+                          {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                            <option value={value} key={value}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="text-slate-200">
+                          {ROLE_LABELS[member.role] ?? member.role}
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-2 px-4">
+                      {isAdmin && member.user !== user?.id ? (
+                        <button
+                          type="button"
+                          className="text-red-400 hover:underline px-2"
+                          onClick={() => handleRemoveMember(member.id)}
+                        >
+                          Usuń
+                        </button>
+                      ) : (
+                        <span className="text-slate-500">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 
       {isAdmin ? (
-        <section className="card add-member">
-          <h2>Dodaj nowego członka</h2>
-          <p>Wygeneruj dane logowania, a następnie przekaż je nowemu użytkownikowi.</p>
-          <form onSubmit={handleAddMember} className="member-form">
-            <div className="form-row">
-              <label className="field">
-                <span>Imię</span>
-                <input name="first_name" value={memberForm.first_name} onChange={handleMemberFormChange} />
+        <section className="bg-slate-800 rounded-xl shadow p-6">
+          <h2 className="text-lg font-semibold text-slate-100">
+            Dodaj nowego członka
+          </h2>
+          <p className="text-slate-300 mb-4">
+            Wygeneruj dane logowania, a następnie przekaż je nowemu
+            użytkownikowi.
+          </p>
+          <form onSubmit={handleAddMember} className="flex flex-col gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label className="flex flex-col gap-2">
+                <span className="text-slate-200 font-medium">Imię</span>
+                <input
+                  name="first_name"
+                  value={memberForm.first_name}
+                  onChange={handleMemberFormChange}
+                  className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+                />
               </label>
-              <label className="field">
-                <span>Nazwisko</span>
-                <input name="last_name" value={memberForm.last_name} onChange={handleMemberFormChange} />
+              <label className="flex flex-col gap-2">
+                <span className="text-slate-200 font-medium">Nazwisko</span>
+                <input
+                  name="last_name"
+                  value={memberForm.last_name}
+                  onChange={handleMemberFormChange}
+                  className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+                />
               </label>
             </div>
-            <label className="field">
-              <span>Email</span>
-              <input name="email" type="email" value={memberForm.email} onChange={handleMemberFormChange} />
+
+            <label className="flex flex-col gap-2">
+              <span className="text-slate-200 font-medium">Email</span>
+              <input
+                name="email"
+                type="email"
+                value={memberForm.email}
+                onChange={handleMemberFormChange}
+                className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+              />
             </label>
-            <div className="form-row">
-              <label className="field">
-                <span>Login</span>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label className="flex flex-col gap-2">
+                <span className="text-slate-200 font-medium">Login</span>
                 <input
                   name="username"
                   value={memberForm.username}
                   onChange={handleMemberFormChange}
                   placeholder="np. member-abc123"
                   required
+                  className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
                 />
               </label>
-              <label className="field">
-                <span>Hasło</span>
+              <label className="flex flex-col gap-2">
+                <span className="text-slate-200 font-medium">Hasło</span>
                 <input
                   name="password"
                   type="text"
@@ -357,13 +465,20 @@ function OrganizationsPage() {
                   onChange={handleMemberFormChange}
                   placeholder="Wygeneruj bezpieczne hasło"
                   required
+                  className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
                 />
               </label>
             </div>
-            <div className="form-row form-row--align">
-              <label className="field">
-                <span>Rola</span>
-                <select name="role" value={memberForm.role} onChange={handleMemberFormChange}>
+
+            <div className="grid grid-cols-1 md:grid-cols-[1fr,auto] items-end gap-4">
+              <label className="flex flex-col gap-2">
+                <span className="text-slate-200 font-medium">Rola</span>
+                <select
+                  name="role"
+                  value={memberForm.role}
+                  onChange={handleMemberFormChange}
+                  className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+                >
                   {Object.entries(ROLE_LABELS).map(([value, label]) => (
                     <option value={value} key={value}>
                       {label}
@@ -371,22 +486,33 @@ function OrganizationsPage() {
                   ))}
                 </select>
               </label>
-              <button type="button" className="secondary" onClick={handleGenerateCredentials}>
+              <button
+                type="button"
+                className="rounded px-4 py-2 font-semibold border border-indigo-500/30 bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/25 transition"
+                onClick={handleGenerateCredentials}
+              >
                 Wygeneruj dane logowania
               </button>
             </div>
-            <div className="actions">
-              <button type="submit" disabled={memberSubmitting}>
-                {memberSubmitting ? 'Dodawanie…' : 'Dodaj członka'}
+
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={memberSubmitting}
+                className="bg-gradient-to-r from-indigo-500 to-violet-500 text-white px-5 py-2 rounded font-semibold disabled:opacity-60"
+              >
+                {memberSubmitting ? "Dodawanie…" : "Dodaj członka"}
               </button>
             </div>
           </form>
         </section>
       ) : (
-        <p className="muted">Tylko administratorzy mogą dodawać nowych członków.</p>
+        <p className="text-slate-400">
+          Tylko administratorzy mogą dodawać nowych członków.
+        </p>
       )}
     </div>
-  )
+  );
 }
 
-export default OrganizationsPage
+export default OrganizationsPage;
