@@ -1,19 +1,23 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { PROJECTS, KANBAN_BOARDS } from "../../../api/fakeData.js";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Plus } from "lucide-react";
 
 export default function KanbanPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const initialProjectId = location.state?.projectId;
   const scrollRef = useRef(null);
+  const scrollAnimationRef = useRef(null);
 
   const [index, setIndex] = useState(() => {
     if (!initialProjectId) return 0;
     const i = PROJECTS.findIndex(p => p.id === initialProjectId);
     return i >= 0 ? i : 0;
   });
+
+  const [draggedItem, setDraggedItem] = useState(null);
+  const [draggedFrom, setDraggedFrom] = useState(null);
 
   const project = PROJECTS[index] || null;
   const board = project ? KANBAN_BOARDS[project.id] : null;
@@ -35,6 +39,79 @@ export default function KanbanPage() {
     scrollContainer.addEventListener('wheel', handleWheel, { passive: false });
     return () => scrollContainer.removeEventListener('wheel', handleWheel);
   }, []);
+
+  const handleDragStart = (e, item, columnId) => {
+    setDraggedItem(item);
+    setDraggedFrom(columnId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+
+    if (!draggedItem || !scrollRef.current) return;
+
+    const container = scrollRef.current;
+    const rect = container.getBoundingClientRect();
+    const threshold = 150;
+    const mouseX = e.clientX;
+
+    // Anuluj poprzednią animację
+    if (scrollAnimationRef.current) {
+      cancelAnimationFrame(scrollAnimationRef.current);
+    }
+
+    const scroll = () => {
+      if (!scrollRef.current) return;
+      
+      const distanceFromLeft = mouseX - rect.left;
+      const distanceFromRight = rect.right - mouseX;
+
+      if (distanceFromLeft < threshold && distanceFromLeft > 0) {
+        scrollRef.current.scrollLeft -= 10;
+        scrollAnimationRef.current = requestAnimationFrame(scroll);
+      } else if (distanceFromRight < threshold && distanceFromRight > 0) {
+        scrollRef.current.scrollLeft += 10;
+        scrollAnimationRef.current = requestAnimationFrame(scroll);
+      }
+    };
+
+    scroll();
+  };
+
+  const handleDrop = (e, targetColumnId) => {
+    e.preventDefault();
+    if (!draggedItem || !draggedFrom || !board) return;
+
+    if (draggedFrom === targetColumnId) {
+      setDraggedItem(null);
+      setDraggedFrom(null);
+      return;
+    }
+
+    const fromColumn = board.columns.find(col => col.id === draggedFrom);
+    const toColumn = board.columns.find(col => col.id === targetColumnId);
+
+    if (!fromColumn || !toColumn) return;
+
+    // Usuń z kolumny źródłowej
+    fromColumn.items = fromColumn.items.filter(item => item.id !== draggedItem.id);
+    // Dodaj do kolumny docelowej
+    toColumn.items.push(draggedItem);
+
+    setDraggedItem(null);
+    setDraggedFrom(null);
+  };
+
+  const handleDragEnd = () => {
+    if (scrollAnimationRef.current) {
+      cancelAnimationFrame(scrollAnimationRef.current);
+      scrollAnimationRef.current = null;
+    }
+    setDraggedItem(null);
+    setDraggedFrom(null);
+  };
 
   if (!project || !board) {
     return (
@@ -67,14 +144,25 @@ export default function KanbanPage() {
               <ChevronRight className="w-5 h-5" />
             </button>
           </div>
-          <button
-            onClick={() => navigate("/dashboard")}
-            className="p-2 rounded-lg hover:bg-slate-700/40 text-slate-300 transition"
-            aria-label="Zamknij"
-            title="Powrót do dashboardu"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate("/kanban/task/new", { state: { projectId: project.id, columnId: board.columns[0]?.id } })}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition"
+              aria-label="Nowe zadanie"
+              title="Dodaj nowe zadanie"
+            >
+              <Plus className="w-5 h-5" />
+              <span className="text-sm font-semibold">Nowe zadanie</span>
+            </button>
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="p-2 rounded-lg hover:bg-slate-700/40 text-slate-300 transition"
+              aria-label="Zamknij"
+              title="Powrót do dashboardu"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 bg-slate-900/95 rounded-2xl shadow-[0_30px_60px_rgba(15,23,42,0.45)] border border-slate-700 p-6 overflow-hidden">
@@ -86,19 +174,36 @@ export default function KanbanPage() {
               <div
                 key={col.id}
                 className="flex flex-col min-h-0 min-w-[400px] flex-1 rounded-lg bg-slate-800/60 border border-slate-700"
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, col.id)}
               >
                 <div className="px-4 py-3 border-b border-slate-700 text-sm font-semibold text-slate-200">
                   {col.name}
                 </div>
-                <div className="flex-1 min-h-0 p-3 space-y-2 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+                <div 
+                  className="flex-1 min-h-0 p-3 space-y-2 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
+                >
                   {col.items.length === 0 && (
                     <div className="text-xs text-slate-500 italic">Pusto</div>
                   )}
                   {col.items.map(item => (
                     <div
                       key={item.id}
-                      className="rounded-lg bg-violet-600/90 hover:bg-violet-500 text-white px-3 py-3 text-sm cursor-pointer transition flex flex-col gap-2 shadow-sm min-h-[90px]"
+                      className={`rounded-lg bg-violet-600/90 hover:bg-violet-500 text-white px-3 py-3 text-sm cursor-pointer transition flex flex-col gap-2 shadow-sm min-h-[90px] ${
+                        draggedItem?.id === item.id ? 'opacity-50' : ''
+                      }`}
                       title={item.title}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, item, col.id)}
+                      onDragEnd={handleDragEnd}
+                      onClick={() => navigate('/kanban/task/edit', { 
+                        state: { 
+                          task: item, 
+                          projectId: project.id, 
+                          columnId: col.id,
+                          returnTo: 'kanban'
+                        } 
+                      })}
                     >
                       <div className="flex items-center justify-between gap-2 shrink-0">
                         <span className="text-xs font-mono text-white/95 font-semibold">{item.taskId}</span>

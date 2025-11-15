@@ -13,6 +13,7 @@ import TagEditPage from './modules/organization/pages/TagEditPage.jsx'
 import ChatCreatePage from './modules/chats/pages/ChatCreatePage.jsx'
 import CalendarPage from './modules/calendar/pages/CalendarPage.jsx'
 import KanbanPage from './modules/kanban/pages/KanbanPage.jsx'
+import TaskEditPage from './modules/kanban/pages/TaskEditPage.jsx'
 
 function App() {
   return (
@@ -32,6 +33,8 @@ function App() {
             <Route path="/chat/new" element={<ChatCreatePage/>} />
             <Route path="/calendar" element={<CalendarPage/>} />
             <Route path="/kanban" element={<KanbanPage/>} />
+            <Route path="/kanban/task/new" element={<TaskEditPage/>} />
+            <Route path="/kanban/task/edit" element={<TaskEditPage/>} />
           {/* </Route> */}
         </Routes>
       </AuthProvider>

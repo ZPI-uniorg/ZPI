@@ -93,29 +93,69 @@ export const KANBAN_BOARDS = {
         id: 'todo', 
         name: 'Do zrobienia', 
         items: [
-          { id: 't1', taskId: 'ORG-1', title: 'Analiza wymagań pstrymagań dymagań mimagań gimagań srymagań sragań gejagań heteroagań również daj tu trzy kropki', assignee: { first_name: 'Jan', last_name: 'Kowalski' } },
-          { id: 't8', taskId: 'ORG-8', title: 'Przygotowanie dokumentacji', assignee: null }
+          { 
+            id: 't1', 
+            taskId: 'ORG-1', 
+            title: 'Analiza wymagań projektu', 
+            description: 'Szczegółowa analiza wymagań funkcjonalnych i niefunkcjonalnych systemu',
+            deadline: '2025-12-15',
+            assignee: { first_name: 'Jan', last_name: 'Kowalski' },
+            createdAt: '2025-11-01T10:00:00Z'
+          },
+          { 
+            id: 't8', 
+            taskId: 'ORG-8', 
+            title: 'Przygotowanie dokumentacji', 
+            description: '',
+            deadline: '',
+            assignee: null,
+            createdAt: '2025-11-05T14:00:00Z'
+          }
         ] 
-      },
+      },  
       { 
         id: 'inprogress', 
         name: 'W toku', 
         items: [
-          { id: 't2', taskId: 'ORG-2', title: 'Implementacja modułu A', assignee: { first_name: 'Anna', last_name: 'Nowak' } }
+          { 
+            id: 't2', 
+            taskId: 'ORG-2', 
+            title: 'Implementacja modułu A', 
+            description: 'Implementacja głównego modułu backendowego',
+            deadline: '2025-11-25',
+            assignee: { first_name: 'Anna', last_name: 'Nowak' },
+            createdAt: '2025-11-02T09:00:00Z'
+          }
         ] 
       },
       { 
         id: 'review', 
         name: 'Review', 
         items: [
-          { id: 't3', taskId: 'ORG-3', title: 'Code review modułu A', assignee: { first_name: 'Piotr', last_name: 'Zieliński' } }
+          { 
+            id: 't3', 
+            taskId: 'ORG-3', 
+            title: 'Code review modułu A', 
+            description: 'Przegląd kodu i testy jednostkowe',
+            deadline: '2025-11-20',
+            assignee: { first_name: 'Piotr', last_name: 'Zieliński' },
+            createdAt: '2025-11-03T11:00:00Z'
+          }
         ] 
       },
       { 
         id: 'done', 
         name: 'Gotowe', 
         items: [
-          { id: 't4', taskId: 'ORG-4', title: 'Konfiguracja repozytorium', assignee: { first_name: 'Jan', last_name: 'Kowalski' } }
+          { 
+            id: 't4', 
+            taskId: 'ORG-4', 
+            title: 'Konfiguracja repozytorium', 
+            description: 'Setupowanie git i CI/CD pipeline',
+            deadline: '2025-11-10',
+            assignee: { first_name: 'Jan', last_name: 'Kowalski' },
+            createdAt: '2025-10-28T08:00:00Z'
+          }
         ] 
       },
     ],
@@ -134,7 +174,15 @@ export const KANBAN_BOARDS = {
         id: 'inprogress', 
         name: 'W toku', 
         items: [
-          { id: 't6', taskId: 'ORG-6', title: 'Przygotowanie prezentacji', assignee: { first_name: 'Anna', last_name: 'Nowak' } }
+          { 
+            id: 't6', 
+            taskId: 'ORG-6', 
+            title: 'Przygotowanie prezentacji', 
+            description: 'Tworzenie slajdów i materiałów do prezentacji',
+            deadline: '2025-11-22',
+            assignee: { first_name: 'Anna', last_name: 'Nowak' },
+            createdAt: '2025-11-04T13:00:00Z'
+          }
         ] 
       },
       { id: 'testing', name: 'Testy', items: [] },

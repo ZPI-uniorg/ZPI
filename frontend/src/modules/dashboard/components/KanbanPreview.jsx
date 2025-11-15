@@ -93,6 +93,14 @@ export default function KanbanPreview({ project, board, onPrev, onNext }) {
                     key={item.id}
                     className="rounded-md bg-violet-600/80 hover:bg-violet-600 text-white px-2.5 py-2 text-xs cursor-pointer transition flex flex-col gap-1 min-h-[70px]"
                     title={item.title}
+                    onClick={() => navigate('/kanban/task/edit', { 
+                      state: { 
+                        task: item, 
+                        projectId: project.id, 
+                        columnId: col.id,
+                        returnTo: 'dashboard'
+                      } 
+                    })}
                   >
                     <div className="flex items-center justify-between gap-2 shrink-0">
                       <span className="text-[10px] font-mono text-white/90 font-semibold">{item.taskId}</span>
