@@ -2,18 +2,15 @@ from datetime import datetime
 import json
 
 from django.contrib.auth import get_user_model
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from django.db.models import Count
-from django.http import JsonResponse, QueryDict
-from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
 from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.views import APIView
 
 from kanban.models import KanbanBoard
 from .models import Membership, Organization, Tag, Project, CombinedTag
@@ -79,15 +76,14 @@ def create_organization_test(request):
         description = request.POST.get('description', '')
         created_by_username = request.POST.get('created_by_username')
 
-        if not name or not created_by_username:
-            return JsonResponse({"error": "Missing fields"}, status=400)
-
-        created_by = User.objects.get(username=created_by_username)
-
-        organization = Organization.objects.create(
-            name=name,
-            description=description,
-            created_by=created_by
+    def get_queryset(self):
+        user = self.request.user
+        return (
+            Organization.objects.filter(memberships__user=user)
+            .annotate(member_count=Count("memberships", distinct=True))
+            .prefetch_related("memberships__user")
+            .select_related("created_by")
+            .distinct()
         )
 
         org_data = {
@@ -209,9 +205,27 @@ def create_membership_test(request):
         if not all([organization_id, user_id, role]):
             return JsonResponse({"error": "Missing fields"}, status=400)
 
-        organization = Organization.objects.get(id=organization_id)
-        user = User.objects.get(id=user_id)
-        invited_by = User.objects.get(id=invited_by_id) if invited_by_id else None
+    def _create_membership(self, organization, inviter, validated_data):
+        existing_user = validated_data.get("user_id")
+        username = validated_data.get("username")
+        role = validated_data.get("role", Membership.Role.MEMBER)
+
+        if existing_user:
+            user = existing_user
+            if organization.memberships.filter(user=user).exists():
+                raise ValidationError({"detail": "User is already a member of this organization."})
+            created = False
+        else:
+            if organization.memberships.filter(user__username__iexact=username).exists():
+                raise ValidationError({"detail": "Username is already used by a member of this organization."})
+            user = User.objects.create_user(
+                username=username,
+                password=validated_data["password"],
+                email=validated_data.get("email"),
+                first_name=validated_data.get("first_name", ""),
+                last_name=validated_data.get("last_name", ""),
+            )
+            created = True
 
         membership = Membership.objects.create(
             organization=organization,

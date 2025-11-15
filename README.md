@@ -5,7 +5,7 @@ A full-stack application with Django backend and React frontend.
 ## Project Structure
 
 - `backend/` - Django REST API
-- `frontend/frontend/` - React application with Vite
+- `frontend/` - React application with Vite
 
 ## Prerequisites
 
@@ -50,7 +50,7 @@ The backend will be available at `http://localhost:8000`
 
 1. Navigate to the frontend directory:
    ```bash
-   cd frontend/frontend
+   cd frontend
    ```
 
 2. Install Node.js dependencies:
