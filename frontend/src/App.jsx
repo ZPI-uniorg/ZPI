@@ -20,29 +20,7 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <div className="min-h-screen bg-slate-900 text-slate-100">
-          <Routes>
-            <Route path="/dashboard" element={<OrganizationDashboardPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            {/* <Route element={<ProtectedRoute />}> */}
-            <Route
-              path="/register-organization"
-              element={<RegisterOrganizationPage />}
-            />
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/account/password" element={<ChangePasswordPage />} />
-            <Route path="/organizations" element={<OrganizationsPage />} />
-            <Route path="/organization" element={<OrganizationPage />} />
-            <Route
-              path="/organization/project/new"
-              element={<ProjectEditPage />}
-            />
-            <Route path="/organization/tag/new" element={<TagEditPage />} />
-            <Route path="/chat/new" element={<ChatCreatePage />} />
-            <Route path="/calendar" element={<CalendarPage />} />
-            {/* </Route> */}
-          </Routes>
-        </div>
-        <Routes>
+<Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register-organization" element={<RegisterOrganizationPage />} />
           <Route element={<ProtectedRoute />}>
@@ -61,6 +39,7 @@ function App() {
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </div>
       </AuthProvider>
     </BrowserRouter>
   );
