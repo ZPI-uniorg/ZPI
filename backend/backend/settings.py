@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "channels",
     "rest_framework",
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
@@ -81,6 +82,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "backend.wsgi.application"
+ASGI_APPLICATION = "backend.asgi.application"
 
 
 # Database
@@ -166,12 +168,43 @@ SIMPLE_JWT = {
 # CORS
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
+    "http://127.0.0.1:5173",
     "https://zealous-pond-01ec7c503-7.westeurope.3.azurestaticapps.net",
     "https://zealous-pond-01ec7c503.3.azurestaticapps.net",
 ]
 CORS_ALLOW_CREDENTIALS = True
 
+# Accept any Azure Static Apps preview domain (branch-based) and future host variants.
+CORS_ALLOWED_ORIGIN_REGEXES = [r"^https://.*\\.azurestaticapps\\.net$"]
+
+# Explicitly enumerate methods & headers to avoid preflight denial for Authorization.
+CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
+
+# TEMP DEV: fully disable CORS restrictions (allow any origin). DO NOT use in production.
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = []
+CORS_ALLOWED_ORIGIN_REGEXES = []
+CORS_ALLOW_CREDENTIALS = False
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Channels (dev: in-memory layer)
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    }
+}

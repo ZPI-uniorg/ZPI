@@ -23,4 +23,5 @@ urlpatterns = [
     path('api/', include('organizations.urls')),
     path('api/', include('kanban.urls')),
     path('api/', include('organization_calendar.urls')),
+    path('api/', include('chatsAndMessaging.urls')),
 ]
