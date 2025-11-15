@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 
 from django.contrib.auth import get_user_model
@@ -605,9 +606,9 @@ def register_organization(request):
 
 @require_http_methods(["GET"])
 @csrf_exempt
-def get_user_organization(request, user_id):
+def get_user_organization(request, username):
     try:
-        memberships = Membership.objects.filter(user__id=user_id)
+        memberships = Membership.objects.filter(user__username=username)
         organizations = [
             {
                 "id": membership.organization.id,
@@ -631,15 +632,17 @@ def get_user_organization(request, user_id):
 @csrf_exempt
 def edit_organization(request, organization_id):
     try:
-        user_id = request.POST.get('user_id')
-        membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
+        data = json.loads(request.body)
+        name = data.get('name')
+        description = data.get('description')
+        username = data.get('username')
+
+        membership = Membership.objects.get(organization__id=organization_id, user__username=username)
 
         if membership.role != 'admin':
             return JsonResponse({"error": "Permission denied"}, status=403)
 
         org = Organization.objects.get(id=organization_id)
-        name = request.POST.get('name')
-        description = request.POST.get('description')
 
         if name:
             org.name = name
@@ -667,8 +670,8 @@ def edit_organization(request, organization_id):
 @csrf_exempt
 def invite_member(request, organization_id):
     try:
-        user_id = request.POST.get('user_id')
-        membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
+        username = request.POST.get('username')
+        membership = Membership.objects.get(organization__id=organization_id, user__username=username)
 
         if membership.role != 'admin':
             return JsonResponse({"error": "Permission denied"}, status=403)
@@ -676,9 +679,9 @@ def invite_member(request, organization_id):
         invitee_username = request.POST.get('invitee_username')
         invitee_email = request.POST.get('invitee_email')
         role = request.POST.get('role', 'member')
-        invited_by = User.objects.get(id=user_id)
+        invited_by = User.objects.get(username=username)
         organization = Organization.objects.get(id=organization_id)
-        password = User.objects.make_random_password()
+        password = "NoweHasloKiedysToZmienie"
 
         invitee = User.objects.create_user(
             username=invitee_username,
@@ -712,8 +715,8 @@ def invite_member(request, organization_id):
 @csrf_exempt
 def get_organization_users(request, organization_id):
     try:
-        user_id = request.GET.get('user_id')
-        membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
+        username = request.GET.get('username')
+        membership = Membership.objects.get(organization__id=organization_id, user__username=username)
 
         if membership.role not in ['admin', 'coordinator']:
             return JsonResponse({"error": "Permission denied"}, status=403)
@@ -726,7 +729,8 @@ def get_organization_users(request, organization_id):
                 "first_name": membership.user.first_name,
                 "last_name": membership.user.last_name,
                 "email": membership.user.email,
-                "role": membership.role
+                "role": membership.role,
+                "permissions": list(membership.permissions.values_list('name', flat=True))
             }
             for membership in memberships
         ]
@@ -740,15 +744,17 @@ def get_organization_users(request, organization_id):
 
 @require_http_methods(["DELETE"])
 @csrf_exempt
-def remove_organization_member(request, organization_id, member_id):
+def remove_organization_member(request, organization_id, username):
     try:
-        user_id = request.GET.get('user_id')
-        membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
+        data = json.loads(request.body)
+        admin_username = data.get('admin_username')
+
+        membership = Membership.objects.get(organization__id=organization_id, user__username=admin_username)
 
         if membership.role != 'admin':
             return JsonResponse({"error": "Permission denied"}, status=403)
 
-        member_membership = Membership.objects.get(organization__id=organization_id, user__id=member_id)
+        member_membership = Membership.objects.get(organization__id=organization_id, user__username=username)
         member_membership.delete()
 
         return JsonResponse({"message": "Member removed successfully"}, status=200)
@@ -760,20 +766,22 @@ def remove_organization_member(request, organization_id, member_id):
 
 @require_http_methods(["PUT"])
 @csrf_exempt
-def change_member_role(request, organization_id, member_id):
+def change_member_role(request, organization_id, username):
     try:
-        user_id = request.POST.get('user_id')
-        membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
+        data = json.loads(request.body)
+        admin_username = data.get('admin_username')
+        new_role = data.get('new_role')
+
+        membership = Membership.objects.get(organization__id=organization_id, user__username=admin_username)
 
         if membership.role != 'admin':
             return JsonResponse({"error": "Permission denied"}, status=403)
 
-        new_role = request.POST.get('role')
 
         if not new_role:
             return JsonResponse({"error": "Missing role field"}, status=400)
 
-        member_membership = Membership.objects.get(organization__id=organization_id, user__id=member_id)
+        member_membership = Membership.objects.get(organization__id=organization_id, user__username=username)
         member_membership.role = new_role
         member_membership.save()
 
@@ -790,29 +798,33 @@ def change_member_role(request, organization_id, member_id):
         return JsonResponse({"error": str(e)}, status=400)
 
 
-@require_http_methods(["POST"])
+@require_http_methods(["PUT"])
 @csrf_exempt
-def edit_permissions(request, organization_id, member_id):
+def edit_permissions(request, organization_id, username):
     try:
-        user_id = request.POST.get('user_id')
-        membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
-        tags = request.POST.getlist('tags[]')
+        data = json.loads(request.body)
+        admin_username = data.get('admin_username')
+        tags_names = data.get('tags', [])
+
+        membership = Membership.objects.get(organization__id=organization_id, user__username=admin_username)
 
         if membership.role == 'member':
             return JsonResponse({"error": "Permission denied"}, status=403)
 
         if membership.role == 'coordinator':
-            allowed_tags = membership.permissions
-            for tag in tags:
+            allowed_tags = list(membership.permissions.values_list('name', flat=True))
+            for tag in tags_names:
                 if tag not in allowed_tags:
                     return JsonResponse({"error": "Permission denied for some tags"}, status=403)
 
-        for tag in tags:
-            if CombinedTag.objects.filter(name=tag).exists():
-                return JsonResponse({"error": f"Cannot assign combined tag: {tag}"}, status=400)
+        for tag in tags_names:
 
-        member_membership = Membership.objects.get(organization__id=organization_id, user__id=member_id)
-        member_membership.permissions = tags
+            tag_id = Tag.objects.filter(name=tag, organization__id=organization_id).first().id
+            if CombinedTag.objects.filter(combined_tag_id=tag_id).exists():
+                return JsonResponse({"error": "Cannot assign combined tag to user"}, status=403)
+
+        member_membership = Membership.objects.get(organization__id=organization_id, user__username=username)
+        member_membership.permissions.set(Tag.objects.filter(name__in=tags_names, organization__id=organization_id))
         member_membership.save()
 
         return JsonResponse({"message": "Member permissions updated successfully"}, status=200)
@@ -832,8 +844,8 @@ def edit_permissions(request, organization_id, member_id):
 @csrf_exempt
 def get_all_tags(request, organization_id):
     try:
-        user_id = request.POST.get('user_id')
-        membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
+        username = request.GET.get('username')
+        membership = Membership.objects.get(organization__id=organization_id, user__username=username)
 
         if membership.role != 'admin':
             return JsonResponse({"error": "Permission denied"}, status=403)
@@ -856,10 +868,21 @@ def get_all_tags(request, organization_id):
 @csrf_exempt
 def get_tags(request, organization_id):
     try:
-        user_id = request.POST.get('user_id')
-        membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
+        username = request.GET.get('username')
+        membership = Membership.objects.get(organization__id=organization_id, user__username=username)
 
-        tags = membership.permissions
+        tags_names = list(membership.permissions.values_list('name', flat=True))
+
+        tags = Tag.objects.filter(name__in=tags_names, organization__id=organization_id)
+
+        tags = [
+            {
+                "id": tag.id,
+                "name": tag.name,
+                "organization_id": tag.organization.id,
+            }
+            for tag in tags
+        ]
 
         return JsonResponse(tags, safe=False, status=200)
     except Exception as e:
@@ -871,8 +894,8 @@ def get_tags(request, organization_id):
 @csrf_exempt
 def create_tag(request, organization_id):
     try:
-        user_id = request.POST.get('user_id')
-        membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
+        username = request.POST.get('username')
+        membership = Membership.objects.get(organization__id=organization_id, user__username=username)
 
         if membership.role != 'admin':
             return JsonResponse({"error": "Permission denied"}, status=403)
@@ -910,15 +933,15 @@ def create_tag(request, organization_id):
 
 @require_http_methods(["DELETE"])
 @csrf_exempt
-def delete_tag(request, organization_id, tag_id):
+def delete_tag(request, organization_id, tag_name):
     try:
-        user_id = request.POST.get('user_id')
-        membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
+        username = request.POST.get('username')
+        membership = Membership.objects.get(organization__id=organization_id, user__id=username)
 
         if membership.role != 'admin':
             return JsonResponse({"error": "Permission denied"}, status=403)
 
-        tag = Tag.objects.get(id=tag_id, organization__id=organization_id)
+        tag = Tag.objects.get(name=tag_name, organization__id=organization_id)
         tag.delete()
 
         return JsonResponse({"message": "Tag deleted successfully"}, status=200)
@@ -934,17 +957,31 @@ def delete_tag(request, organization_id, tag_id):
 @csrf_exempt
 def create_project(request, organization_id):
     try:
-        user_id = request.POST.get('user_id')
-        membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
+        username = request.POST.get('username')
+        membership = Membership.objects.get(organization__id=organization_id, user__username=username)
 
         if membership.role not in ['admin', 'coordinator']:
             return JsonResponse({"error": "Permission denied"}, status=403)
 
         name = request.POST.get('name')
         description = request.POST.get('description', '')
-        start_dte = request.POST.get('start_dte')
-        end_dte = request.POST.get('end_dte')
+        start_dte_raw = request.POST.get('start_dte')
+        end_dte_raw = request.POST.get('end_dte')
         tag_name = name
+
+        try:
+            def parse_to_date(s):
+                if 'T' in s:
+                    return datetime.fromisoformat(s).date()
+                return datetime.strptime(s, "%Y-%m-%d").date()
+
+            start_dte = parse_to_date(start_dte_raw)
+            end_dte = parse_to_date(end_dte_raw)
+        except Exception:
+            return JsonResponse({"error": "Invalid date format, expected YYYY-MM-DD or ISO"}, status=400)
+
+        if start_dte > end_dte:
+            return JsonResponse({"error": "start_dte must be before or equal to end_dte"}, status=400)
 
         if not all([name, start_dte, end_dte, tag_name]):
             return JsonResponse({"error": "Missing fields"}, status=400)
@@ -967,7 +1004,7 @@ def create_project(request, organization_id):
 
         kanbanBoard = KanbanBoard.objects.create(
             project=project,
-            name=f"{project.title} Kanban Board",
+            title=f"{project.title} Kanban Board",
             organization = organization
         )
 
@@ -1001,9 +1038,16 @@ def create_project(request, organization_id):
 @csrf_exempt
 def update_project(request, organization_id, project_id):
     try:
-        user_id = request.POST.get('user_id')
+        data = json.loads(request.body)
+        username = data.get('username')
+        name = data.get('name')
+        description = data.get('description')
+        start_dte_raw = data.get('start_dte')
+        end_dte_raw = data.get('end_dte')
+        coordinator_username = data.get('coordinator_username')
+
         project = Project.objects.get(id=project_id)
-        membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
+        membership = Membership.objects.get(organization__id=organization_id, user__username=username)
 
         if membership.role not in ['admin', 'coordinator']:
             return JsonResponse({"error": "Permission denied"}, status=403)
@@ -1011,11 +1055,20 @@ def update_project(request, organization_id, project_id):
         if membership.role == 'coordinator' and project.coordinator != membership.user:
             return JsonResponse({"error": "Permission denied"}, status=403)
 
-        name = request.POST.get('name')
-        description = request.POST.get('description')
-        start_dte = request.POST.get('start_dte')
-        end_dte = request.POST.get('end_dte')
-        coordinator_username = request.POST.get('coordinator_username')
+        try:
+            def parse_to_date(s):
+                if 'T' in s:
+                    return datetime.fromisoformat(s).date()
+                return datetime.strptime(s, "%Y-%m-%d").date()
+
+            start_dte = parse_to_date(start_dte_raw)
+            end_dte = parse_to_date(end_dte_raw)
+        except Exception:
+            return JsonResponse({"error": "Invalid date format, expected YYYY-MM-DD or ISO"}, status=400)
+
+        if start_dte > end_dte:
+            return JsonResponse({"error": "start_dte must be before or equal to end_dte"}, status=400)
+
 
         if name:
             project.name = name
@@ -1079,11 +1132,12 @@ def get_projects(request, organization_id):
 
 @require_http_methods(["GET"])
 @csrf_exempt
-def get_user_projects(request, organization_id, user_id):
+def get_user_projects(request, organization_id):
     try:
-        membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
+        username=request.GET.get('username')
+        membership = Membership.objects.get(organization__id=organization_id, user__username=username)
 
-        tags = membership.permissions
+        tags = list(membership.permissions.values_list('name', flat=True))
 
         projects = Project.objects.filter(organization__id=organization_id, tag__name__in=tags)
 
