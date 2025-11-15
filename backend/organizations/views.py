@@ -14,6 +14,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from kanban.models import KanbanBoard
 from .models import Membership, Organization, Tag, Project, CombinedTag
 from .serializers import (
     MembershipCreateSerializer,
@@ -791,10 +792,9 @@ def change_member_role(request, organization_id, member_id):
 
 @require_http_methods(["POST"])
 @csrf_exempt
-def edit_permissions(request, member_id):
+def edit_permissions(request, organization_id, member_id):
     try:
         user_id = request.POST.get('user_id')
-        organization_id = request.POST.get('organization_id')
         membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
         tags = request.POST.getlist('tags[]')
 
@@ -932,10 +932,9 @@ def delete_tag(request, organization_id, tag_id):
 
 @require_http_methods(["POST"])
 @csrf_exempt
-def create_project(request):
+def create_project(request, organization_id):
     try:
         user_id = request.POST.get('user_id')
-        organization_id = request.POST.get('organization_id')
         membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
 
         if membership.role not in ['admin', 'coordinator']:
@@ -957,13 +956,19 @@ def create_project(request):
         )
 
         project = Project.objects.create(
-            name=name,
+            title=name,
             description=description,
             start_dte=start_dte,
             end_dte=end_dte,
             organization=organization,
             tag=tag,
             coordinator=membership.user if membership.role == 'coordinator' else None
+        )
+
+        kanbanBoard = KanbanBoard.objects.create(
+            project=project,
+            name=f"{project.title} Kanban Board",
+            organization = organization
         )
 
         project_data = {
@@ -994,11 +999,11 @@ def create_project(request):
 
 @require_http_methods(["PUT"])
 @csrf_exempt
-def update_project(request, project_id):
+def update_project(request, organization_id, project_id):
     try:
         user_id = request.POST.get('user_id')
         project = Project.objects.get(id=project_id)
-        membership = Membership.objects.get(organization__id=project.organization.id, user__id=user_id)
+        membership = Membership.objects.get(organization__id=organization_id, user__id=user_id)
 
         if membership.role not in ['admin', 'coordinator']:
             return JsonResponse({"error": "Permission denied"}, status=403)
