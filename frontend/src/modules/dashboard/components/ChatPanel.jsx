@@ -1,8 +1,22 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
+import { Maximize2 } from "lucide-react";
 
 export default function ChatPanel({ chats, query, setQuery, addChat }) {
+  const navigate = useNavigate();
   return (
     <section className="basis-[30%] grow h-full bg-[rgba(15,23,42,0.92)] rounded-[24px] p-5 shadow-[0_25px_50px_rgba(15,23,42,0.45)] text-slate-300 border border-[rgba(148,163,184,0.35)] flex flex-col min-h-0 overflow-hidden">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="m-0 text-slate-200 font-semibold">Chaty</h3>
+        <button
+          onClick={() => navigate("/chats")}
+          className="p-1.5 rounded hover:bg-slate-700/40 text-slate-300"
+          aria-label="Pełny ekran"
+          title="Pełny ekran"
+        >
+          <Maximize2 className="w-4 h-4" />
+        </button>
+      </div>
       <div className="mb-4">
         <input
           type="text"
@@ -25,7 +39,9 @@ export default function ChatPanel({ chats, query, setQuery, addChat }) {
                 {c.title.slice(0, 2).toUpperCase()}
               </div>
               <div className="flex-1">
-                <p className="font-medium text-[15px] md:text-base">{c.title}</p>
+                <p className="font-medium text-[15px] md:text-base">
+                  {c.title}
+                </p>
                 {c.tags?.length ? (
                   <p className="text-xs text-slate-400">{c.tags.join(", ")}</p>
                 ) : null}
