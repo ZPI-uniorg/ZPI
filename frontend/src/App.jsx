@@ -14,6 +14,8 @@ import ChatCreatePage from "./modules/chats/pages/ChatCreatePage.jsx";
 import CalendarPage from "./modules/calendar/pages/CalendarPage.jsx";
 import AppLayout from './modules/shared/components/AppLayout.jsx'
 import ProfilePage from './modules/account/pages/ProfilePage.jsx'
+import KanbanPage from './modules/kanban/pages/KanbanPage.jsx'
+import TaskEditPage from './modules/kanban/pages/TaskEditPage.jsx'
 
 function App() {
   return (
@@ -34,6 +36,9 @@ function App() {
               <Route path="organization/tag/new" element={<TagEditPage />} />
               <Route path="chat/new" element={<ChatCreatePage />} />
               <Route path="calendar" element={<CalendarPage />} />
+              <Route path="/kanban" element={<KanbanPage/>} />
+              <Route path="/kanban/task/new" element={<TaskEditPage/>} />
+              <Route path="/kanban/task/edit" element={<TaskEditPage/>} />
               <Route path="profile" element={<ProfilePage />} />
             </Route>
           </Route>

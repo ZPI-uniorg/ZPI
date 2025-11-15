@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from "react";
 import useAuth from "../../../auth/useAuth.js";
 import { TAGS, CHATS, PROJECTS } from "../../../api/fakeData.js";
+import { KANBAN_BOARDS } from "../../../api/fakeData.js";
 import TagList from "../components/TagList.jsx";
 import ChatPanel from "../components/ChatPanel.jsx";
 import MiniCalendar from "../components/MiniCalendar.jsx";
+import KanbanPreview from "../components/KanbanPreview.jsx";
 import { useNavigate } from "react-router-dom";
 import { Settings } from "lucide-react";
 
@@ -17,6 +19,7 @@ export default function OrganizationDashboardPage() {
   const [query, setQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState([]);
   const [logic, setLogic] = useState("AND");
+  const [kanbanIndex, setKanbanIndex] = useState(0);
 
   const toggleTag = (t) =>
     setSelectedTags((prev) =>
@@ -59,6 +62,20 @@ export default function OrganizationDashboardPage() {
   const addProject = () => navigate("/organization/project/new");
 
   const allTagsAndProjects = [...tags, ...projects.map((p) => p.name)];
+  const projectList = projects; // tylko projekty (nie tagi)
+  const currentProject = projectList[kanbanIndex] || null;
+  const currentBoard = currentProject ? KANBAN_BOARDS[currentProject.id] : null;
+
+  const prevKanban = () => {
+    setKanbanIndex((i) =>
+      projectList.length === 0
+        ? 0
+        : (i - 1 + projectList.length) % projectList.length
+    );
+  };
+  const nextKanban = () => {
+    setKanbanIndex((i) => (projectList.length === 0 ? 0 : (i + 1) % projectList.length));
+  };
 
   return (
     <div className="flex min-h-full flex-col overflow-hidden bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-[clamp(24px,5vw,48px)] text-slate-100">
@@ -78,7 +95,7 @@ export default function OrganizationDashboardPage() {
         </div>
       </header>
 
-      <div className="flex flex-1 gap-6 max-w-[90vw] mx-auto w-full overflow-hidden">
+      <div className="flex flex-1 gap-6 max-w-[90vw] mx-auto w-full overflow-hidden min-h-0">
         <aside className="w-[450px] h-full bg-[rgba(15,23,42,0.92)] rounded-2xl border border-[rgba(148,163,184,0.35)] p-5 shrink-0 flex flex-col overflow-hidden min-h-0">
           <div className="mb-4">
             <p className="text-[13px] text-slate-400">Imię i nazwisko</p>
@@ -123,12 +140,17 @@ export default function OrganizationDashboardPage() {
             setQuery={setQuery}
             addChat={addChat}
           />
-          <div className="flex flex-col basis-[45%] grow gap-6 h-full min-h-0">
+          <div className="flex flex-col basis-[45%] grow gap-6 h-full min-h-0 overflow-hidden">
             <div className="flex-1 min-h-0 bg-[rgba(15,23,42,0.92)] rounded-[24px] p-[clamp(24px,3vw,40px)] shadow-[0_25px_50px_rgba(15,23,42,0.45)] flex items-start justify-center text-slate-300 border border-[rgba(148,163,184,0.35)] overflow-hidden">
               <MiniCalendar selectedTags={selectedTags} logic={logic} />
             </div>
-            <div className="flex-1 min-h-0 bg-[rgba(15,23,42,0.92)] rounded-[24px] p-[clamp(24px,3vw,40px)] shadow-[0_25px_50px_rgba(15,23,42,0.45)] flex items-center justify-center text-slate-300 border border-[rgba(148,163,184,0.35)] overflow-hidden">
-              Kanban
+            <div className="flex-1 min-h-0 bg-[rgba(15,23,42,0.92)] rounded-[24px] p-[clamp(24px,3vw,40px)] shadow-[0_25px_50px_rgba(15,23,42,0.45)] flex flex-col text-slate-300 border border-[rgba(148,163,184,0.35)] overflow-hidden">
+              <KanbanPreview
+                project={currentProject}
+                board={currentBoard}
+                onPrev={prevKanban}
+                onNext={nextKanban}
+              />
             </div>
           </div>
         </div>
