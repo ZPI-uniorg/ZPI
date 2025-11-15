@@ -5,9 +5,8 @@ import {
   listOrganizations,
   removeOrganizationMember,
   updateOrganizationMember,
-} from '../api/organizations'
-import useAuth from '../hooks/useAuth'
-import './OrganizationsPage.css'
+} from '../../../api/organizations.js'
+import useAuth from '../../../auth/useAuth.js'
 
 const emptyMemberForm = {
   first_name: '',
