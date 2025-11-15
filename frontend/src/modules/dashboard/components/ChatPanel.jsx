@@ -9,7 +9,7 @@ export default function ChatPanel({ chats, query, setQuery, addChat }) {
       <div className="flex items-center justify-between mb-3">
         <h3 className="m-0 text-slate-200 font-semibold">Chaty</h3>
         <button
-          onClick={() => navigate("/chats")}
+          onClick={() => navigate("/chat")}
           className="p-1.5 rounded hover:bg-slate-700/40 text-slate-300"
           aria-label="Pełny ekran"
           title="Pełny ekran"

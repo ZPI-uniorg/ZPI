@@ -5,7 +5,12 @@ import { useEffect, useState, useRef } from 'react'
 import TagList from '../../dashboard/components/TagList.jsx'
 import { TAGS, PROJECTS } from '../../../api/fakeData.js'
 
-const NAV_LINKS = [{ to: '/dashboard', label: 'Pulpit organizacji' }]
+const NAV_LINKS = [
+  { to: '/dashboard', label: 'Pulpit organizacji' },
+  { to: '/calendar', label: 'Kalendarz' },
+  { to: '/kanban', label: 'Kanban' },
+  { to: '/chat', label: 'Chaty' },
+]
 
 function AppLayout() {
   const { user, organization, logout } = useAuth()
