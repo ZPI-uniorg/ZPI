@@ -17,7 +17,7 @@ function AppLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="flex min-h-screen flex-col bg-slate-950 text-slate-100">
       <header className="sticky top-0 z-40 bg-slate-950/85 backdrop-blur border-b border-slate-800">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-4">
           <div className="flex items-center gap-3">
@@ -53,9 +53,16 @@ function AppLayout() {
           </div>
         </div>
       </header>
-      <main className="min-h-[calc(100vh-64px)]">
+      <main className="flex-1">
         <Outlet />
       </main>
+      <footer className="border-t border-slate-800 bg-slate-950/90 py-4">
+        <div className="mx-auto flex max-w-6xl items-center justify-center px-6">
+          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
+            @2025 UniOrg made with hate to C. P. P
+          </p>
+        </div>
+      </footer>
     </div>
   )
 }

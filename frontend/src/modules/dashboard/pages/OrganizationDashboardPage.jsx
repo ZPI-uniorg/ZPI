@@ -5,7 +5,7 @@ import TagList from "../components/TagList.jsx";
 import ChatPanel from "../components/ChatPanel.jsx";
 import MiniCalendar from "../components/MiniCalendar.jsx";
 import { useNavigate } from "react-router-dom";
-import { Pencil } from "lucide-react";
+import { Settings } from "lucide-react";
 
 export default function OrganizationDashboardPage() {
   const { user, organization: activeOrganization } = useAuth();
@@ -61,7 +61,7 @@ export default function OrganizationDashboardPage() {
   const allTagsAndProjects = [...tags, ...projects.map((p) => p.name)];
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-[clamp(24px,5vw,48px)] text-slate-100">
+    <div className="flex min-h-full flex-col overflow-hidden bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-[clamp(24px,5vw,48px)] text-slate-100">
       <header className="mb-6">
         <div className="flex items-center justify-center gap-2">
           <h1 className="text-[clamp(1.6rem,2.2vw,2.2rem)] font-semibold text-center m-0">
@@ -73,7 +73,7 @@ export default function OrganizationDashboardPage() {
             className="ml-2 p-2 rounded-full hover:bg-slate-700/40 transition flex items-center"
             title="Edytuj członków i tagi organizacji"
           >
-            <Pencil className="w-6 h-6 text-slate-300" />
+            <Settings className="w-6 h-6 text-slate-300" />
           </button>
         </div>
       </header>
