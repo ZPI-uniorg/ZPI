@@ -9,6 +9,11 @@ class KanbanBoard(models.Model):
         related_name="kanban_boards",
         on_delete=models.CASCADE,
     )
+    project = models.ForeignKey(
+        "organizations.Project",
+        related_name="kanban_boards",
+        on_delete=models.CASCADE,
+    )
 
     def __str__(self):
         return self.title
@@ -43,7 +48,7 @@ class Task(models.Model):
         on_delete=models.CASCADE,
     )
     position = models.IntegerField()
-    due_date = models.DateTimeField(null=True, blank=True)
+    due_date = models.DateField(null=True, blank=True)
     assigned_to = models.ForeignKey(
         "core.User",
         related_name="tasks",
