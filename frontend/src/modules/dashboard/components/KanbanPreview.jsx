@@ -42,18 +42,18 @@ export default function KanbanPreview({ project, board, onPrev, onNext }) {
           <button
             type="button"
             onClick={onPrev}
-            className="px-2 py-1 rounded hover:bg-slate-700/40 text-slate-300"
+            className="px-2 py-0.5 rounded hover:bg-slate-700/40 text-slate-300 text-sm"
             aria-label="Poprzedni projekt"
           >
             &lt;
           </button>
-          <h3 className="text-lg font-semibold text-slate-200 min-w-[180px] text-center">
+          <h3 className="text-base font-semibold text-slate-200 min-w-[160px] text-center">
             {project.name}
           </h3>
           <button
             type="button"
             onClick={onNext}
-            className="px-2 py-1 rounded hover:bg-slate-700/40 text-slate-300"
+            className="px-2 py-0.5 rounded hover:bg-slate-700/40 text-slate-300 text-sm"
             aria-label="Następny projekt"
           >
             &gt;
@@ -62,11 +62,11 @@ export default function KanbanPreview({ project, board, onPrev, onNext }) {
         <button
           type="button"
           onClick={handleFullscreen}
-          className="p-1.5 rounded hover:bg-slate-700/40 text-slate-300"
+          className="p-1 rounded hover:bg-slate-700/40 text-slate-300"
           aria-label="Pełny ekran"
           title="Pełny ekran"
         >
-          <Maximize2 className="w-4 h-4" />
+          <Maximize2 className="w-3.5 h-3.5" />
         </button>
       </div>
 
