@@ -1,6 +1,7 @@
 import logging
 
 from django.conf import settings
+from datetime import datetime
 
 try:
     from azure.communication.email import EmailClient
@@ -42,14 +43,55 @@ def _render_plain(username: str, password: str) -> str:
 
 
 def _render_html(username: str, password: str) -> str:
-    return (
-        "<h2>Twoje konto w UniOrg</h2>"
-        "<p>Twoje konto zostalo utworzone. Oto dane logowania:</p>"
-        f"<ul><li><strong>Login:</strong> {username}</li>"
-        f"<li><strong>Haslo tymczasowe:</strong> {password}</li></ul>"
-        "<p>Zaloguj sie i zmien haslo przy pierwszej okazji.</p>"
-        "<p>Pozdrawiamy,<br/>Zespol UniOrg</p>"
-    )
+    # Inline styles for broad email client support (mirrors app dark theme)
+    login_url = "https://zealous-pond-01ec7c503.3.azurestaticapps.net/login"
+    return f"""
+<!DOCTYPE html>
+<html lang='pl'>
+    <head>
+        <meta charset='UTF-8' />
+        <meta name='viewport' content='width=device-width,initial-scale=1' />
+        <title>Twoje konto w UniOrg</title>
+        <style>
+            :root {{ color-scheme: dark; }}
+            body {{ margin:0; padding:0; background:#0f172a; font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color:#f8fafc; }}
+            .wrapper {{ width:100%; background:#0f172a; padding:24px 0; }}
+            .container {{ max-width:560px; margin:0 auto; background:#1e293b; border:1px solid #334155; border-radius:12px; padding:32px 40px; box-shadow:0 4px 12px rgba(0,0,0,0.4); }}
+            h1 {{ font-size:24px; margin:0 0 16px; letter-spacing:0.5px; color:#f8fafc; }}
+            p {{ line-height:1.55; margin:0 0 16px; color:#e2e8f0; }}
+            ul {{ list-style:none; padding:0; margin:0 0 24px; }}
+            li {{ margin:4px 0; font-size:15px; color:#e2e8f0; }}
+            strong {{ color:#f8fafc; }}
+            .kbd {{ display:inline-block; background:#0f172a; padding:4px 10px; border:1px solid #475569; border-radius:6px; font-family: 'Courier New', monospace; font-size:14px; letter-spacing:0.5px; color:#cbd5e1; }}
+            .btn {{ display:inline-block; background:#3b82f6; color:#f8fafc !important; text-decoration:none; padding:14px 24px; border-radius:8px; font-weight:600; letter-spacing:0.5px; box-shadow:0 2px 6px rgba(0,0,0,0.35); }}
+            .btn:hover {{ background:#2563eb; }}
+            .footer {{ font-size:12px; color:#94a3b8; margin-top:32px; line-height:1.4; }}
+            .divider {{ height:1px; background:#334155; border:none; margin:32px 0; }}
+            @media (max-width:600px) {{ .container {{ padding:28px 24px; }} h1 {{ font-size:21px; }} }}
+        </style>
+    </head>
+    <body>
+        <div class='wrapper'>
+            <div class='container'>
+                <h1>Witaj w UniOrg</h1>
+                <p>Twoje konto zostało utworzone. Użyj poniższych danych aby się zalogować i <strong>jak najszybciej zmień hasło</strong>.</p>
+                <ul>
+                    <li><strong>Login:</strong> <span class='kbd'>{username}</span></li>
+                    <li><strong>Hasło tymczasowe:</strong> <span class='kbd'>{password}</span></li>
+                </ul>
+                <p style='margin-bottom:28px;'>Kliknij przycisk poniżej aby przejść do ekranu logowania aplikacji.</p>
+                <p><a href='{login_url}' class='btn' target='_blank' rel='noopener'>Przejdź do logowania</a></p>
+                <hr class='divider' />
+                <p>Jeżeli przycisk nie działa, skopiuj ten adres URL:<br /><span class='kbd' style='word-break:break-all'>{login_url}</span></p>
+                <div class='footer'>
+                    <p>Ta wiadomość została wygenerowana automatycznie przez UniOrg. Proszę nie odpowiadać.</p>
+                    <p>© {datetime.utcnow().year} UniOrg</p>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
+"""
 
 
 def _send_via_acs(recipient_email: str, username: str, password: str, organization_name: str) -> bool:
@@ -96,6 +138,12 @@ def send_new_user_credentials_email(
     password: str,
     organization_name: str,
 ) -> bool:
+    logger.warning(
+        "send_new_user_credentials_email called: recipient_email=%s username=%s organization=%s",
+        recipient_email,
+        username,
+        organization_name,
+    )
     if not recipient_email:
         logger.warning("Skipping credential email - recipient missing")
         return False

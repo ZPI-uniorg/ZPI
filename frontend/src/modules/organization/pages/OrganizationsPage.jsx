@@ -288,8 +288,8 @@ function OrganizationsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto py-10 px-4">
-      <section className="bg-slate-800 rounded-xl p-6 shadow mb-6 flex items-start justify-between gap-6">
+    <div className="min-h-screen flex flex-col max-w-7xl mx-auto py-10 px-4">
+      <section className="bg-slate-800 rounded-xl p-6 shadow mb-6 flex flex-col lg:flex-row items-start justify-between gap-6">
         <div>
           <p className="text-slate-400 text-sm uppercase tracking-wide">
             Organizacja
