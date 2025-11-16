@@ -71,7 +71,7 @@ def _render_html(username: str, password: str) -> str:
 
 def main():
     try:
-        connection_string = "endpoint=https://uniorg-cs.europe.communication.azure.com/;accesskey=3qDMC0D1ldjxt7tPsEAOSPwI6sP7pRm2aa4mz1F44Sryscon9g7jJQQJ99BKACULyCpTNnCJAAAAAZCSHJpp"
+        connection_string = "endpoint=endpoint=https://zpi-uniorg-communication-service.europe.communication.azure.com/;accesskey=9peONHoxA3Zcl2sNu7fq74fEJvWyPNV9E1qbf6V6VcJCUrA8QmgRJQQJ99BKACULyCpTNnCJAAAAAZCSA7LK"
         client = EmailClient.from_connection_string(connection_string)
 
         # Mock user data
@@ -80,9 +80,9 @@ def main():
         organization_name = "Acme Corp"
 
         message = {
-            "senderAddress": "DoNotReply@410f18c0-1626-42b8-a65e-a103ee974837.azurecomm.net",
+            "senderAddress": "DoNotReply@3af5f752-8655-4840-b541-10927c5794da.azurecomm.net",
             "recipients": {
-                "to": [{"address": "<TEST_MAIL>"}]
+                "to": [{"address": "<INPUT MAIL>"}]
             },
             "content": {
                 "subject": _render_subject(organization_name),

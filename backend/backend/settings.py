@@ -179,5 +179,5 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 # Email configuration (SendGrid)
-AZURE_COMMUNICATION_CONNECTION_STRING = "endpoint=https://uniorg-cs.europe.communication.azure.com/;accesskey=3qDMC0D1ldjxt7tPsEAOSPwI6sP7pRm2aa4mz1F44Sryscon9g7jJQQJ99BKACULyCpTNnCJAAAAAZCSHJpp"
-AZURE_COMMUNICATION_SENDER_EMAIL = "DoNotReply@410f18c0-1626-42b8-a65e-a103ee974837.azurecomm.net"
+AZURE_COMMUNICATION_CONNECTION_STRING = "endpoint=https://zpi-uniorg-communication-service.europe.communication.azure.com/;accesskey=9peONHoxA3Zcl2sNu7fq74fEJvWyPNV9E1qbf6V6VcJCUrA8QmgRJQQJ99BKACULyCpTNnCJAAAAAZCSA7LK"
+AZURE_COMMUNICATION_SENDER_EMAIL = "DoNotReply@3af5f752-8655-4840-b541-10927c5794da.azurecomm.net"
