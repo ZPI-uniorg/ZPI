@@ -17,6 +17,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from kanban.models import KanbanBoard
+from core.email_utils import send_new_user_credentials_email
 from .models import Membership, Organization, Tag, Project, CombinedTag
 from .serializers import (
     MembershipCreateSerializer,
@@ -769,6 +770,14 @@ def invite_member(request, organization_id):
 
         if not generated_password and not raw_password and not user_created:
             response_payload["password_retained"] = True
+
+        if user_created and generated_password and invitee.email:
+            send_new_user_credentials_email(
+                recipient_email=invitee.email,
+                username=invitee.username,
+                password=generated_password,
+                organization_name=organization.name,
+            )
 
         return JsonResponse(response_payload, status=201)
     except Membership.DoesNotExist:
