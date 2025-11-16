@@ -64,8 +64,19 @@ export default function ProjectEditPage() {
       : createProject(organization.id, user.username, payload);
 
     request
-      .then(() => {
-        navigate("/dashboard", { state: { projectJustUpdated: true } });
+      .then((project) => {
+        const fallbackProject = isEditing && editingProject
+          ? {
+              ...editingProject,
+              ...payload,
+              id: editingProject.id,
+            }
+          : { ...payload };
+        const resolvedProject = project && project.id ? project : fallbackProject;
+        const redirectState = isEditing
+          ? { projectJustUpdated: resolvedProject }
+          : { projectJustCreated: resolvedProject };
+        navigate("/dashboard", { state: redirectState });
       })
       .catch((err) => {
         const message =

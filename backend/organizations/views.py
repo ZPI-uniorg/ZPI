@@ -1104,6 +1104,20 @@ def create_project(request, organization_id):
             organization = organization
         )
 
+        if project.coordinator:
+            try:
+                coordinator_membership = Membership.objects.get(
+                    organization=organization,
+                    user=project.coordinator,
+                )
+                coordinator_membership.permissions.add(tag)
+            except Membership.DoesNotExist:
+                logger.warning(
+                    "create_project: coordinator membership missing for user %s in organization %s",
+                    project.coordinator.username,
+                    organization_id,
+                )
+
         project_data = {
             "id": project.id,
             "name": project.title,
@@ -1177,10 +1191,36 @@ def update_project(request, organization_id, project_id):
         if coordinator_username:
             coordinator = User.objects.get(username=coordinator_username)
             project.coordinator = coordinator
+            try:
+                coordinator_membership = Membership.objects.get(
+                    organization__id=organization_id,
+                    user=coordinator,
+                )
+                coordinator_membership.permissions.add(project.tag)
+            except Membership.DoesNotExist:
+                logger.warning(
+                    "update_project: coordinator membership missing for user %s in organization %s",
+                    coordinator_username,
+                    organization_id,
+                )
+
+        if membership.role == 'coordinator':
+            membership.permissions.add(project.tag)
 
         project.save()
 
-        return JsonResponse({"message": "Project updated successfully"}, status=200)
+        project_data = {
+            "id": project.id,
+            "name": project.title,
+            "description": project.description,
+            "start_dte": project.start_dte,
+            "end_dte": project.end_dte,
+            "organization_id": project.organization.id,
+            "tag_id": project.tag.id,
+            "coordinator_id": project.coordinator.id if project.coordinator else None,
+        }
+
+        return JsonResponse(project_data, status=200)
     except Project.DoesNotExist:
         return JsonResponse({"error": "Project not found"}, status=404)
     except Membership.DoesNotExist:

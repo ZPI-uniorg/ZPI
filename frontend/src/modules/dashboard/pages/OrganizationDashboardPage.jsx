@@ -4,14 +4,18 @@ import { KANBAN_BOARDS } from "../../../api/fakeData.js";
 import ChatPanel from "../components/ChatPanel.jsx";
 import MiniCalendar from "../components/MiniCalendar.jsx";
 import KanbanPreview from "../components/KanbanPreview.jsx";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { getAllProjects, getUserProjects } from "../../../api/projects.js";
 
 export default function OrganizationDashboardPage() {
   const { user, organization: activeOrganization } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const projectJustCreated = location.state?.projectJustCreated;
+  const projectJustUpdated = location.state?.projectJustUpdated;
 
   const [projects, setProjects] = useState([]);
+  const [localProjects, setLocalProjects] = useState([]);
   const [chats] = useState([]);
   const [query, setQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState([]);
@@ -20,34 +24,154 @@ export default function OrganizationDashboardPage() {
   const [projectsError, setProjectsError] = useState(null);
   const [projectsLoading, setProjectsLoading] = useState(false);
 
+  const mergeProjectData = (baseList, extras) => {
+    const merged = Array.isArray(baseList) ? [...baseList] : [];
+    extras
+      .filter(Boolean)
+      .forEach((extra) => {
+        if (!extra || typeof extra !== "object") {
+          return;
+        }
+        const extraId = Number(extra.id);
+        if (Number.isNaN(extraId)) {
+          merged.push(extra);
+          return;
+        }
+        const existingIndex = merged.findIndex((project) => Number(project.id) === extraId);
+        if (existingIndex >= 0) {
+          merged[existingIndex] = {
+            ...merged[existingIndex],
+            ...extra,
+          };
+        } else {
+          merged.push(extra);
+        }
+      });
+    return merged;
+  };
+
   useEffect(() => {
     if (!activeOrganization?.id || !user?.username) {
       setProjects([]);
+      setProjectsLoading(false);
+      setProjectsError(null);
       return;
     }
 
+    let ignore = false;
+
     async function loadProjects() {
+      if (ignore) {
+        return;
+      }
+
       setProjectsLoading(true);
       setProjectsError(null);
       try {
         const fetcher = activeOrganization.role === "admin" ? getAllProjects : getUserProjects;
         const data = await fetcher(activeOrganization.id, user.username);
-        setProjects(data ?? []);
-        setKanbanIndex(0);
+        if (ignore) {
+          return;
+        }
+        const fetchedProjects = Array.isArray(data) ? data : [];
+        const merged = mergeProjectData(fetchedProjects, localProjects);
+        setProjects(merged);
+        setKanbanIndex((currentIndex) =>
+          merged.length === 0 ? 0 : Math.min(currentIndex, merged.length - 1)
+        );
+        setLocalProjects((currentLocal) => {
+          if (currentLocal.length === 0) {
+            return currentLocal;
+          }
+          const backendIds = new Set(
+            fetchedProjects
+              .map((project) => Number(project.id))
+              .filter((id) => Number.isFinite(id))
+          );
+          const filtered = currentLocal.filter(
+            (project) => !backendIds.has(Number(project?.id))
+          );
+          return filtered.length === currentLocal.length ? currentLocal : filtered;
+        });
       } catch (err) {
+        if (ignore) {
+          return;
+        }
         setProjectsError(
           err.response?.data?.error ??
             err.response?.data?.detail ??
             "Nie udało się pobrać projektów."
         );
         setProjects([]);
+        setKanbanIndex(0);
       } finally {
-        setProjectsLoading(false);
+        if (!ignore) {
+          setProjectsLoading(false);
+        }
       }
     }
 
     loadProjects();
-  }, [activeOrganization?.id, activeOrganization?.role, user?.username]);
+
+    return () => {
+      ignore = true;
+    };
+  }, [
+    activeOrganization?.id,
+    activeOrganization?.role,
+    user?.username,
+    location.key,
+    localProjects,
+  ]);
+
+  useEffect(() => {
+    if (!projectJustCreated && !projectJustUpdated) {
+      return;
+    }
+
+    const extras = [projectJustCreated, projectJustUpdated];
+    setLocalProjects((current) => mergeProjectData(current, extras));
+    setProjects((current) => mergeProjectData(current, extras));
+  }, [projectJustCreated, projectJustUpdated]);
+
+  useEffect(() => {
+    if (!projectJustCreated) {
+      return;
+    }
+
+    const createdId = Number(projectJustCreated.id);
+    if (Number.isNaN(createdId)) {
+      return;
+    }
+
+    const index = projects.findIndex((project) => Number(project.id) === createdId);
+    if (index >= 0) {
+      setKanbanIndex(index);
+    }
+  }, [projectJustCreated, projects]);
+
+  useEffect(() => {
+    if (!projectJustCreated && !projectJustUpdated) {
+      return;
+    }
+
+    if (typeof window === "undefined") {
+      navigate(location.pathname, { replace: true, state: undefined });
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      navigate(location.pathname, { replace: true, state: undefined });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [projectJustCreated, projectJustUpdated, navigate, location.pathname]);
+
+  useEffect(() => {
+    setLocalProjects([]);
+    setProjects([]);
+    setKanbanIndex(0);
+  }, [activeOrganization?.id]);
 
   const filteredChats = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -80,7 +204,6 @@ export default function OrganizationDashboardPage() {
 
   const addChat = () => navigate("/chat/new");
   const addTag = () => navigate("/organization/tag/new");
-  const addProject = () => navigate("/organization/project/new");
 
   const projectList = projects; // tylko projekty (nie tagi)
   const currentProject = projectList[kanbanIndex] || null;
