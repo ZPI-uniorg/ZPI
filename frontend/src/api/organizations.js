@@ -67,3 +67,17 @@ export async function removeOrganizationMember(organizationId, memberUsername, a
     data: { admin_username: adminUsername },
   })
 }
+
+export async function updateOrganizationMemberProfile(organizationId, memberUsername, adminUsername, payload) {
+  const response = await apiClient.put(
+    `members/update-profile/${organizationId}/${encodeURIComponent(memberUsername)}/`,
+    {
+      admin_username: adminUsername,
+      first_name: payload.first_name,
+      last_name: payload.last_name,
+      email: payload.email,
+    },
+  )
+
+  return response.data
+}

@@ -11,7 +11,7 @@ from organizations.views import (
     get_tag_test, get_all_tags_test, create_tag_test, delete_tag_test,
     get_project_test, get_all_projects_test, create_project_test, delete_project_test, update_project_test,
     register_organization, get_user_organization, edit_organization, invite_member, get_organization_users,
-    remove_organization_member, change_member_role, edit_permissions, get_all_tags, get_tags, create_tag, delete_tag,
+    remove_organization_member, change_member_role, update_member_profile, edit_permissions, get_all_tags, get_tags, create_tag, delete_tag,
     create_project, update_project, get_projects, get_user_projects,
 )
 
@@ -39,6 +39,7 @@ urlpatterns += [
     path('members/<int:organization_id>/', get_organization_users, name='get_organization_users'),
     path('members/delete/<int:organization_id>/<str:username>/', remove_organization_member, name='remove_organization_member'),
     path('members/change-role/<int:organization_id>/<str:username>/', change_member_role, name='change_member_role'),
+    path('members/update-profile/<int:organization_id>/<str:username>/', update_member_profile, name='update_member_profile'),
     path('members/update-permissions/<int:organization_id>/<str:username>/', edit_permissions, name='edit_permissions'),
     path('tags/all/<int:organization_id>/', get_all_tags, name='get_all_tags'),
     path('tags/my/<int:organization_id>/', get_tags, name='get_tags'),
