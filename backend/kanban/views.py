@@ -399,8 +399,8 @@ def update_task_test(request, task_id):
 @csrf_exempt
 def get_board(request, organization_id, project_id):
     try:
-        user_id = request.GET.get("user_id")
-        membership = Membership.objects.get(user__id=user_id, organization__id=organization_id)
+        username = request.GET.get("username")
+        membership = Membership.objects.get(user__username=username, organization__id=organization_id)
 
         project = Project.objects.get(project_id=project_id)
 
@@ -431,8 +431,8 @@ def get_board(request, organization_id, project_id):
 @csrf_exempt
 def get_board_with_content(request, organization_id, project_id):
     try:
-        user_id = request.GET.get("user_id")
-        membership = Membership.objects.get(user__id=user_id, organization__id=organization_id)
+        username = request.GET.get("username")
+        membership = Membership.objects.get(user__username=username, organization__id=organization_id)
 
         project = Project.objects.get(project_id=project_id)
 
@@ -488,8 +488,8 @@ def get_board_with_content(request, organization_id, project_id):
 @csrf_exempt
 def add_column(request, organization_id, board_id):
     try:
-        user_id = request.POST.get("user_id")
-        membership = Membership.objects.get(user__id=user_id, organization__id=organization_id)
+        username = request.POST.get("username")
+        membership = Membership.objects.get(user__username=username, organization__id=organization_id)
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
 
@@ -532,10 +532,10 @@ def update_column_position(request, organization_id, board_id, column_id):
     try:
         data = json.loads(request.body)
         position = data.get("position")
-        user_id = data.get("user_id")
+        username = data.get("username")
 
 
-        membership = Membership.objects.get(user__id=user_id, organization__id=organization_id)
+        membership = Membership.objects.get(user__username=username, organization__id=organization_id)
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
 
@@ -572,7 +572,8 @@ def update_column_position(request, organization_id, board_id, column_id):
 @csrf_exempt
 def delete_column(request, organization_id, board_id, column_id):
     try:
-        user_id = request.DELETE.get("user_id")
+        data = json.loads(request.body)
+        user_id = data.get("user_id")
         membership = Membership.objects.get(user__id=user_id, organization__id=organization_id)
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
@@ -599,8 +600,8 @@ def delete_column(request, organization_id, board_id, column_id):
 @csrf_exempt
 def get_column(request, organization_id, board_id, column_id):
     try:
-        user_id = request.GET.get("user_id")
-        membership = Membership.objects.get(user__id=user_id, organization__id=organization_id)
+        username = request.GET.get("username")
+        membership = Membership.objects.get(user__username=username, organization__id=organization_id)
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
 
@@ -631,8 +632,8 @@ def get_column(request, organization_id, board_id, column_id):
 @csrf_exempt
 def add_task(request, organization_id, board_id, column_id):
     try:
-        user_id = request.POST.get("user_id")
-        membership = Membership.objects.get(user__id=user_id, organization__id=organization_id)
+        username = request.POST.get("username")
+        membership = Membership.objects.get(user__username=username, organization__id=organization_id)
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
 
@@ -693,9 +694,9 @@ def add_task(request, organization_id, board_id, column_id):
 def update_task(request, organization_id, board_id, column_id, task_id):
     try:
         data = json.loads(request.body)
-        user_id = data.get("user_id")
+        username = data.get("username")
 
-        membership = Membership.objects.get(user__id=user_id, organization__id=organization_id)
+        membership = Membership.objects.get(user__username=username, organization__id=organization_id)
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
 
@@ -754,8 +755,9 @@ def update_task(request, organization_id, board_id, column_id, task_id):
 @csrf_exempt
 def delete_task(request, organization_id, board_id, column_id, task_id):
     try:
-        user_id = request.DELETE.get("user_id")
-        membership = Membership.objects.get(user__id=user_id, organization__id=organization_id)
+        data = json.loads(request.body)
+        username = data.get("username")
+        membership = Membership.objects.get(user__username=username, organization__id=organization_id)
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
 
@@ -785,8 +787,8 @@ def delete_task(request, organization_id, board_id, column_id, task_id):
 @csrf_exempt
 def get_task(request, organization_id, board_id, column_id, task_id):
     try:
-        user_id = request.GET.get("user_id")
-        membership = Membership.objects.get(user__id=user_id, organization__id=organization_id)
+        username = request.GET.get("username")
+        membership = Membership.objects.get(user__username=username, organization__id=organization_id)
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
 
