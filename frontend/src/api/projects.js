@@ -6,6 +6,15 @@ function toFormData(payload) {
     if (value === undefined || value === null) {
       return
     }
+    if (Array.isArray(value)) {
+      value.forEach((entry) => {
+        if (entry === undefined || entry === null) {
+          return
+        }
+        params.append(key, String(entry))
+      })
+      return
+    }
     params.append(key, String(value))
   })
   return params
@@ -25,6 +34,8 @@ export async function createProject(organizationId, actorUsername, payload) {
     description: payload.description,
     start_dte: payload.start_dte,
     end_dte: payload.end_dte,
+    coordinator_username: payload.coordinator_username ?? null,
+    members: payload.members,
   })
 
   const response = await apiClient.post(`project/create/${organizationId}/`, params)
@@ -49,6 +60,7 @@ export async function updateProject(organizationId, projectId, actorUsername, pa
     start_dte: payload.start_dte,
     end_dte: payload.end_dte,
     coordinator_username: payload.coordinator_username ?? null,
+    members: payload.members ?? [],
   })
 
   return response.data

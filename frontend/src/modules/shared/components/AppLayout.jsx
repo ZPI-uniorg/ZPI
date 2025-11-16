@@ -16,16 +16,45 @@ function AppLayout() {
   const { user, organization, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const projectJustCreated = location.state?.projectJustCreated
+  const projectJustUpdated = location.state?.projectJustUpdated
   const fullName = `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.username
 
   // globalny stan filtrów
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [tags, setTags] = useState([])
   const [projects, setProjects] = useState([])
+  const [localProjects, setLocalProjects] = useState([])
   const [selectedTags, setSelectedTags] = useState([])
   const [logic, setLogic] = useState('AND')
 
   const tagListRootRef = useRef(null)
+
+  const mergeProjectData = (baseList, extras) => {
+    const merged = Array.isArray(baseList) ? [...baseList] : []
+    extras
+      .filter(Boolean)
+      .forEach((extra) => {
+        if (!extra || typeof extra !== 'object') {
+          return
+        }
+        const extraId = Number(extra.id)
+        if (Number.isNaN(extraId)) {
+          merged.push(extra)
+          return
+        }
+        const existingIndex = merged.findIndex((project) => Number(project.id) === extraId)
+        if (existingIndex >= 0) {
+          merged[existingIndex] = {
+            ...merged[existingIndex],
+            ...extra,
+          }
+        } else {
+          merged.push(extra)
+        }
+      })
+    return merged
+  }
 
   useEffect(() => {
     const params = new URLSearchParams(location.search)
@@ -77,12 +106,28 @@ function AppLayout() {
       try {
         const fetcher = organization.role === 'admin' ? getAllProjects : getUserProjects
         const data = await fetcher(organization.id, user.username)
-        if (!ignore) {
-          setProjects(Array.isArray(data) ? data : [])
+        if (ignore) {
+          return
         }
+        const fetchedProjects = Array.isArray(data) ? data : []
+        setProjects(mergeProjectData(fetchedProjects, localProjects))
+        setLocalProjects((currentLocal) => {
+          if (currentLocal.length === 0) {
+            return currentLocal
+          }
+          const backendIds = new Set(
+            fetchedProjects
+              .map((project) => Number(project.id))
+              .filter((id) => Number.isFinite(id))
+          )
+          const filtered = currentLocal.filter(
+            (project) => !backendIds.has(Number(project?.id))
+          )
+          return filtered.length === currentLocal.length ? currentLocal : filtered
+        })
       } catch (error) {
         if (!ignore) {
-          setProjects([])
+          setProjects(mergeProjectData([], localProjects))
         }
       }
     }
@@ -92,7 +137,22 @@ function AppLayout() {
     return () => {
       ignore = true
     }
-  }, [organization?.id, organization?.role, user?.username, location.key])
+  }, [organization?.id, organization?.role, user?.username, location.key, localProjects])
+
+  useEffect(() => {
+    if (!projectJustCreated && !projectJustUpdated) {
+      return
+    }
+
+    const extras = [projectJustCreated, projectJustUpdated]
+    setLocalProjects((current) => mergeProjectData(current, extras))
+    setProjects((current) => mergeProjectData(current, extras))
+  }, [projectJustCreated, projectJustUpdated])
+
+  useEffect(() => {
+    setLocalProjects([])
+    setProjects([])
+  }, [organization?.id])
 
   useEffect(() => {
     const collectedTags = new Set()

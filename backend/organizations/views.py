@@ -33,6 +33,87 @@ from .serializers import (
 
 User = get_user_model()
 
+
+def _normalize_username_list(raw_values):
+    if not raw_values:
+        return []
+    normalized = []
+    for value in raw_values:
+        if value is None:
+            continue
+        username = str(value).strip()
+        if username and username not in normalized:
+            normalized.append(username)
+    return normalized
+
+
+def _parse_members_from_post(post_data):
+    members = post_data.getlist('members') or post_data.getlist('members[]')
+    if not members:
+        raw_members = post_data.get('members')
+        if raw_members:
+            try:
+                decoded = json.loads(raw_members)
+                if isinstance(decoded, (list, tuple)):
+                    members = [str(item) for item in decoded]
+                else:
+                    members = [str(raw_members)]
+            except json.JSONDecodeError:
+                members = [str(raw_members)]
+    return _normalize_username_list(members)
+
+
+def _parse_members_from_payload(value):
+    if value is None:
+        return None
+    if isinstance(value, (list, tuple)):
+        return _normalize_username_list(value)
+    if isinstance(value, str):
+        try:
+            decoded = json.loads(value)
+            if isinstance(decoded, (list, tuple)):
+                return _normalize_username_list(decoded)
+        except json.JSONDecodeError:
+            return _normalize_username_list([value])
+        return _normalize_username_list([value])
+    return _normalize_username_list([])
+
+
+def _serialize_project_members(project):
+    memberships = (
+        Membership.objects.filter(
+            organization=project.organization,
+            permissions=project.tag,
+        )
+        .select_related('user')
+        .order_by('user__username')
+    )
+    return [
+        {
+            "id": membership.user.id,
+            "username": membership.user.username,
+            "first_name": membership.user.first_name,
+            "last_name": membership.user.last_name,
+            "role": membership.role,
+        }
+        for membership in memberships
+    ]
+
+
+def _project_to_dict(project):
+    return {
+        "id": project.id,
+        "name": project.title,
+        "description": project.description,
+        "start_dte": project.start_dte,
+        "end_dte": project.end_dte,
+        "organization_id": project.organization.id,
+        "tag_id": project.tag.id,
+        "coordinator_id": project.coordinator.id if project.coordinator else None,
+        "coordinator_username": project.coordinator.username if project.coordinator else None,
+        "members": _serialize_project_members(project),
+    }
+
 @require_http_methods(["GET"])
 @csrf_exempt
 def get_organizations_test(request):
@@ -536,7 +617,7 @@ def update_project_test(request, project_id):
         coordinator_username = data.get('coordinator_username')
 
         if name:
-            project.name = name
+            project.title = name
         if description:
             project.description = description
         if start_dte:
@@ -893,6 +974,72 @@ def change_member_role(request, organization_id, username):
 
 @require_http_methods(["PUT"])
 @csrf_exempt
+def update_member_profile(request, organization_id, username):
+    try:
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON payload"}, status=400)
+
+        admin_username = data.get('admin_username')
+        if not admin_username:
+            return JsonResponse({"error": "Missing field: admin_username"}, status=400)
+
+        admin_membership = Membership.objects.get(
+            organization__id=organization_id,
+            user__username=admin_username,
+        )
+
+        if admin_membership.role != 'admin':
+            return JsonResponse({"error": "Permission denied"}, status=403)
+
+        member_membership = Membership.objects.get(
+            organization__id=organization_id,
+            user__username=username,
+        )
+
+        user = member_membership.user
+
+        update_fields = []
+        if 'first_name' in data:
+            user.first_name = (data.get('first_name') or '').strip()
+            update_fields.append('first_name')
+        if 'last_name' in data:
+            user.last_name = (data.get('last_name') or '').strip()
+            update_fields.append('last_name')
+        if 'email' in data:
+            email_value = (data.get('email') or '').strip()
+            user.email = email_value
+            update_fields.append('email')
+
+        if update_fields:
+            user.save(update_fields=update_fields)
+
+        member_payload = {
+            "user_id": user.id,
+            "username": user.username,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "email": user.email,
+            "role": member_membership.role,
+            "permissions": list(member_membership.permissions.values_list('name', flat=True)),
+        }
+
+        return JsonResponse(
+            {
+                "message": "Member updated successfully",
+                "member": member_payload,
+            },
+            status=200,
+        )
+    except Membership.DoesNotExist:
+        return JsonResponse({"error": "Membership not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@require_http_methods(["PUT"])
+@csrf_exempt
 def edit_permissions(request, organization_id, username):
     try:
         data = json.loads(request.body)
@@ -1064,6 +1211,7 @@ def create_project(request, organization_id):
         start_dte_raw = request.POST.get('start_dte')
         end_dte_raw = request.POST.get('end_dte')
         tag_name = name
+        requested_coordinator_username = request.POST.get('coordinator_username') or None
 
         try:
             def parse_to_date(s):
@@ -1088,6 +1236,20 @@ def create_project(request, organization_id):
             organization=organization
         )
 
+        coordinator_membership = None
+        if membership.role == 'coordinator':
+            coordinator_membership = membership
+        elif requested_coordinator_username:
+            coordinator_membership = Membership.objects.filter(
+                organization=organization,
+                user__username=requested_coordinator_username,
+            ).select_related('user').first()
+            if not coordinator_membership:
+                return JsonResponse({"error": "Coordinator not found in organization"}, status=404)
+
+        if coordinator_membership and coordinator_membership.role != 'coordinator':
+            return JsonResponse({"error": "Selected user must have coordinator role"}, status=400)
+
         project = Project.objects.create(
             title=name,
             description=description,
@@ -1095,25 +1257,39 @@ def create_project(request, organization_id):
             end_dte=end_dte,
             organization=organization,
             tag=tag,
-            coordinator=membership.user if membership.role == 'coordinator' else None
+            coordinator=coordinator_membership.user if coordinator_membership else None
         )
 
-        kanbanBoard = KanbanBoard.objects.create(
+        member_usernames = _parse_members_from_post(request.POST)
+        if project.coordinator:
+            member_usernames.append(project.coordinator.username)
+        if membership.role == 'coordinator':
+            member_usernames.append(membership.user.username)
+        member_usernames = _normalize_username_list(member_usernames)
+
+        KanbanBoard.objects.create(
             project=project,
             title=f"{project.title} Kanban Board",
-            organization = organization
+            organization=organization
         )
 
-        project_data = {
-            "id": project.id,
-            "name": project.title,
-            "description": project.description,
-            "start_dte": project.start_dte,
-            "end_dte": project.end_dte,
-            "organization_id": project.organization.id,
-            "tag_id": project.tag.id,
-            "coordinator_id": project.coordinator.id if project.coordinator else None,
-        }
+        if member_usernames:
+            memberships_to_grant = Membership.objects.filter(
+                organization=organization,
+                user__username__in=member_usernames,
+            ).select_related('user')
+            found_usernames = {m.user.username for m in memberships_to_grant}
+            missing = set(member_usernames) - found_usernames
+            for project_membership in memberships_to_grant:
+                project_membership.permissions.add(tag)
+            if missing:
+                logger.warning(
+                    "create_project: some usernames not found for permissions assignment: org=%s usernames=%s",
+                    organization_id,
+                    ",".join(sorted(missing)),
+                )
+
+        project_data = _project_to_dict(project)
 
         return JsonResponse(project_data, status=201)
     except Membership.DoesNotExist:
@@ -1141,6 +1317,7 @@ def update_project(request, organization_id, project_id):
         start_dte_raw = data.get('start_dte')
         end_dte_raw = data.get('end_dte')
         coordinator_username = data.get('coordinator_username')
+        members_payload = data.get('members') if 'members' in data else None
 
         project = Project.objects.get(id=project_id)
         membership = Membership.objects.get(organization__id=organization_id, user__username=username)
@@ -1167,20 +1344,73 @@ def update_project(request, organization_id, project_id):
 
 
         if name:
-            project.name = name
+            project.title = name
         if description:
             project.description = description
         if start_dte:
             project.start_dte = start_dte
         if end_dte:
             project.end_dte = end_dte
-        if coordinator_username:
-            coordinator = User.objects.get(username=coordinator_username)
-            project.coordinator = coordinator
+        if coordinator_username is not None:
+            if not coordinator_username:
+                project.coordinator = None
+            else:
+                coordinator_membership = Membership.objects.filter(
+                    organization__id=organization_id,
+                    user__username=coordinator_username,
+                ).select_related('user').first()
+                if not coordinator_membership:
+                    return JsonResponse({"error": "Coordinator not found in organization"}, status=404)
+                if coordinator_membership.role != 'coordinator':
+                    return JsonResponse({"error": "Selected user must have coordinator role"}, status=400)
+
+                project.coordinator = coordinator_membership.user
+                coordinator_membership.permissions.add(project.tag)
+
+        if members_payload is not None:
+            desired_usernames = _parse_members_from_payload(members_payload) or []
+            if project.coordinator:
+                desired_usernames.append(project.coordinator.username)
+            if membership.role == 'coordinator':
+                desired_usernames.append(membership.user.username)
+            desired_usernames = _normalize_username_list(desired_usernames)
+
+            existing_memberships = Membership.objects.filter(
+                organization__id=organization_id,
+                permissions=project.tag,
+            ).select_related('user')
+            desired_memberships = Membership.objects.filter(
+                organization__id=organization_id,
+                user__username__in=desired_usernames,
+            ).select_related('user')
+
+            desired_usernames_set = set(desired_usernames)
+
+            to_remove = [m for m in existing_memberships if m.user.username not in desired_usernames_set]
+            to_add = [m for m in desired_memberships if m.user.username in desired_usernames_set]
+
+            for membership_to_remove in to_remove:
+                membership_to_remove.permissions.remove(project.tag)
+
+            for membership_to_add in to_add:
+                membership_to_add.permissions.add(project.tag)
+
+            missing_usernames = desired_usernames_set - {m.user.username for m in desired_memberships}
+            if missing_usernames:
+                logger.warning(
+                    "update_project: some usernames not found for permissions assignment: org=%s usernames=%s",
+                    organization_id,
+                    ",".join(sorted(missing_usernames)),
+                )
+
+        if membership.role == 'coordinator':
+            membership.permissions.add(project.tag)
 
         project.save()
 
-        return JsonResponse({"message": "Project updated successfully"}, status=200)
+        project_data = _project_to_dict(project)
+
+        return JsonResponse(project_data, status=200)
     except Project.DoesNotExist:
         return JsonResponse({"error": "Project not found"}, status=404)
     except Membership.DoesNotExist:
@@ -1215,19 +1445,7 @@ def get_projects(request, organization_id):
             return JsonResponse({"error": "Permission denied"}, status=403)
 
         projects = Project.objects.filter(organization__id=organization_id)
-        project_list = [
-            {
-                "id": project.id,
-                "name": project.title,
-                "description": project.description,
-                "start_dte": project.start_dte,
-                "end_dte": project.end_dte,
-                "organization_id": project.organization.id,
-                "tag_id": project.tag.id,
-                "coordinator_id": project.coordinator.id if project.coordinator else None,
-            }
-            for project in projects
-        ]
+        project_list = [_project_to_dict(project) for project in projects]
         return JsonResponse(project_list, safe=False, status=200)
     except Membership.DoesNotExist:
         return JsonResponse({"error": "Membership not found"}, status=404)
@@ -1246,19 +1464,7 @@ def get_user_projects(request, organization_id):
 
         projects = Project.objects.filter(organization__id=organization_id, tag__name__in=tags)
 
-        project_list = [
-            {
-                "id": project.id,
-                "name": project.title,
-                "description": project.description,
-                "start_dte": project.start_dte,
-                "end_dte": project.end_dte,
-                "organization_id": project.organization.id,
-                "tag_id": project.tag.id,
-                "coordinator_id": project.coordinator.id if project.coordinator else None,
-            }
-            for project in projects
-        ]
+        project_list = [_project_to_dict(project) for project in projects]
         return JsonResponse(project_list, safe=False, status=200)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)

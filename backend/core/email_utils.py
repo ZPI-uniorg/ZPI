@@ -147,8 +147,9 @@ def send_new_user_credentials_email(
     if not recipient_email:
         logger.warning("Skipping credential email - recipient missing")
         return False
-    if _send_via_acs(recipient_email, username, password, organization_name):
-        return True
+    # uncomment to enable acs sending
+    # if _send_via_acs(recipient_email, username, password, organization_name):
+    #     return True
     # Final failure already logged with details inside _send_via_acs
     logger.error("ACS email failed for %s (see previous error for details)", recipient_email)
     return False

@@ -5,6 +5,7 @@ import {
   listOrganizations,
   removeOrganizationMember,
   updateOrganizationMember,
+  updateOrganizationMemberProfile,
 } from "../../../api/organizations.js";
 import useAuth from "../../../auth/useAuth.js";
 
@@ -61,6 +62,14 @@ function OrganizationsPage() {
   const [memberSubmitting, setMemberSubmitting] = useState(false);
   const [lastCreatedCredentials, setLastCreatedCredentials] = useState(null);
   const [memberSuccess, setMemberSuccess] = useState(null);
+  const [editingMember, setEditingMember] = useState(null);
+  const [memberEditForm, setMemberEditForm] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+  });
+  const [memberEditSubmitting, setMemberEditSubmitting] = useState(false);
+  const [memberEditError, setMemberEditError] = useState(null);
 
   const selectedOrganization = useMemo(
     () => organizations.find((org) => org.id === selectedOrgId) ?? null,
@@ -164,6 +173,16 @@ function OrganizationsPage() {
     }
   }, [selectedOrgId, loadMembers]);
 
+  useEffect(() => {
+    setEditingMember(null);
+    setMemberEditForm({
+      first_name: "",
+      last_name: "",
+      email: "",
+    });
+    setMemberEditError(null);
+  }, [selectedOrgId]);
+
   const handleMemberFormChange = (event) => {
     const { name, value } = event.target;
     setMemberForm((prev) => ({ ...prev, [name]: value }));
@@ -177,6 +196,23 @@ function OrganizationsPage() {
         generateUsername(selectedOrganization?.slug ?? "member"),
       password: generatePassword(),
     }));
+  };
+
+  const startEditMember = (member) => {
+    setEditingMember(member);
+    setMemberEditForm({
+      first_name: member.first_name ?? "",
+      last_name: member.last_name ?? "",
+      email: member.email ?? "",
+    });
+    setMemberEditError(null);
+    setMemberSuccess(null);
+    setMemberError(null);
+  };
+
+  const handleEditMemberFormChange = (event) => {
+    const { name, value } = event.target;
+    setMemberEditForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleAddMember = async (event) => {
@@ -242,12 +278,63 @@ function OrganizationsPage() {
     }
   };
 
+  const handleUpdateMember = async (event) => {
+    event.preventDefault();
+    if (!selectedOrgId || !user?.username || !editingMember?.username) {
+      return;
+    }
+
+    const payload = {
+      first_name: memberEditForm.first_name.trim(),
+      last_name: memberEditForm.last_name.trim(),
+      email: memberEditForm.email.trim(),
+    };
+
+    setMemberEditSubmitting(true);
+    setMemberEditError(null);
+    setMemberError(null);
+    setMemberSuccess(null);
+
+    try {
+      await updateOrganizationMemberProfile(
+        selectedOrgId,
+        editingMember.username,
+        user.username,
+        payload
+      );
+      await loadMembers(selectedOrgId);
+      setMemberSuccess("Dane użytkownika zostały zaktualizowane.");
+      setEditingMember(null);
+      setMemberEditForm({ first_name: "", last_name: "", email: "" });
+    } catch (error) {
+      const message =
+        error.response?.data?.error ??
+        error.response?.data?.detail ??
+        "Nie udało się zaktualizować danych użytkownika.";
+      setMemberEditError(message);
+      setMemberError(message);
+    } finally {
+      setMemberEditSubmitting(false);
+    }
+  };
+
+  const handleCancelEditMember = () => {
+    setEditingMember(null);
+    setMemberEditForm({ first_name: "", last_name: "", email: "" });
+    setMemberEditError(null);
+    setMemberError(null);
+  };
+
   const handleRemoveMember = async (memberId) => {
     if (!selectedOrgId || !user?.username) return;
     if (!window.confirm("Czy na pewno chcesz usunąć tego członka?")) return;
     try {
       await removeOrganizationMember(selectedOrgId, memberId, user.username);
       await loadMembers(selectedOrgId);
+      if (editingMember?.username === memberId) {
+        setEditingMember(null);
+        setMemberEditForm({ first_name: "", last_name: "", email: "" });
+      }
     } catch (error) {
       setMemberError(
         error.response?.data?.error ??
@@ -436,14 +523,25 @@ function OrganizationsPage() {
                       )}
                     </td>
                     <td className="py-2 px-4">
-                      {isAdmin && member.user !== user?.id ? (
-                        <button
-                          type="button"
-                          className="text-red-400 hover:underline px-2"
-                          onClick={() => handleRemoveMember(member.username)}
-                        >
-                          Usuń
-                        </button>
+                      {isAdmin ? (
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            className="text-indigo-300 hover:underline"
+                            onClick={() => startEditMember(member)}
+                          >
+                            Edytuj
+                          </button>
+                          {member.user !== user?.id && (
+                            <button
+                              type="button"
+                              className="text-red-400 hover:underline"
+                              onClick={() => handleRemoveMember(member.username)}
+                            >
+                              Usuń
+                            </button>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-slate-500">—</span>
                       )}
@@ -452,6 +550,67 @@ function OrganizationsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+        {isAdmin && editingMember && (
+          <div className="mt-6 border-t border-slate-700 pt-6">
+            <h3 className="text-base font-semibold text-slate-100 mb-2">
+              Edytuj użytkownika: {editingMember.username}
+            </h3>
+            <p className="text-sm text-slate-400 mb-4">
+              Wprowadź aktualne dane kontaktowe członka projektu.
+            </p>
+            {memberEditError && (
+              <p className="mb-4 text-red-400 bg-red-500/10 border border-red-400/30 rounded px-4 py-3 text-sm">
+                {memberEditError}
+              </p>
+            )}
+            <form onSubmit={handleUpdateMember} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label className="flex flex-col gap-2">
+                <span className="text-slate-200 font-medium">Imię</span>
+                <input
+                  name="first_name"
+                  value={memberEditForm.first_name}
+                  onChange={handleEditMemberFormChange}
+                  className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+                />
+              </label>
+              <label className="flex flex-col gap-2">
+                <span className="text-slate-200 font-medium">Nazwisko</span>
+                <input
+                  name="last_name"
+                  value={memberEditForm.last_name}
+                  onChange={handleEditMemberFormChange}
+                  className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+                />
+              </label>
+              <label className="flex flex-col gap-2 md:col-span-2">
+                <span className="text-slate-200 font-medium">Adres email</span>
+                <input
+                  name="email"
+                  type="email"
+                  value={memberEditForm.email}
+                  onChange={handleEditMemberFormChange}
+                  className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+                />
+              </label>
+              <div className="flex items-center gap-3 md:col-span-2">
+                <button
+                  type="submit"
+                  disabled={memberEditSubmitting}
+                  className="bg-gradient-to-r from-indigo-500 to-violet-500 text-white px-5 py-2 rounded font-semibold disabled:opacity-60"
+                >
+                  {memberEditSubmitting ? "Zapisywanie…" : "Zapisz zmiany"}
+                </button>
+                <button
+                  type="button"
+                  className="text-slate-300 hover:underline"
+                  onClick={handleCancelEditMember}
+                >
+                  Anuluj
+                </button>
+              </div>
+            </form>
           </div>
         )}
       </section>
