@@ -399,8 +399,8 @@ def update_task_test(request, task_id):
 @csrf_exempt
 def get_board(request, organization_id, project_id):
     try:
-        user_id = request.GET.get("user_id")
-        membership = Membership.objects.get(user__id=user_id, organization__id=organization_id)
+        username = request.GET.get("username")
+        membership = Membership.objects.get(user__username=username, organization__id=organization_id)
 
         project = Project.objects.get(project_id=project_id)
 
@@ -431,8 +431,8 @@ def get_board(request, organization_id, project_id):
 @csrf_exempt
 def get_board_with_content(request, organization_id, project_id):
     try:
-        user_id = request.GET.get("user_id")
-        membership = Membership.objects.get(user__id=user_id, organization__id=organization_id)
+        username = request.GET.get("username")
+        membership = Membership.objects.get(user__username=username, organization__id=organization_id)
 
         project = Project.objects.get(project_id=project_id)
 
