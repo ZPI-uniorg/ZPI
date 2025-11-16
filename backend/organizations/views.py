@@ -1,6 +1,7 @@
 from datetime import datetime
 import json
 import secrets
+import logging
 
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
@@ -17,6 +18,9 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from kanban.models import KanbanBoard
+from core.email_utils import send_new_user_credentials_email
+
+logger = logging.getLogger(__name__)
 from .models import Membership, Organization, Tag, Project, CombinedTag
 from .serializers import (
     MembershipCreateSerializer,
@@ -769,6 +773,21 @@ def invite_member(request, organization_id):
 
         if not generated_password and not raw_password and not user_created:
             response_payload["password_retained"] = True
+
+        logger.warning(
+            "Invite flow: user_created=%s generated_password_present=%s email=%s",
+            user_created,
+            bool(generated_password),
+            invitee.email,
+        )
+
+        if user_created and generated_password and invitee.email:
+            send_new_user_credentials_email(
+                recipient_email=invitee.email,
+                username=invitee.username,
+                password=generated_password,
+                organization_name=organization.name,
+            )
 
         return JsonResponse(response_payload, status=201)
     except Membership.DoesNotExist:

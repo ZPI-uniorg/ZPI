@@ -7,3 +7,4 @@ django-cors-headers==4.6.0
 psycopg2-binary==2.9.11
 supabase==2.23.0
 requests ==2.31.0
+azure-communication-email==1.0.0

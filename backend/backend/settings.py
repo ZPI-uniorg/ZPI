@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from datetime import timedelta
 from pathlib import Path
 
@@ -175,3 +176,8 @@ CORS_ALLOW_CREDENTIALS = True
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# Email configuration (SendGrid)
+AZURE_COMMUNICATION_CONNECTION_STRING = "endpoint=https://uniorg-cs.europe.communication.azure.com/;accesskey=3qDMC0D1ldjxt7tPsEAOSPwI6sP7pRm2aa4mz1F44Sryscon9g7jJQQJ99BKACULyCpTNnCJAAAAAZCSHJpp"
+AZURE_COMMUNICATION_SENDER_EMAIL = "DoNotReply@410f18c0-1626-42b8-a65e-a103ee974837.azurecomm.net"
