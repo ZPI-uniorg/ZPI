@@ -3,13 +3,6 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 
 from organizations.views import (
-    get_organizations_test, get_organization_test, create_organization_test, delete_organization_test,
-    update_organization_test,
-    get_membership_test, get_all_organization_memberships_test, create_membership_test, delete_membership_test,
-    update_membership_test,
-    get_all_organization_members_test,
-    get_tag_test, get_all_tags_test, create_tag_test, delete_tag_test,
-    get_project_test, get_all_projects_test, create_project_test, delete_project_test, update_project_test,
     register_organization, get_user_organization, edit_organization, invite_member, get_organization_users,
     remove_organization_member, change_member_role, update_member_profile, edit_permissions, get_all_tags, get_tags, create_tag, delete_tag,
     create_project, update_project, get_projects, get_user_projects,

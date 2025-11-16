@@ -4,11 +4,8 @@ import secrets
 import logging
 
 from django.contrib.auth import get_user_model
-from django.db import IntegrityError, transaction
-from django.db.models import Count
-from django.http import JsonResponse, QueryDict
+from django.db import IntegrityError
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from rest_framework import status, viewsets
@@ -21,15 +18,7 @@ from kanban.models import KanbanBoard
 from core.email_utils import send_new_user_credentials_email
 
 logger = logging.getLogger(__name__)
-from .models import Membership, Organization, Tag, Project, CombinedTag
-from .serializers import (
-    MembershipCreateSerializer,
-    MembershipSerializer,
-    MembershipUpdateSerializer,
-    OrganizationCreateSerializer,
-    OrganizationSerializer,
-    OrganizationRegistrationSerializer,
-)
+from .models import Membership, Organization, Tag, Project
 
 User = get_user_model()
 

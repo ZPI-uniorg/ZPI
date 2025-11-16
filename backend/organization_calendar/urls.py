@@ -1,6 +1,7 @@
 from django.urls import path
-from .views import get_all_events, get_user_events, get_events_by_tag, create_event, delete_event, get_event, \
-    update_event
+from .views import(
+    get_all_events, get_user_events, get_events_by_tag, create_event, delete_event, get_event, update_event
+)
 
 urlpatterns = [
     path('events/all/<int:organization_id>/', get_all_events, name='get_all_events'),
