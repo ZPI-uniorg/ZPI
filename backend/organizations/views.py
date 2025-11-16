@@ -1178,7 +1178,8 @@ def create_tag(request, organization_id):
 @csrf_exempt
 def delete_tag(request, organization_id, tag_name):
     try:
-        username = request.POST.get('username')
+        data = json.loads(request.body)
+        username = data.get('username')
         membership = Membership.objects.get(organization__id=organization_id, user__id=username)
 
         if membership.role != 'admin':

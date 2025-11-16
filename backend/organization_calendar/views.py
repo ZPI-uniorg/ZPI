@@ -398,7 +398,8 @@ def create_event(request, organization_id):
 @csrf_exempt
 def delete_event(request, organization_id, event_id):
     try:
-        username = request.GET.get("username")
+        data = json.loads(request.body)
+        username = data.get("username")
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
 
         event = Event.objects.get(event_id=event_id, organization__id=organization_id)
