@@ -1,14 +1,36 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { TAGS, PROJECTS, CHATS } from "../../../api/fakeData.js";
+import { CHATS } from "../../../api/fakeData.js";
+import { getAllProjects, getUserProjects } from "../../../api/projects.js";
+import useAuth from "../../../auth/useAuth.js";
 import TagCombinationsPicker from "../../shared/components/TagCombinationsPicker.jsx";
 
 export default function ChatCreatePage() {
   const navigate = useNavigate();
+  const { user, organization } = useAuth();
   const [title, setTitle] = useState("");
-  const [combinations, setCombinations] = useState([]); // Każdy element to tablica tagów (kombinacja)
+  const [combinations, setCombinations] = useState([]);
+  const [projects, setProjects] = useState([]);
 
-  const allSuggestions = [...PROJECTS.map(p => p.name), ...TAGS];
+  useEffect(() => {
+    if (!organization?.id || !user?.username) {
+      setProjects([]);
+      return;
+    }
+    async function loadProjects() {
+      try {
+        const fetcher =
+          organization.role === "admin" ? getAllProjects : getUserProjects;
+        const data = await fetcher(organization.id, user.username);
+        setProjects(Array.isArray(data) ? data : []);
+      } catch {
+        setProjects([]);
+      }
+    }
+    loadProjects();
+  }, [organization?.id, organization?.role, user?.username]);
+
+  const allSuggestions = projects.map((p) => p.name).filter(Boolean);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -42,11 +64,13 @@ export default function ChatCreatePage() {
 
         <div className="flex flex-col gap-6">
           <label className="flex flex-col gap-2">
-            <span className="text-slate-300 text-sm font-medium">Nazwa chatu</span>
+            <span className="text-slate-300 text-sm font-medium">
+              Nazwa chatu
+            </span>
             <input
               className="border border-slate-600 rounded-lg px-3 py-2 bg-slate-800 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
               value={title}
-              onChange={e => setTitle(e.target.value)}
+              onChange={(e) => setTitle(e.target.value)}
               placeholder="Np. Planowanie sprintu"
               required
             />

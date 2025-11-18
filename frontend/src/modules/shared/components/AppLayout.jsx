@@ -32,27 +32,26 @@ function AppLayout() {
 
   const mergeProjectData = (baseList, extras) => {
     const merged = Array.isArray(baseList) ? [...baseList] : []
-    extras
-      .filter(Boolean)
-      .forEach((extra) => {
-        if (!extra || typeof extra !== 'object') {
+    
+    extras.filter(Boolean).forEach((extra) => {
+      if (!extra || typeof extra !== 'object') return
+      
+      const extraId = Number(extra.id)
+      
+      // Aktualizuj jeśli ma ID i już istnieje
+      if (Number.isFinite(extraId) && extraId > 0) {
+        const idx = merged.findIndex((p) => Number(p.id) === extraId)
+        if (idx >= 0) {
+          merged[idx] = { ...merged[idx], ...extra }
           return
         }
-        const extraId = Number(extra.id)
-        if (Number.isNaN(extraId)) {
-          merged.push(extra)
-          return
-        }
-        const existingIndex = merged.findIndex((project) => Number(project.id) === extraId)
-        if (existingIndex >= 0) {
-          merged[existingIndex] = {
-            ...merged[existingIndex],
-            ...extra,
-          }
-        } else {
-          merged.push(extra)
-        }
-      })
+      }
+      
+      // Pomiń jeśli ten sam name już istnieje (tymczasowy duplikat przed fetch)
+      if (extra.name && merged.some((p) => p.name === extra.name)) return
+      
+      merged.push(extra)
+    })
     return merged
   }
 
@@ -106,29 +105,21 @@ function AppLayout() {
       try {
         const fetcher = organization.role === 'admin' ? getAllProjects : getUserProjects
         const data = await fetcher(organization.id, user.username)
-        if (ignore) {
-          return
-        }
+        if (ignore) return
+        
         const fetchedProjects = Array.isArray(data) ? data : []
         setProjects(mergeProjectData(fetchedProjects, localProjects))
-        setLocalProjects((currentLocal) => {
-          if (currentLocal.length === 0) {
-            return currentLocal
-          }
-          const backendIds = new Set(
-            fetchedProjects
-              .map((project) => Number(project.id))
-              .filter((id) => Number.isFinite(id))
+        
+        // Usuń lokalne duplikaty (po name lub ID)
+        setLocalProjects((cur) => 
+          cur.filter((local) => 
+            !fetchedProjects.some((fetched) => 
+              fetched.name === local.name || Number(fetched.id) === Number(local.id)
+            )
           )
-          const filtered = currentLocal.filter(
-            (project) => !backendIds.has(Number(project?.id))
-          )
-          return filtered.length === currentLocal.length ? currentLocal : filtered
-        })
+        )
       } catch (error) {
-        if (!ignore) {
-          setProjects(mergeProjectData([], localProjects))
-        }
+        if (!ignore) setProjects(mergeProjectData([], localProjects))
       }
     }
 
@@ -137,7 +128,7 @@ function AppLayout() {
     return () => {
       ignore = true
     }
-  }, [organization?.id, organization?.role, user?.username, location.key, localProjects])
+  }, [organization?.id, organization?.role, user?.username, location.key])
 
   useEffect(() => {
     if (!projectJustCreated && !projectJustUpdated) {
