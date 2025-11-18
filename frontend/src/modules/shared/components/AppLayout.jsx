@@ -238,8 +238,8 @@ function AppLayout() {
           </div>
         </div>
       </header>
-      <main className="flex-1 min-h-0 overflow-y-auto">
-        <div className="flex flex-col min-h-full">
+      <main className="flex-1 min-h-0 overflow-hidden">
+        <div className="h-full flex flex-col min-h-0">
           <Outlet />
         </div>
       </main>
