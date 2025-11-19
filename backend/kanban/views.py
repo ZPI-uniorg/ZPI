@@ -396,6 +396,9 @@ def update_task_test(request, task_id):
 @csrf_exempt
 def get_board(request, organization_id, project_id):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User not authenticated"}, status=401)
+
         username = request.GET.get("username")
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
 
@@ -428,6 +431,9 @@ def get_board(request, organization_id, project_id):
 @csrf_exempt
 def get_board_with_content(request, organization_id, project_id):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User not authenticated"}, status=401)
+
         username = request.GET.get("username")
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
 
@@ -485,6 +491,9 @@ def get_board_with_content(request, organization_id, project_id):
 @csrf_exempt
 def add_column(request, organization_id, board_id):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User not authenticated"}, status=401)
+
         username = request.POST.get("username")
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
         organization = Organization.objects.get(id=organization_id)
@@ -527,6 +536,9 @@ def add_column(request, organization_id, board_id):
 @csrf_exempt
 def update_column_position(request, organization_id, board_id, column_id):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User not authenticated"}, status=401)
+
         data = json.loads(request.body)
         position = data.get("position")
         username = data.get("username")
@@ -569,6 +581,9 @@ def update_column_position(request, organization_id, board_id, column_id):
 @csrf_exempt
 def delete_column(request, organization_id, board_id, column_id):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User not authenticated"}, status=401)
+
         data = json.loads(request.body)
         user_id = data.get("user_id")
         membership = Membership.objects.get(user__id=user_id, organization__id=organization_id)
@@ -597,6 +612,9 @@ def delete_column(request, organization_id, board_id, column_id):
 @csrf_exempt
 def get_column(request, organization_id, board_id, column_id):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User not authenticated"}, status=401)
+
         username = request.GET.get("username")
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
         organization = Organization.objects.get(id=organization_id)
@@ -629,6 +647,9 @@ def get_column(request, organization_id, board_id, column_id):
 @csrf_exempt
 def add_task(request, organization_id, board_id, column_id):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User not authenticated"}, status=401)
+
         username = request.POST.get("username")
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
         organization = Organization.objects.get(id=organization_id)
@@ -690,6 +711,9 @@ def add_task(request, organization_id, board_id, column_id):
 @csrf_exempt
 def update_task(request, organization_id, board_id, column_id, task_id):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User not authenticated"}, status=401)
+
         data = json.loads(request.body)
         username = data.get("username")
 
@@ -752,6 +776,9 @@ def update_task(request, organization_id, board_id, column_id, task_id):
 @csrf_exempt
 def delete_task(request, organization_id, board_id, column_id, task_id):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User not authenticated"}, status=401)
+
         data = json.loads(request.body)
         username = data.get("username")
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
@@ -784,6 +811,9 @@ def delete_task(request, organization_id, board_id, column_id, task_id):
 @csrf_exempt
 def get_task(request, organization_id, board_id, column_id, task_id):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User not authenticated"}, status=401)
+
         username = request.GET.get("username")
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
         organization = Organization.objects.get(id=organization_id)

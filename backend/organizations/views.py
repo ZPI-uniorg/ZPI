@@ -618,6 +618,9 @@ def register_organization(request):
 @csrf_exempt
 def get_user_organization(request, username):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User is not authenticated"}, status=401)
+
         memberships = Membership.objects.filter(user__username=username)
 
         organizations = [
@@ -643,6 +646,9 @@ def get_user_organization(request, username):
 @csrf_exempt
 def edit_organization(request, organization_id):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User is not authenticated"}, status=401)
+
         data = json.loads(request.body)
         name = data.get('name')
         description = data.get('description')
@@ -681,6 +687,9 @@ def edit_organization(request, organization_id):
 @csrf_exempt
 def invite_member(request, organization_id):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User is not authenticated"}, status=401)
+
         if request.content_type == "application/json":
             data = json.loads(request.body or "{}")
         else:
@@ -806,6 +815,9 @@ def invite_member(request, organization_id):
 @csrf_exempt
 def get_organization_users(request, organization_id):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User is not authenticated"}, status=401)
+
         username = request.GET.get('username')
         membership = Membership.objects.get(organization__id=organization_id, user__username=username)
 
@@ -837,6 +849,9 @@ def get_organization_users(request, organization_id):
 @csrf_exempt
 def remove_organization_member(request, organization_id, username):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User is not authenticated"}, status=401)
+
         data = json.loads(request.body)
         admin_username = data.get('admin_username')
 
@@ -859,6 +874,9 @@ def remove_organization_member(request, organization_id, username):
 @csrf_exempt
 def change_member_role(request, organization_id, username):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User is not authenticated"}, status=401)
+
         data = json.loads(request.body)
         admin_username = data.get('admin_username')
         new_role = data.get('new_role')
@@ -893,6 +911,9 @@ def change_member_role(request, organization_id, username):
 @csrf_exempt
 def update_member_profile(request, organization_id, username):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User is not authenticated"}, status=401)
+
         try:
             data = json.loads(request.body)
         except json.JSONDecodeError:
@@ -958,6 +979,9 @@ def update_member_profile(request, organization_id, username):
 @csrf_exempt
 def edit_permissions(request, organization_id, username):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User is not authenticated"}, status=401)
+
         data = json.loads(request.body)
         admin_username = data.get('admin_username')
         tags_names = data.get('tags', [])
@@ -1000,6 +1024,9 @@ def edit_permissions(request, organization_id, username):
 @csrf_exempt
 def get_all_tags(request, organization_id):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User is not authenticated"}, status=401)
+
         username = request.GET.get('username')
         membership = Membership.objects.get(organization__id=organization_id, user__username=username)
 
@@ -1024,6 +1051,9 @@ def get_all_tags(request, organization_id):
 @csrf_exempt
 def get_tags(request, organization_id):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User is not authenticated"}, status=401)
+
         username = request.GET.get('username')
         membership = Membership.objects.get(organization__id=organization_id, user__username=username)
 
@@ -1050,6 +1080,9 @@ def get_tags(request, organization_id):
 @csrf_exempt
 def create_tag(request, organization_id):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User is not authenticated"}, status=401)
+
         username = request.POST.get('username')
         membership = Membership.objects.get(organization__id=organization_id, user__username=username)
 
@@ -1094,6 +1127,9 @@ def create_tag(request, organization_id):
 @csrf_exempt
 def delete_tag(request, organization_id, tag_name):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User is not authenticated"}, status=401)
+
         data = json.loads(request.body)
         username = data.get('username')
         membership = Membership.objects.get(organization__id=organization_id, user__id=username)
@@ -1117,6 +1153,9 @@ def delete_tag(request, organization_id, tag_name):
 @csrf_exempt
 def create_project(request, organization_id):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User is not authenticated"}, status=401)
+
         username = request.POST.get('username')
         membership = Membership.objects.get(organization__id=organization_id, user__username=username)
 
@@ -1206,6 +1245,9 @@ def create_project(request, organization_id):
 @csrf_exempt
 def update_project(request, organization_id, project_id):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User is not authenticated"}, status=401)
+
         data = json.loads(request.body)
         username = data.get('username')
         name = data.get('name')
@@ -1288,6 +1330,9 @@ def update_project(request, organization_id, project_id):
 @csrf_exempt
 def get_projects(request, organization_id):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User is not authenticated"}, status=401)
+
         username = request.GET.get('username')
 
         if not username:
@@ -1315,6 +1360,9 @@ def get_projects(request, organization_id):
 @csrf_exempt
 def get_user_projects(request, organization_id):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User is not authenticated"}, status=401)
+
         username=request.GET.get('username')
         membership = Membership.objects.get(organization__id=organization_id, user__username=username)
 
