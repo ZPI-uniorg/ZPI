@@ -8,17 +8,15 @@ from organizations.views import (
     create_project, update_project, get_projects, get_user_projects,
 )
 
-from .views import LoginView, LogoutView, PasswordChangeView, register_user
+from .views import login_view, logout_view, change_password_view, login_status_view
 
 router = DefaultRouter()
 
 urlpatterns = [
-    path("auth/login/", LoginView.as_view(), name="login"),
-    path("auth/logout/", LogoutView.as_view(), name="logout"),
-    path("auth/change-password/", PasswordChangeView.as_view(), name="change-password"),
-    path("auth/token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
-    path("auth/register/", register_user, name="register"),
-
+    path("auth/login/<str:organization_name>/", login_view, name="login"),
+    path("auth/logout/<str:organization_name>/", logout_view, name="logout"),
+    path("auth/change-password/", change_password_view, name="change-password"),
+    path('auth/check-auth/', login_status_view, name='check-auth'),
 ]
 
 urlpatterns += router.urls
