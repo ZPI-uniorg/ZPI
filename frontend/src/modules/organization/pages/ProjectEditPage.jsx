@@ -123,15 +123,21 @@ export default function ProjectEditPage() {
   };
 
   const handleCancel = () => navigate("/dashboard");
+  const handleDelete = () => {
+    // TODO: wywołanie API usuwania projektu gdy będzie dostępne
+    navigate("/dashboard");
+  };
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(145deg,#0f172a,#1e293b)] flex items-center justify-center p-8">
+    <div className="h-full overflow-auto bg-[linear-gradient(145deg,#0f172a,#1e293b)] px-6 py-8">
       <form
         onSubmit={handleSubmit}
-        className="bg-slate-900/95 rounded-3xl shadow-[0_30px_60px_rgba(15,23,42,0.45)] p-12 w-full max-w-6xl flex flex-col gap-10 border border-slate-700"
+        className="mx-auto bg-slate-900/95 rounded-3xl shadow-[0_30px_60px_rgba(15,23,42,0.45)] w-full max-w-6xl p-8 md:p-10 flex flex-col gap-10 border border-slate-700"
       >
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-2">
-          <span className="text-indigo-400 text-base font-semibold">Nazwa organizacji</span>
+          <h1 className="text-lg font-semibold text-slate-200">
+            {isEditing ? "Edytuj projekt" : "Nowy projekt"}
+          </h1>
           <button
             type="button"
             className="border border-slate-500 px-4 py-2 rounded-lg text-slate-200 bg-transparent hover:bg-slate-700/40 transition"
@@ -240,10 +246,10 @@ export default function ProjectEditPage() {
           {isEditing && (
             <button
               type="button"
-              className="border border-slate-500 px-8 py-3 rounded-xl text-lg text-slate-200 bg-transparent hover:bg-slate-700/40 transition w-full md:w-auto"
-              onClick={handleCancel}
+              className="border border-red-500 px-8 py-3 rounded-xl text-lg text-red-400 bg-transparent hover:bg-red-500/10 transition w-full md:w-auto"
+              onClick={handleDelete}
             >
-              Anuluj
+              Usuń projekt
             </button>
           )}
         </div>

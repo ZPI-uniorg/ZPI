@@ -46,10 +46,10 @@ export default function ChatCreatePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(145deg,#0f172a,#1e293b)] flex items-center justify-center p-8">
+    <div className="h-full overflow-auto bg-[linear-gradient(145deg,#0f172a,#1e293b)] px-6 py-8">
       <form
         onSubmit={handleSubmit}
-        className="bg-slate-900/95 rounded-3xl shadow-[0_30px_60px_rgba(15,23,42,0.45)] p-10 w-full max-w-3xl flex flex-col gap-8 border border-slate-700"
+        className="mx-auto bg-slate-900/95 rounded-3xl shadow-[0_30px_60px_rgba(15,23,42,0.45)] w-full max-w-3xl p-8 md:p-10 flex flex-col gap-8 border border-slate-700"
       >
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold text-slate-100">Nowy chat</h1>

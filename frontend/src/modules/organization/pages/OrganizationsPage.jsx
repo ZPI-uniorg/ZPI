@@ -375,8 +375,9 @@ function OrganizationsPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col max-w-7xl mx-auto py-10 px-4">
-      <section className="bg-slate-800 rounded-xl p-6 shadow mb-6 flex flex-col lg:flex-row items-start justify-between gap-6">
+    <div className="h-full overflow-auto max-w-7xl mx-auto px-4 py-8 flex flex-col gap-8">
+      {/* Sekcja organizacji (bez sticky) */}
+      <section className="bg-slate-800 rounded-xl p-6 shadow flex flex-col lg:flex-row items-start justify-between gap-6">
         <div>
           <p className="text-slate-400 text-sm uppercase tracking-wide">
             Organizacja
@@ -403,23 +404,23 @@ function OrganizationsPage() {
       </section>
 
       {organizationsError && (
-        <p className="mb-4 text-red-400 bg-red-500/10 border border-red-400/30 rounded px-4 py-3">
+        <p className="mb-0 text-red-400 bg-red-500/10 border border-red-400/30 rounded px-4 py-3">
           {organizationsError}
         </p>
       )}
       {memberError && (
-        <p className="mb-4 text-red-400 bg-red-500/10 border border-red-400/30 rounded px-4 py-3">
+        <p className="mb-0 text-red-400 bg-red-500/10 border border-red-400/30 rounded px-4 py-3">
           {memberError}
         </p>
       )}
       {memberSuccess && (
-        <p className="mb-4 text-green-400 bg-green-500/10 border border-green-400/30 rounded px-4 py-3">
+        <p className="mb-0 text-green-400 bg-green-500/10 border border-green-400/30 rounded px-4 py-3">
           {memberSuccess}
         </p>
       )}
 
       {lastCreatedCredentials && (
-        <div className="bg-slate-800 rounded-xl p-6 shadow mb-6">
+        <div className="bg-slate-800 rounded-xl p-6 shadow">
           <h2 className="text-lg font-semibold text-slate-100">
             Dane nowego użytkownika
           </h2>
@@ -460,17 +461,19 @@ function OrganizationsPage() {
         </div>
       )}
 
+      {/* Sekcja członków (naprawiona) */}
       <section className="bg-slate-800 rounded-xl shadow p-6 mb-6">
-        <header className="flex items-center justify-between mb-3">
+        <header className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-slate-100">Członkowie</h2>
           <span className="text-slate-300">{members.length} osób</span>
         </header>
+
         {membersLoading ? (
           <p className="text-slate-300">Ładowanie członków…</p>
         ) : members.length === 0 ? (
           <p className="text-slate-300">Brak członków w tej organizacji.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-[460px] overflow-y-auto rounded border border-slate-700/50">
             <table className="w-full min-w-[900px] text-left">
               <thead>
                 <tr className="text-slate-300">
@@ -482,38 +485,24 @@ function OrganizationsPage() {
               </thead>
               <tbody>
                 {members.map((member) => (
-                  <tr
-                    key={member.id}
-                    className="border-t border-slate-700 align-top"
-                  >
+                  <tr key={member.id} className="border-t border-slate-700 align-top">
                     <td className="py-2 px-4">
-                      <strong className="text-slate-100">
-                        {member.username}
-                      </strong>
-                      <br />
-                      <small className="text-slate-300">
-                        {member.first_name} {member.last_name}
-                      </small>
+                      <strong className="text-slate-100">{member.username}</strong><br />
+                      <small className="text-slate-300">{member.first_name} {member.last_name}</small>
                     </td>
                     <td className="py-2 px-4">
-                      <small className="text-slate-300">
-                        {member.email || "—"}
-                      </small>
+                      <small className="text-slate-300">{member.email || "—"}</small>
                     </td>
                     <td className="py-2 px-4">
                       {isAdmin ? (
                         <select
                           value={member.role}
-                          onChange={(event) =>
-                            handleRoleChange(member.username, event.target.value)
-                          }
+                          onChange={(e) => handleRoleChange(member.username, e.target.value)}
                           disabled={member.user === user?.id}
                           className="rounded px-2 py-1 border border-slate-600 bg-slate-900 text-slate-100"
                         >
                           {Object.entries(ROLE_LABELS).map(([value, label]) => (
-                            <option value={value} key={value}>
-                              {label}
-                            </option>
+                            <option key={value} value={value}>{label}</option>
                           ))}
                         </select>
                       ) : (
@@ -552,8 +541,9 @@ function OrganizationsPage() {
             </table>
           </div>
         )}
+
         {isAdmin && editingMember && (
-          <div className="mt-6 border-t border-slate-700 pt-6">
+          <div className="mt-8 border-t border-slate-700 pt-6">
             <h3 className="text-base font-semibold text-slate-100 mb-2">
               Edytuj użytkownika: {editingMember.username}
             </h3>
@@ -572,7 +562,7 @@ function OrganizationsPage() {
                   name="first_name"
                   value={memberEditForm.first_name}
                   onChange={handleEditMemberFormChange}
-                  className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+                  className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500"
                 />
               </label>
               <label className="flex flex-col gap-2">
@@ -581,7 +571,7 @@ function OrganizationsPage() {
                   name="last_name"
                   value={memberEditForm.last_name}
                   onChange={handleEditMemberFormChange}
-                  className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+                  className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500"
                 />
               </label>
               <label className="flex flex-col gap-2 md:col-span-2">
@@ -591,7 +581,7 @@ function OrganizationsPage() {
                   type="email"
                   value={memberEditForm.email}
                   onChange={handleEditMemberFormChange}
-                  className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+                  className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500"
                 />
               </label>
               <div className="flex items-center gap-3 md:col-span-2">

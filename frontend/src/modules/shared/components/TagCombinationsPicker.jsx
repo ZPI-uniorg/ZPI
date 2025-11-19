@@ -19,11 +19,11 @@ export default function TagCombinationsPicker({
   const filtered = allSuggestions
     .filter((s) => s.toLowerCase().includes(query.toLowerCase()))
     .filter((s) => !currentCombination.includes(s))
-    .slice(0, 50);
+    .slice(0, 75);
 
   const mainFiltered = allSuggestions
     .filter((s) => s.toLowerCase().includes(mainQuery.toLowerCase()))
-    .slice(0, 50);
+    .slice(0, 75);
 
   const handleMainSelect = (val) => {
     onChange([...(combinations || []), [val]]);
@@ -60,22 +60,21 @@ export default function TagCombinationsPicker({
         getOptionLabel={(o) => o.label}
       />
 
-      {combinations?.length > 0 && (
-        <div className="flex flex-wrap gap-2 mt-2">
-          {combinations.map((combo, idx) => (
-            <div key={idx} className="flex items-center gap-2">
-              <div className="flex items-center bg-violet-600/80 text-white rounded-full px-3 py-1.5 text-sm select-none">
+      {/* Pasek kombinacji – poziomy scroll bez zmiany wysokości całego formularza */}
+      {combinations.length > 0 && (
+        <div className="relative">
+          <div className="flex flex-wrap gap-2 mt-2">
+            {combinations.map((combo, idx) => (
+              <div key={idx} className="flex items-center bg-violet-600/80 text-white rounded-full px-3 py-1.5 text-sm whitespace-nowrap">
                 <div className="flex items-center">
                   {combo.map((tag, i) => (
                     <span key={i} className="flex items-center">
-                      <span className="whitespace-nowrap">{tag}</span>
-                      {i < combo.length - 1 && (
-                        <span className="px-1 text-slate-200/70">+</span>
-                      )}
+                      <span>{tag}</span>
+                      {i < combo.length - 1 && <span className="px-1 text-slate-200/70">+</span>}
                     </span>
                   ))}
                 </div>
-                <span className="mx-2 h-4 w-px bg-white/35 rounded-sm" />
+                <span className="mx-2 h-4 w-px bg-white/35" />
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
@@ -95,30 +94,34 @@ export default function TagCombinationsPicker({
                   </button>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
 
-      {editingIndex !== null && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-2 p-4 bg-indigo-900/30 border border-indigo-700 rounded-xl shadow-lg backdrop-blur-sm">
-          <p className="text-indigo-300 text-xs mb-3">Dodaj tag lub projekt do kombinacji:</p>
-          <Autocomplete
-            value={query}
-            onChange={setQuery}
-            options={filtered.map((s) => ({ id: s, label: s }))}
-            onSelect={(opt) => handleSelect(opt.label)}
-            placeholder="Wybierz tag/projekt..."
-            inputClassName="border border-slate-600 rounded-lg px-3 py-2 w-full bg-slate-800 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
-            getOptionLabel={(o) => o.label}
-          />
-          <button
-            type="button"
-            onClick={() => setEditingIndex(null)}
-            className="mt-3 text-xs text-slate-400 hover:text-slate-200"
-          >
-            Zakończ edycję
-          </button>
+          {editingIndex !== null && (
+            <div className="absolute left-0 right-0 top-full mt-2 z-50 rounded-xl border border-indigo-700 bg-indigo-950/70 backdrop-blur-sm p-4 shadow-xl">
+              <p className="text-indigo-300 text-xs mb-3">
+                Dodaj tag lub projekt do kombinacji:
+              </p>
+              <Autocomplete
+                value={query}
+                onChange={setQuery}
+                options={filtered.map((s) => ({ id: s, label: s }))}
+                onSelect={(opt) => handleSelect(opt.label)}
+                placeholder="Wybierz tag/projekt..."
+                inputClassName="border border-slate-600 rounded-lg px-3 py-2 w-full bg-slate-800 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
+                getOptionLabel={(o) => o.label}
+              />
+              <div className="mt-3 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setEditingIndex(null)}
+                  className="text-xs text-slate-400 hover:text-slate-200 transition"
+                >
+                  Zakończ edycję
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
