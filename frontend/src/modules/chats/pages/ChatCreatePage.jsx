@@ -1,34 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CHATS } from "../../../api/fakeData.js";
-import { getAllProjects, getUserProjects } from "../../../api/projects.js";
 import useAuth from "../../../auth/useAuth.js";
 import TagCombinationsPicker from "../../shared/components/TagCombinationsPicker.jsx";
+import { useProjects } from "../../shared/components/ProjectsContext.jsx";
 
 export default function ChatCreatePage() {
   const navigate = useNavigate();
-  const { user, organization } = useAuth();
+  const { user } = useAuth();
+  const { projects } = useProjects();
   const [title, setTitle] = useState("");
   const [combinations, setCombinations] = useState([]);
-  const [projects, setProjects] = useState([]);
-
-  useEffect(() => {
-    if (!organization?.id || !user?.username) {
-      setProjects([]);
-      return;
-    }
-    async function loadProjects() {
-      try {
-        const fetcher =
-          organization.role === "admin" ? getAllProjects : getUserProjects;
-        const data = await fetcher(organization.id, user.username);
-        setProjects(Array.isArray(data) ? data : []);
-      } catch {
-        setProjects([]);
-      }
-    }
-    loadProjects();
-  }, [organization?.id, organization?.role, user?.username]);
 
   const allSuggestions = projects.map((p) => p.name).filter(Boolean);
 

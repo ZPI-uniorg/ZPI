@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { EVENTS, TAGS } from "../../../api/fakeData.js";
-import { getAllProjects, getUserProjects } from "../../../api/projects.js";
 import useAuth from "../../../auth/useAuth.js";
+import { useProjects } from "../../shared/components/ProjectsContext.jsx";
 import { Edit2, Eye } from "lucide-react";
 import TagCombinationsPicker from "../../shared/components/TagCombinationsPicker.jsx";
 
@@ -102,7 +102,8 @@ export default function EventEditPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { event: editingEvent, date: presetDate, time: presetTime } = location.state || {};
-  const { user, organization } = useAuth();
+  const { user } = useAuth();
+  const { projects } = useProjects();
 
   const [title, setTitle] = useState(editingEvent?.title || "");
   const [description, setDescription] = useState(editingEvent?.description || "");
@@ -110,30 +111,12 @@ export default function EventEditPage() {
   const [startTime, setStartTime] = useState(editingEvent?.start_time || presetTime || "");
   const [endTime, setEndTime] = useState(editingEvent?.end_time || "");
   const [isEditing, setIsEditing] = useState(!editingEvent);
-  const [projects, setProjects] = useState([]);
 
   const [combinations, setCombinations] = useState(() => {
     if (editingEvent?.tagCombinations?.length) return editingEvent.tagCombinations;
     if (editingEvent?.tags?.length) return [editingEvent.tags];
     return [];
   });
-
-  useEffect(() => {
-    if (!organization?.id || !user?.username) {
-      setProjects([]);
-      return;
-    }
-    async function loadProjects() {
-      try {
-        const fetcher = organization.role === "admin" ? getAllProjects : getUserProjects;
-        const data = await fetcher(organization.id, user.username);
-        setProjects(Array.isArray(data) ? data : []);
-      } catch {
-        setProjects([]);
-      }
-    }
-    loadProjects();
-  }, [organization?.id, organization?.role, user?.username]);
 
   const allSuggestions = [...projects.map((p) => p.name).filter(Boolean), ...TAGS];
 

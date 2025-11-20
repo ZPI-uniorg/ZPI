@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import useAuth from "../../../auth/useAuth.js";
-import { getAllProjects, getUserProjects } from "../../../api/projects.js";
+import { useProjects } from "../../shared/components/ProjectsContext.jsx";
 import { KANBAN_BOARDS } from "../../../api/fakeData.js";
 import { ChevronLeft, ChevronRight, X, Plus, Edit2, Trash2, Check } from "lucide-react";
 
@@ -13,46 +13,16 @@ export default function KanbanPage() {
   const scrollAnimationRef = useRef(null);
   const [isMouseOver, setIsMouseOver] = useState(false);
   const { user, organization } = useAuth();
+  const { projects, projectsLoading: loading, projectsError: error } = useProjects();
 
-  const [projects, setProjects] = useState([]);
   const [index, setIndex] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [updateCounter, setUpdateCounter] = useState(0); // force re-render without changing projects
+  const [updateCounter, setUpdateCounter] = useState(0);
 
   const [draggedItem, setDraggedItem] = useState(null);
   const [draggedFrom, setDraggedFrom] = useState(null);
   // Rename state
   const [editingColumnId, setEditingColumnId] = useState(null);
   const [editingColumnName, setEditingColumnName] = useState("");
-
-  useEffect(() => {
-    if (!organization?.id || !user?.username) {
-      setProjects([]);
-      return;
-    }
-
-    async function loadProjects() {
-      setLoading(true);
-      setError(null);
-      try {
-        const fetcher = organization.role === "admin" ? getAllProjects : getUserProjects;
-        const data = await fetcher(organization.id, user.username);
-        setProjects(data ?? []);
-      } catch (err) {
-        setError(
-          err.response?.data?.error ??
-            err.response?.data?.detail ??
-            "Nie udało się pobrać projektów."
-        );
-        setProjects([]);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadProjects();
-  }, [organization?.id, organization?.role, user?.username]);
 
   useEffect(() => {
     if (!initialProjectId) {
