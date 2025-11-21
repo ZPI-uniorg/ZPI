@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
+    "channels",
     "core",
     "chatsAndMessaging",
     "organizations",
@@ -82,6 +83,13 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "backend.wsgi.application"
+ASGI_APPLICATION = "backend.asgi.application"
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    }
+}
 
 
 # Database
@@ -180,4 +188,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Email configuration (SendGrid)
 AZURE_COMMUNICATION_CONNECTION_STRING = "endpoint=https://zpi-uniorg-communication-service.europe.communication.azure.com/;accesskey=9peONHoxA3Zcl2sNu7fq74fEJvWyPNV9E1qbf6V6VcJCUrA8QmgRJQQJ99BKACULyCpTNnCJAAAAAZCSA7LK"
-AZURE_COMMUNICATION_SENDER_EMAIL = "DoNotReply@3af5f752-8655-4840-b541-10927c5794da.azurecomm.net"
+AZURE_COMMUNICATION_SENDER_EMAIL = (
+    "DoNotReply@3af5f752-8655-4840-b541-10927c5794da.azurecomm.net"
+)
