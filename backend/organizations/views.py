@@ -584,6 +584,9 @@ def register_organization(request):
         if not all([name, username, email, password]):
             return JsonResponse({"error": "Missing fields"}, status=400)
 
+        if User.objects.filter(username=username).exists():
+            return JsonResponse({"error": "Username already exists"}, status=400)
+
         user = User.objects.create_user(
             username=username,
             email=email,
