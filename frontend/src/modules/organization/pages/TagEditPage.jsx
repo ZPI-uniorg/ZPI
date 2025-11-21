@@ -1,23 +1,27 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { TAGS, renameTag, deleteTag } from "../../../api/fakeData.js";
 import useAuth from "../../../auth/useAuth.js";
-import { getOrganizationMembers } from "../../../api/organizations.js";
-import { TAGS, setTagMembers, renameTag, deleteTag } from "../../../api/fakeData.js";
+import { getOrganizationMembers, createTag } from "../../../api/organizations.js";
 import Autocomplete from "../../shared/components/Autocomplete.jsx";
 
 export default function TagEditPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, organization } = useAuth();
-  const editingTag = location.state?.tag || null;
+  const editingTagRaw = location.state?.tag || null;              // <-- NEW
+  const editingTagName = typeof editingTagRaw === 'string'
+    ? editingTagRaw
+    : editingTagRaw?.name || null;                                 // <-- NEW
 
-  const [name, setName] = useState(editingTag?.name || "");
+  const [name, setName] = useState(editingTagName || "");          // CHANGED
   const [memberInput, setMemberInput] = useState("");
   const [members, setMembers] = useState([]);
 
   const [availableMembers, setAvailableMembers] = useState([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [error, setError] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!organization?.id || !user?.username) {
@@ -33,12 +37,17 @@ export default function TagEditPage() {
         const normalized = (data || []).map((m) => ({
           id: m.user_id ?? m.id ?? m.username,
           username: m.username,
-          first_name: m.first_name ?? "",
-          last_name: m.last_name ?? "",
-          email: m.email ?? "",
-          role: m.role,
+            first_name: m.first_name ?? "",
+            last_name: m.last_name ?? "",
+            email: m.email ?? "",
+            role: m.role,
+            permissions: m.permissions || [],            // <-- DODANE
         }));
         setAvailableMembers(normalized);
+        // Wstępne zaznaczenie członków mających ten tag
+        if (editingTagName && members.length === 0) {
+          setMembers(normalized.filter(m => (m.permissions || []).includes(editingTagName)));
+        }
       })
       .catch((err) => {
         if (ignore) return;
@@ -55,7 +64,9 @@ export default function TagEditPage() {
     return () => {
       ignore = true;
     };
-  }, [organization?.id, user?.username]);
+  }, [organization?.id, user?.username, editingTagName]);          // CHANGED deps
+
+  const tagName = editingTag?.name || null;
 
   const filteredMembers = availableMembers
     .filter((m) => !members.some((mem) => mem.id === m.id))
@@ -63,7 +74,11 @@ export default function TagEditPage() {
       (m.first_name + " " + m.last_name + " " + m.username + " " + m.email)
         .toLowerCase()
         .includes(memberInput.toLowerCase())
-    );
+    )
+    .filter(m => {
+      if (!editingTagName) return true;                            // nowy tag -> wszyscy
+      return (m.permissions || []).includes(editingTagName);       // istniejący tag -> tylko z permission
+    });
 
   const handleMemberSelect = (m) => {
     setMembers((prev) => [...prev, m]);
@@ -74,29 +89,42 @@ export default function TagEditPage() {
     setMembers((prev) => prev.filter((m) => m.id !== id));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name.trim()) return;
-    
-    if (editingTag) {
-      // Zmień nazwę tagu jeśli się zmieniła
-      if (name !== editingTag.name) {
-        renameTag(editingTag.name, name);
+
+    if (editingTagName) {                                          // CHANGED (was editingTag)
+      if (name !== editingTagName) {
+        renameTag(editingTagName, name);
       }
-      // Zaktualizuj członków tagu
-      setTagMembers(name, members.map(m => m.id));
+      // TODO: wysłanie aktualizacji członków na backend gdy będzie endpoint
     } else {
       // Dodaj nowy tag
-      TAGS.push(name);
-      setTagMembers(name, members.map(m => m.id));
+      if (!organization?.id || !user?.username) {
+        setError("Brak danych organizacji lub użytkownika.");
+        return;
+      }
+      setSubmitting(true);
+      setError(null);
+      try {
+        const created = await createTag(organization.id, user.username, name.trim());
+        TAGS.push(created.name || name.trim());
+        navigate("/dashboard", { state: { tagJustCreated: created } });
+      } catch (err) {
+        setError(
+          err.response?.data?.error ??
+          err.response?.data?.detail ??
+          "Nie udało się utworzyć tagu."
+        );
+      } finally {
+        setSubmitting(false);
+      }
     }
-    
-    navigate("/dashboard");
   };
 
   const handleDelete = () => {
-    if (!editingTag) return;
-    deleteTag(editingTag.name);
+    if (!editingTagName) return;                                   // CHANGED
+    deleteTag(editingTagName);
     navigate("/dashboard");
   };
 
@@ -179,9 +207,9 @@ export default function TagEditPage() {
           <button
             type="submit"
             className="bg-gradient-to-r from-indigo-500 to-violet-500 text-white px-10 py-3 rounded-xl text-lg font-semibold shadow hover:brightness-110 transition w-full md:w-auto"
-            disabled={!name.trim()}
+            disabled={!name.trim() || submitting}
           >
-            {editingTag ? "Zaktualizuj tag" : "Stwórz tag"}
+            {submitting ? "Zapisywanie..." : editingTag ? "Zaktualizuj tag" : "Stwórz tag"}
           </button>
          {editingTag && (
             <button

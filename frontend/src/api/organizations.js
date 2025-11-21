@@ -81,3 +81,30 @@ export async function updateOrganizationMemberProfile(organizationId, memberUser
 
   return response.data
 }
+
+export async function createTag(organizationId, actorUsername, tagName) {
+  const params = toFormData({
+    username: actorUsername,
+    name: tagName,
+  })
+  const response = await apiClient.post(`tags/create/${organizationId}/`, params)
+  return response.data
+}
+
+export async function getTags(organizationId, actorUsername) {
+  const response = await apiClient.get(`tags/all/${organizationId}/`, {
+    params: { username: actorUsername },
+  })
+  return response.data
+}
+
+export async function updateMemberPermissions(organizationId, memberUsername, adminUsername, tags) {
+  const response = await apiClient.put(
+    `members/update-permissions/${organizationId}/${encodeURIComponent(memberUsername)}/`,
+    {
+      admin_username: adminUsername,
+      tags: tags,
+    },
+  )
+  return response.data
+}

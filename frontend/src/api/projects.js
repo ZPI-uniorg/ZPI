@@ -29,13 +29,12 @@ export async function createProject(organizationId, actorUsername, payload) {
   }
 
   const params = toFormData({
-    username: actorUsername,
+    username: actorUsername,                    // WYMAGANE przez backend
     name: payload.name,
-    description: payload.description,
+    description: payload.description || "",
     start_dte: payload.start_dte,
     end_dte: payload.end_dte,
-    coordinator_username: payload.coordinator_username ?? null,
-    members: payload.members,
+    coordinator_username: payload.coordinator_username, // WYMAGANE
   })
 
   const response = await apiClient.post(`project/create/${organizationId}/`, params)
@@ -54,13 +53,12 @@ export async function updateProject(organizationId, projectId, actorUsername, pa
   }
 
   const response = await apiClient.put(`project/update/${organizationId}/${projectId}/`, {
-    username: actorUsername,
+    username: actorUsername,                   // WYMAGANE
     name: payload.name,
-    description: payload.description,
+    description: payload.description || "",
     start_dte: payload.start_dte,
     end_dte: payload.end_dte,
-    coordinator_username: payload.coordinator_username ?? null,
-    members: payload.members ?? [],
+    coordinator_username: payload.coordinator_username, // jeśli zmieniono
   })
 
   return response.data
