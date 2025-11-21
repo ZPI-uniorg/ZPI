@@ -465,6 +465,9 @@ def update_event(request, organization_id, event_id):
         end_time = data.get("end_time")
         permissions_str = data.get("permissions")
 
+        if start_time >= end_time:
+            return JsonResponse({"error": "Invalid time range"}, status=400)
+
         if permissions_str:
             if membership.role != 'admin':
                 allowed_permissions = membership.permissions.all()
