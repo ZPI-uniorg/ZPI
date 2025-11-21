@@ -1,14 +1,36 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { TAGS, PROJECTS, CHATS } from "../../../api/fakeData.js";
+import { CHATS } from "../../../api/fakeData.js";
+import { getAllProjects, getUserProjects } from "../../../api/projects.js";
+import useAuth from "../../../auth/useAuth.js";
 import TagCombinationsPicker from "../../shared/components/TagCombinationsPicker.jsx";
 
 export default function ChatCreatePage() {
   const navigate = useNavigate();
+  const { user, organization } = useAuth();
   const [title, setTitle] = useState("");
-  const [combinations, setCombinations] = useState([]); // Każdy element to tablica tagów (kombinacja)
+  const [combinations, setCombinations] = useState([]);
+  const [projects, setProjects] = useState([]);
 
-  const allSuggestions = [...PROJECTS.map(p => p.name), ...TAGS];
+  useEffect(() => {
+    if (!organization?.id || !user?.username) {
+      setProjects([]);
+      return;
+    }
+    async function loadProjects() {
+      try {
+        const fetcher =
+          organization.role === "admin" ? getAllProjects : getUserProjects;
+        const data = await fetcher(organization.id, user.username);
+        setProjects(Array.isArray(data) ? data : []);
+      } catch {
+        setProjects([]);
+      }
+    }
+    loadProjects();
+  }, [organization?.id, organization?.role, user?.username]);
+
+  const allSuggestions = projects.map((p) => p.name).filter(Boolean);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -24,10 +46,10 @@ export default function ChatCreatePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(145deg,#0f172a,#1e293b)] flex items-center justify-center p-8">
+    <div className="h-full overflow-auto bg-[linear-gradient(145deg,#0f172a,#1e293b)] px-6 py-8">
       <form
         onSubmit={handleSubmit}
-        className="bg-slate-900/95 rounded-3xl shadow-[0_30px_60px_rgba(15,23,42,0.45)] p-10 w-full max-w-3xl flex flex-col gap-8 border border-slate-700"
+        className="mx-auto bg-slate-900/95 rounded-3xl shadow-[0_30px_60px_rgba(15,23,42,0.45)] w-full max-w-3xl p-8 md:p-10 flex flex-col gap-8 border border-slate-700"
       >
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold text-slate-100">Nowy chat</h1>
@@ -42,11 +64,13 @@ export default function ChatCreatePage() {
 
         <div className="flex flex-col gap-6">
           <label className="flex flex-col gap-2">
-            <span className="text-slate-300 text-sm font-medium">Nazwa chatu</span>
+            <span className="text-slate-300 text-sm font-medium">
+              Nazwa chatu
+            </span>
             <input
               className="border border-slate-600 rounded-lg px-3 py-2 bg-slate-800 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
               value={title}
-              onChange={e => setTitle(e.target.value)}
+              onChange={(e) => setTitle(e.target.value)}
               placeholder="Np. Planowanie sprintu"
               required
             />

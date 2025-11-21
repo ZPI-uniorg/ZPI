@@ -16,8 +16,8 @@ export default function TagList({ tags, projects = [], selectedTags, logic, setL
   };
 
   return (
-    <div className="border-t border-slate-600/30 pt-4 flex flex-col flex-1 min-h-0">
-      <div className="flex items-center justify-between mb-3">
+    <div className="border-t border-slate-600/30 pt-2 flex flex-col flex-1 min-h-0">
+      <div className="flex items-center justify-between mb-2">
         <span className="text-sm md:text-base text-slate-300">Tagi</span>
         <div className="flex items-center gap-2">
           <button
@@ -48,7 +48,7 @@ export default function TagList({ tags, projects = [], selectedTags, logic, setL
             <li key={t}>
               <label
                 htmlFor={`tag-${t}`}
-                className="group flex items-center gap-3 w-full cursor-pointer rounded-lg px-2 py-2 hover:bg-slate-800/30"
+                className="group flex items-center gap-3 w-full cursor-pointer rounded-lg px-2 py-2"
               >
                 <input
                   id={`tag-${t}`}
@@ -71,9 +71,12 @@ export default function TagList({ tags, projects = [], selectedTags, logic, setL
                 <span className="text-sm md:text-[15px] text-slate-200 leading-none">{t}</span>
                 <button
                   type="button"
-                  className="ml-2 p-1 rounded hover:bg-slate-700/40"
+                  className="ml-auto p-1 rounded hover:bg-slate-700/40 transition"
                   title={projects.some((p) => p.name === t) ? "Edytuj projekt" : "Edytuj tag"}
-                  onClick={() => handleEdit(t)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleEdit(t);
+                  }}
                 >
                   <Settings className="w-4 h-4 text-slate-400" />
                 </button>

@@ -239,22 +239,12 @@ export default function OrganizationDashboardPage() {
               board={currentBoard}
               onPrev={prevKanban}
               onNext={nextKanban}
+              loading={projectsLoading}
+              error={projectsError}
             />
           </div>
         </div>
       </div>
-      {projectsError && (
-        <div className="max-w-[90vw] mx-auto mt-4 w-full">
-          <p className="text-red-400 bg-red-500/10 border border-red-500/40 rounded-lg px-4 py-3 text-sm">
-            {projectsError}
-          </p>
-        </div>
-      )}
-      {projectsLoading && (
-        <div className="max-w-[90vw] mx-auto mt-4 w-full">
-          <p className="text-slate-400 text-sm">Ładowanie projektów…</p>
-        </div>
-      )}
     </div>
   );
 }

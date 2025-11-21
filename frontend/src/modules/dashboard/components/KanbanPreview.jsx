@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Maximize2 } from 'lucide-react';
 
-export default function KanbanPreview({ project, board, onPrev, onNext }) {
+export default function KanbanPreview({ project, board, onPrev, onNext, loading, error }) {
   const navigate = useNavigate();
   const scrollRef = useRef(null);
 
@@ -25,6 +25,24 @@ export default function KanbanPreview({ project, board, onPrev, onNext }) {
     if (!project) return;
     navigate('/kanban', { state: { projectId: project.id } });
   };
+
+  if (loading) {
+    return (
+      <div className="flex w-full h-full items-center justify-center text-slate-400 text-sm">
+        Ładowanie projektów…
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex w-full h-full items-center justify-center">
+        <p className="text-red-400 bg-red-500/10 border border-red-500/40 rounded-lg px-4 py-3 text-sm max-w-md text-center">
+          {error}
+        </p>
+      </div>
+    );
+  }
 
   if (!project) {
     return (
