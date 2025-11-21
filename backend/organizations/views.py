@@ -1353,3 +1353,73 @@ def get_user_projects(request, organization_id):
         return JsonResponse(project_list, safe=False, status=200)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
+
+
+@require_http_methods(["PUT"])
+@csrf_exempt
+def add_tag_to_user(request, organization_id, username):
+    try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User is not authenticated"}, status=401)
+
+        data = json.loads(request.body)
+        admin_username = data.get('admin_username')
+        tag_name = data.get('tag_name')
+
+        membership = Membership.objects.get(organization__id=organization_id, user__username=admin_username)
+
+        if membership.role == 'member' or (membership.role == 'coordinator' and tag_name not in membership.permissions.values_list('name', flat=True)):
+            return JsonResponse({"error": "Permission denied"}, status=403)
+
+        member_membership = Membership.objects.get(organization__id=organization_id, user__username=username)
+        tag = Tag.objects.get(name=tag_name, organization__id=organization_id)
+        member_membership.permissions.add(tag)
+        member_membership.save()
+
+        return JsonResponse({"message": "Tag added to member successfully"}, status=200)
+    except Membership.DoesNotExist:
+        return JsonResponse({"error": "Membership not found"}, status=404)
+    except Tag.DoesNotExist:
+        return JsonResponse({"error": "Tag not found"}, status=404)
+    except KeyError as e:
+        return JsonResponse({"error": f"Missing field: {str(e)}"}, status=400)
+    except ValueError as e:
+        return JsonResponse({"error": f"Invalid value: {str(e)}"}, status=400)
+    except TypeError as e:
+        return JsonResponse({"error": f"Type error: {str(e)}"}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+def remove_tag_from_user(request, organization_id, username):
+    try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User is not authenticated"}, status=401)
+
+        data = json.loads(request.body)
+        admin_username = data.get('admin_username')
+        tag_name = data.get('tag_name')
+
+        membership = Membership.objects.get(organization__id=organization_id, user__username=admin_username)
+
+        if membership.role == 'member' or (membership.role == 'coordinator' and tag_name not in membership.permissions.values_list('name', flat=True)):
+            return JsonResponse({"error": "Permission denied"}, status=403)
+
+        member_membership = Membership.objects.get(organization__id=organization_id, user__username=username)
+        tag = Tag.objects.get(name=tag_name, organization__id=organization_id)
+        member_membership.permissions.remove(tag)
+        member_membership.save()
+
+        return JsonResponse({"message": "Tag removed from member successfully"}, status=200)
+    except Membership.DoesNotExist:
+        return JsonResponse({"error": "Membership not found"}, status=404)
+    except Tag.DoesNotExist:
+        return JsonResponse({"error": "Tag not found"}, status=404)
+    except KeyError as e:
+        return JsonResponse({"error": f"Missing field: {str(e)}"}, status=400)
+    except ValueError as e:
+        return JsonResponse({"error": f"Invalid value: {str(e)}"}, status=400)
+    except TypeError as e:
+        return JsonResponse({"error": f"Type error: {str(e)}"}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
