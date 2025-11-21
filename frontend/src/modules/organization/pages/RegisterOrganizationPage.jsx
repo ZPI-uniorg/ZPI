@@ -41,12 +41,14 @@ function RegisterOrganizationPage() {
     () =>
       submitting ||
       !organization.name.trim() ||
+      !admin.email.trim() ||
       !admin.username.trim() ||
       !admin.password.trim() ||
       admin.password.length < 8 ||
       admin.password !== admin.confirmPassword,
     [
       admin.confirmPassword,
+      admin.email,
       admin.password,
       admin.username,
       organization.name,
@@ -90,9 +92,10 @@ function RegisterOrganizationPage() {
           admin: {
             username: admin.username.trim(),
             password: admin.password,
-            email: admin.email.trim() || undefined,
+            email: admin.email.trim(),
             first_name: admin.first_name.trim(),
             last_name: admin.last_name.trim(),
+            confirmPassword: admin.confirmPassword,
           },
         };
 
@@ -195,6 +198,7 @@ function RegisterOrganizationPage() {
               type="email"
               value={admin.email}
               onChange={handleAdminChange}
+              required
               className="border border-slate-600 rounded-[12px] p-3 text-[16px] bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
             />
           </label>
