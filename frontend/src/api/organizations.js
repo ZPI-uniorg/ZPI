@@ -18,10 +18,14 @@ export async function registerOrganization(payload) {
     email: payload.admin?.email ?? '',
     password: payload.admin?.password ?? '',
     password_confirm: payload.admin?.confirmPassword ?? payload.admin?.password ?? '',
-    first_name: payload.admin?.first_name ?? '',
-    last_name: payload.admin?.last_name ?? '',
+    firstname: payload.admin?.first_name ?? '',
+    lastname: payload.admin?.last_name ?? '',
   })
-  const response = await apiClient.post('register-organization/', params)
+  const response = await apiClient.post('register-organization/', params, {
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+  })
   return response.data
 }
 
