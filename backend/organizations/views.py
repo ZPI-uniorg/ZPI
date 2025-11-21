@@ -578,13 +578,14 @@ def register_organization(request):
         lastname = request.POST.get('lastname')
         password = request.POST.get('password')
         password_confirm = request.POST.get('password_confirm')
+        identifier = username + "_" + name
 
         if password != password_confirm:
             return JsonResponse({"error": "Passwords do not match"}, status=400)
         if not all([name, username, email, password]):
             return JsonResponse({"error": "Missing fields"}, status=400)
 
-        if User.objects.filter(username=username).exists():
+        if User.objects.filter(identifier=identifier).exists():
             return JsonResponse({"error": "Username already exists"}, status=400)
 
         user = User.objects.create_user(
@@ -592,7 +593,8 @@ def register_organization(request):
             email=email,
             password=password,
             first_name=firstname,
-            last_name=lastname
+            last_name=lastname,
+            identifier=identifier
         )
 
         organization = Organization.objects.create(
@@ -725,80 +727,40 @@ def invite_member(request, organization_id):
         organization = Organization.objects.get(id=organization_id)
 
         generated_password = raw_password or secrets.token_urlsafe(12)
-        user_created = False
+        identifier = invitee_username + "_" + organization.name
 
-        invitee = User.objects.filter(username=invitee_username).first()
+        if User.objects.filter(identifier=identifier).exists():
+            return JsonResponse({"error": "User already exists"}, status=400)
 
-        if invitee is None:
-            invitee = User.objects.create_user(
-                username=invitee_username,
-                email=invitee_email,
-                password=generated_password,
-                first_name=first_name,
-                last_name=last_name,
-            )
-            user_created = True
-        else:
-            if Membership.objects.filter(
-                organization=organization,
-                user=invitee,
-            ).exists():
-                return JsonResponse({"error": "User is already a member of this organization"}, status=400)
+        invitee = User.objects.create_user(
+            username=invitee_username,
+            email=invitee_email,
+            password=generated_password,
+            first_name=first_name,
+            last_name=last_name,
+            identifier=identifier
+        )
 
-            updated = False
-            if invitee_email and invitee.email != invitee_email:
-                invitee.email = invitee_email
-                updated = True
-            if first_name and invitee.first_name != first_name:
-                invitee.first_name = first_name
-                updated = True
-            if last_name and invitee.last_name != last_name:
-                invitee.last_name = last_name
-                updated = True
-            if raw_password:
-                invitee.set_password(raw_password)
-                updated = True
-                generated_password = raw_password
-            else:
-                generated_password = None
-
-            if updated:
-                invitee.save()
-
-        membership = Membership.objects.create(
+        Membership.objects.create(
             organization=organization,
             user=invitee,
             role=role,
-            invited_by=invited_by,
+            invited_by=invited_by
+        )
+
+        send_new_user_credentials_email(
+            recipient_email=invitee_email,
+            username=invitee_username,
+            password=generated_password,
+            organization_name=organization.name
         )
 
         response_payload = {
             "message": "Member invited successfully",
-            "member": {
-                "user_id": invitee.id,
-                "username": invitee.username,
-                "first_name": invitee.first_name,
-                "last_name": invitee.last_name,
-                "email": invitee.email,
-                "role": membership.role,
-            },
+            "invitee_username": invitee_username,
+            "invitee_email": invitee_email,
+            "role": role
         }
-
-        if generated_password:
-            response_payload["password"] = generated_password
-
-        response_payload["user_created"] = user_created
-
-        if not generated_password and not raw_password and not user_created:
-            response_payload["password_retained"] = True
-
-        if user_created and generated_password and invitee.email:
-            send_new_user_credentials_email(
-                recipient_email=invitee.email,
-                username=invitee.username,
-                password=generated_password,
-                organization_name=organization.name,
-            )
 
         return JsonResponse(response_payload, status=201)
     except Membership.DoesNotExist:
