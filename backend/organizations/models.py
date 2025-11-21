@@ -75,8 +75,8 @@ class Membership(models.Model):
 
 
 class Tag(models.Model):
-    name = models.CharField(max_length=50, unique=True)
-    id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=50)
+    id = models.AutoField(primary_key=True, unique=True)
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
     combined = models.BooleanField(default=False)
 

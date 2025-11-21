@@ -1099,6 +1099,9 @@ def create_tag(request, organization_id):
 
         organization = Organization.objects.get(id=organization_id)
 
+        if Tag.objects.filter(name=name, organization=organization).exists():
+            return JsonResponse({"error": "Tag with this name already exists in the organization"}, status=400)
+
         tag = Tag.objects.create(
             name=name,
             organization=organization
@@ -1187,6 +1190,10 @@ def create_project(request, organization_id):
             return JsonResponse({"error": "Missing fields"}, status=400)
 
         organization = Organization.objects.get(id=organization_id)
+
+        if Tag.objects.filter(name=tag_name, organization=organization).exists():
+            return JsonResponse({"error": "Tag with this name already exists in the organization"}, status=400)
+
         tag = Tag.objects.create(
             name=tag_name,
             organization=organization
