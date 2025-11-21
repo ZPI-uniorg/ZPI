@@ -1175,7 +1175,7 @@ def create_project(request, organization_id):
             if not coordinator_membership:
                 return JsonResponse({"error": "Coordinator not found in organization"}, status=404)
 
-        if coordinator_membership and coordinator_membership.role != 'coordinator':
+        if coordinator_membership and coordinator_membership.role == 'member':
             return JsonResponse({"error": "Selected user must have coordinator role"}, status=400)
 
         project = Project.objects.create(
@@ -1277,7 +1277,7 @@ def update_project(request, organization_id, project_id):
                 ).first()
                 if not coordinator_membership:
                     return JsonResponse({"error": "Coordinator not found in organization"}, status=404)
-                if coordinator_membership.role != 'coordinator':
+                if coordinator_membership.role == 'member':
                     return JsonResponse({"error": "Selected user must have coordinator role"}, status=400)
 
                 project.coordinator = coordinator_membership.user
