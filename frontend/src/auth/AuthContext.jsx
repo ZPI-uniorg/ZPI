@@ -8,6 +8,23 @@ const ORGANIZATION_STORAGE_KEY = 'uniorg.auth.organization'
 
 const AuthContext = createContext(null)
 
+const normalizeOrganizationSlug = (value) => {
+  if (!value) {
+    return ''
+  }
+
+  const normalized = typeof value.normalize === 'function' ? value.normalize('NFKD') : value
+  const withoutDiacritics = normalized.replace(/[\u0300-\u036f]/g, '')
+  const stripped = withoutDiacritics.replace(/[^a-zA-Z0-9\s_-]/g, '')
+
+  return stripped
+    .toLowerCase()
+    .trim()
+    .replace(/[_\s]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
 export function AuthProvider({ children }) {
   const [tokens, setTokens] = useState(() => {
     const stored = localStorage.getItem(TOKEN_STORAGE_KEY)
@@ -55,32 +72,74 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(
     async (credentials) => {
-      const response = await apiClient.post('auth/login/', credentials)
-      establishSession(response.data)
-      return response.data.user
+      const rawOrganization = credentials.organization?.trim()
+      const organizationSlug = normalizeOrganizationSlug(rawOrganization)
+      if (!organizationSlug) {
+        throw new Error('Organization identifier is required')
+      }
+
+      const params = new URLSearchParams()
+      params.append('username', credentials.username ?? '')
+      params.append('password', credentials.password ?? '')
+
+      const response = await apiClient.post(
+        `auth/login/${encodeURIComponent(organizationSlug)}/`,
+        params,
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        },
+      )
+
+      const data = response.data ?? {}
+
+      if (data.status && data.status !== 'success') {
+        const errorMessage = data.message ?? 'Nie udało się zalogować.'
+        throw Object.assign(new Error(errorMessage), { response: { data } })
+      }
+
+      const session = {
+        token: {
+          access: data.access,
+          refresh: data.refresh,
+        },
+        user: data.user ?? {
+          username: credentials.username ?? '',
+        },
+        organization: data.organization
+          ? { ...data.organization, slug: organizationSlug, original: rawOrganization }
+          : { slug: organizationSlug, name: rawOrganization, original: rawOrganization },
+      }
+
+      establishSession(session)
+      return session.user
     },
     [establishSession],
   )
 
   const logout = useCallback(async () => {
-    if (tokens?.refresh) {
+    const organizationSlug = organization?.slug?.trim()
+    if (organizationSlug) {
       try {
-        await apiClient.post('auth/logout/', { refresh: tokens.refresh })
+        await apiClient.post(`auth/logout/${encodeURIComponent(organizationSlug)}/`)
       } catch (error) {
-        console.error('Failed to revoke refresh token', error)
+        console.error('Failed to revoke session on server', error)
       }
     }
+
     setTokens(null)
     setUser(null)
     setOrganization(null)
-  }, [tokens])
+  }, [tokens, organization])
 
   const changePassword = useCallback(
     async ({ currentPassword, newPassword }) => {
-      await apiClient.post('auth/change-password/', {
-        current_password: currentPassword,
-        new_password: newPassword,
-      })
+      const params = new URLSearchParams()
+      params.append('old_password', currentPassword)
+      params.append('new_password', newPassword)
+
+      await apiClient.post('auth/change-password/', params)
     },
     [],
   )
