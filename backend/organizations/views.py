@@ -759,7 +759,8 @@ def invite_member(request, organization_id):
             "message": "Member invited successfully",
             "invitee_username": invitee_username,
             "invitee_email": invitee_email,
-            "role": role
+            "role": role,
+            "generated_password": generated_password if not raw_password else "Provided by inviter"
         }
 
         return JsonResponse(response_payload, status=201)
