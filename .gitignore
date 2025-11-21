@@ -1,2 +1,4 @@
 context.md
 *venv/
+*.hcl
+.terraform/
