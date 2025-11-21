@@ -26,10 +26,23 @@ function LoginPage() {
       await login(form);
       navigate("/");
     } catch (err) {
-      setError(
-        err.response?.data?.detail ??
-          "Nie udało się zalogować, spróbuj ponownie."
-      );
+      const responseData = err.response?.data;
+      let message = responseData?.detail;
+
+      if (!message) {
+        const rawMessage = responseData?.message;
+        if (Array.isArray(rawMessage)) {
+          message = rawMessage.join(" ");
+        } else if (typeof rawMessage === "string") {
+          message = rawMessage;
+        }
+      }
+
+      if (!message && typeof err.message === "string" && err.message.trim()) {
+        message = err.message;
+      }
+
+      setError(message ?? "Nie udało się zalogować, spróbuj ponownie.");
     } finally {
       setLoading(false);
     }
