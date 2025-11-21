@@ -43,7 +43,7 @@ class UserManager(DjangoUserManager):
 class User(AbstractUser):
     """Custom user model allowing future extensions."""
 
-    identifier = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    identifier = models.CharField(default=uuid.uuid4, unique=True, editable=False)
 
     username = models.CharField(
         _("username"),

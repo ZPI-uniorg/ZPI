@@ -19,9 +19,9 @@ def login_view(request, organization_name):
     try:
         username = request.POST.get("username")
         password = request.POST.get("password")
-        user = authenticate(request, username=username, password=password)
         organization = Organization.objects.get(slug=organization_name)
-        membership = Membership.objects.get(user=user, organization=organization)
+        membership = Membership.objects.get(user__username=username, organization=organization)
+        user = authenticate(request, identifier=username+"_"+organization.name, password=password)
 
         if membership is None:
             return JsonResponse({"status": "error", "message": "User is not a member of the organization"}, status=403)
