@@ -150,6 +150,9 @@ def update_event_test(request, event_id):
 @csrf_exempt
 def get_all_events(request, organization_id):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User not authenticated"}, status=401)
+
         username = request.GET.get("username")
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
 
@@ -184,6 +187,9 @@ def get_all_events(request, organization_id):
 @csrf_exempt
 def get_user_events(request, organization_id, username):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User not authenticated"}, status=401)
+
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
 
         if not membership:
@@ -225,6 +231,9 @@ def get_user_events(request, organization_id, username):
 @csrf_exempt
 def get_events_by_tag(request, organization_id, tag_id):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User not authenticated"}, status=401)
+
         username = request.GET.get("username")
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
 
@@ -272,6 +281,9 @@ def get_events_by_tag(request, organization_id, tag_id):
 @csrf_exempt
 def get_event(request, organization_id, event_id):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User not authenticated"}, status=401)
+
         username = request.GET.get("username")
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
 
@@ -305,6 +317,9 @@ def get_event(request, organization_id, event_id):
 @csrf_exempt
 def create_event(request, organization_id):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User not authenticated"}, status=401)
+
         username = request.POST.get("username")
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
 
@@ -397,6 +412,9 @@ def create_event(request, organization_id):
 @csrf_exempt
 def delete_event(request, organization_id, event_id):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User not authenticated"}, status=401)
+
         data = json.loads(request.body)
         username = data.get("username")
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
@@ -422,6 +440,9 @@ def delete_event(request, organization_id, event_id):
 @csrf_exempt
 def update_event(request, organization_id, event_id):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User not authenticated"}, status=401)
+
         data = json.loads(request.body)
         username = data.get("username")
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)

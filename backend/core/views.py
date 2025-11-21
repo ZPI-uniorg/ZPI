@@ -1,4 +1,4 @@
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, authenticate, login, logout
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -8,88 +8,85 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .permissions import IsAuthenticatedAndActive
-from .serializers import LoginSerializer, UserSerializer
-from organizations.serializers import OrganizationSerializer
+from organizations.models import Organization, Membership
 
 User = get_user_model()
 
 
-def get_tokens_for_user(user):
-    refresh = RefreshToken.for_user(user)
-    return {
-        "refresh": str(refresh),
-        "access": str(refresh.access_token),
-    }
+@require_http_methods(["POST"])
+@csrf_exempt
+def login_view(request, organization_name):
+    try:
+        username = request.POST.get("username")
+        password = request.POST.get("password")
+        user = authenticate(request, username=username, password=password)
+        organization = Organization.objects.get(slug=organization_name)
+        membership = Membership.objects.get(user=user, organization=organization)
 
+        if membership is None:
+            return JsonResponse({"status": "error", "message": "User is not a member of the organization"}, status=403)
 
-class LoginView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        serializer = LoginSerializer(data=request.data, context={"request": request})
-        serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data["user"]
-        organization = serializer.validated_data["organization"]
-        token = get_tokens_for_user(user)
-        organization_data = OrganizationSerializer(organization, context={"request": request, "actor": user}).data
-        return Response(
-            {
-                "token": token,
-                "user": UserSerializer(user).data,
-                "organization": organization_data,
-            },
-            status=status.HTTP_200_OK,
-        )
-
-
-class LogoutView(APIView):
-    permission_classes = [IsAuthenticatedAndActive]
-
-    def post(self, request):
-        refresh_token = request.data.get("refresh")
-        if refresh_token:
-            try:
-                token = RefreshToken(refresh_token)
-                token.blacklist()
-            except Exception:  # pylint: disable=broad-exception-caught
-                pass
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-class PasswordChangeView(APIView):
-    permission_classes = [IsAuthenticatedAndActive]
-
-    def post(self, request):
-        user = request.user
-        current_password = request.data.get("current_password")
-        new_password = request.data.get("new_password")
-
-        if not user.check_password(current_password):
-            return Response({"detail": "Current password is incorrect."}, status=status.HTTP_400_BAD_REQUEST)
-
-        user.set_password(new_password)
-        user.save(update_fields=["password"])
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        if user is not None:
+            login(request, user)
+            session_key = request.session.session_key
+            refresh = RefreshToken.for_user(user)
+            return JsonResponse({
+                "status": "success",
+                "sessionKey": session_key,
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+                "organization": {
+                    "id": organization.id,
+                    "name": organization.name,
+                    "description": organization.description,
+                }
+            }, status=200)
+        else:
+            return JsonResponse({"status": "error", "message": "Invalid credentials"}, status=401)
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=500)
 
 
 @require_http_methods(["POST"])
 @csrf_exempt
-def register_user(request):
+def logout_view(request, organization_name):
     try:
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        email = request.POST.get('email')
-
-        if not username or not password or not email:
-            return JsonResponse({"error": "Username, password, and email are required."}, status=400)
-
-        if User.objects.filter(username=username).exists():
-            return JsonResponse({"error": "Username already exists."}, status=400)
-
-        user = User.objects.create_user(username=username, password=password, email=email)
-        user.save()
-
-        return JsonResponse({"message": "User registered successfully."}, status=200)
+        if request.user.is_authenticated:
+            logout(request)
+            return JsonResponse({"status": "success", "message": f"User {request.user.username} logged out"}, status=200)
+        else:
+            return JsonResponse({"status": "error", "message": "User is not authenticated"}, status=401)
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        return JsonResponse({"status": "error", "message": str(e)}, status=500)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def change_password_view(request):
+    try:
+        if request.user.is_authenticated:
+            old_password = request.POST.get("old_password")
+            new_password = request.POST.get("new_password")
+
+            if not request.user.check_password(old_password):
+                return JsonResponse({"status": "error", "message": "Old password is incorrect"}, status=400)
+
+            request.user.set_password(new_password)
+            request.user.save()
+            return JsonResponse({"status": "success", "message": "Password changed successfully"}, status=200)
+        else:
+            return JsonResponse({"status": "error", "message": "User is not authenticated"}, status=401)
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+@csrf_exempt
+def login_status_view(request):
+    try:
+        if request.user.is_authenticated:
+            return JsonResponse({"status": "success", "message": "User is authenticated", "username": request.user.username}, status=200)
+        else:
+            return JsonResponse({"status": "error", "message": "User is not authenticated"}, status=401)
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=500)
