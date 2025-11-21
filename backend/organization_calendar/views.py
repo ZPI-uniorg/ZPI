@@ -373,8 +373,12 @@ def create_event(request, organization_id):
 
         permissions = Tag.objects.filter(name__in=permissions_names)
 
-        if not all([name, description, start_time, end_time]):
+        if not all([name, start_time, end_time]):
             return JsonResponse({"error": "Missing required fields"}, status=400)
+
+        if start_time >= end_time:
+            return JsonResponse({"error": "Invalid time range"}, status=400)
+
 
         for perm in permissions:
             if perm not in allowed_permissions:
@@ -460,6 +464,9 @@ def update_event(request, organization_id, event_id):
         start_time = data.get("start_time")
         end_time = data.get("end_time")
         permissions_str = data.get("permissions")
+
+        if start_time >= end_time:
+            return JsonResponse({"error": "Invalid time range"}, status=400)
 
         if permissions_str:
             if membership.role != 'admin':
