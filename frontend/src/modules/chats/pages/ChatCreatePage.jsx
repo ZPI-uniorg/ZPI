@@ -1,34 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CHATS } from "../../../api/fakeData.js";
-import { getAllProjects, getUserProjects } from "../../../api/projects.js";
 import useAuth from "../../../auth/useAuth.js";
 import TagCombinationsPicker from "../../shared/components/TagCombinationsPicker.jsx";
+import { useProjects } from "../../shared/components/ProjectsContext.jsx";
 
 export default function ChatCreatePage() {
   const navigate = useNavigate();
-  const { user, organization } = useAuth();
+  const { user } = useAuth();
+  const { projects } = useProjects();
   const [title, setTitle] = useState("");
   const [combinations, setCombinations] = useState([]);
-  const [projects, setProjects] = useState([]);
-
-  useEffect(() => {
-    if (!organization?.id || !user?.username) {
-      setProjects([]);
-      return;
-    }
-    async function loadProjects() {
-      try {
-        const fetcher =
-          organization.role === "admin" ? getAllProjects : getUserProjects;
-        const data = await fetcher(organization.id, user.username);
-        setProjects(Array.isArray(data) ? data : []);
-      } catch {
-        setProjects([]);
-      }
-    }
-    loadProjects();
-  }, [organization?.id, organization?.role, user?.username]);
 
   const allSuggestions = projects.map((p) => p.name).filter(Boolean);
 
@@ -46,10 +28,10 @@ export default function ChatCreatePage() {
   };
 
   return (
-    <div className="h-full overflow-auto bg-[linear-gradient(145deg,#0f172a,#1e293b)] px-6 py-8">
+    <div className="h-full flex items-center justify-center bg-[linear-gradient(145deg,#0f172a,#1e293b)] px-6 py-8">
       <form
         onSubmit={handleSubmit}
-        className="mx-auto bg-slate-900/95 rounded-3xl shadow-[0_30px_60px_rgba(15,23,42,0.45)] w-full max-w-3xl p-8 md:p-10 flex flex-col gap-8 border border-slate-700"
+        className="bg-slate-900/95 rounded-3xl shadow-[0_30px_60px_rgba(15,23,42,0.45)] w-full max-w-3xl p-8 md:p-10 flex flex-col gap-8 border border-slate-700 max-h-[90vh] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
       >
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold text-slate-100">Nowy chat</h1>

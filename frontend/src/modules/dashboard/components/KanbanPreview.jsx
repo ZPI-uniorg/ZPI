@@ -1,25 +1,27 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Maximize2 } from 'lucide-react';
 
 export default function KanbanPreview({ project, board, onPrev, onNext, loading, error }) {
   const navigate = useNavigate();
   const scrollRef = useRef(null);
+  const [isMouseOver, setIsMouseOver] = useState(false);
 
   useEffect(() => {
     const scrollContainer = scrollRef.current;
     if (!scrollContainer) return;
 
     const handleWheel = (e) => {
+      if (!isMouseOver) return;
       if (e.deltaY !== 0) {
         e.preventDefault();
         scrollContainer.scrollLeft += e.deltaY;
       }
     };
 
-    scrollContainer.addEventListener('wheel', handleWheel, { passive: false });
-    return () => scrollContainer.removeEventListener('wheel', handleWheel);
-  }, []);
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    return () => window.removeEventListener('wheel', handleWheel);
+  }, [isMouseOver]);
 
   const handleFullscreen = () => {
     if (!project) return;
@@ -92,9 +94,11 @@ export default function KanbanPreview({ project, board, onPrev, onNext, loading,
         {board ? (
           <div
             ref={scrollRef}
+            onMouseEnter={() => setIsMouseOver(true)}
+            onMouseLeave={() => setIsMouseOver(false)}
             className="flex h-full gap-3 overflow-x-auto overflow-y-hidden overscroll-contain scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
           >
-            {board.columns.map((col) => (
+            {(board.columns ?? []).map((col) => (
               <div
                 key={col.id}
                 className="flex flex-col min-h-0 min-w-[200px] flex-1 rounded-lg bg-slate-800/40 border border-slate-700"
@@ -103,10 +107,10 @@ export default function KanbanPreview({ project, board, onPrev, onNext, loading,
                   {col.name}
                 </div>
                 <div className="flex-1 min-h-0 p-2 space-y-2 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
-                  {col.items.length === 0 && (
+                  {((col.items?.length ?? 0) === 0) && (
                     <div className="text-[11px] text-slate-500 italic">Pusto</div>
                   )}
-                  {col.items.map((item) => (
+                  {(col.items ?? []).map((item) => (
                     <div
                       key={item.id}
                       className="rounded-md bg-violet-600/80 hover:bg-violet-600 text-white px-2.5 py-2 text-xs cursor-pointer transition flex flex-col gap-1 min-h-[70px]"

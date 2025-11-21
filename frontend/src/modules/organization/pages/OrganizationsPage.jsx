@@ -8,6 +8,7 @@ import {
   updateOrganizationMemberProfile,
 } from "../../../api/organizations.js";
 import useAuth from "../../../auth/useAuth.js";
+import { useProjects } from "../../shared/components/ProjectsContext.jsx"; // <-- KONTEKST PROJEKTÓW
 
 const emptyMemberForm = {
   first_name: "",
@@ -51,6 +52,7 @@ function generateUsername(prefix = "member") {
 
 function OrganizationsPage() {
   const { user, organization: activeOrganization } = useAuth();
+  const { projects } = useProjects(); // <-- projekty z kontekstu
   const [organizations, setOrganizations] = useState([]);
   const [organizationsLoading, setOrganizationsLoading] = useState(false);
   const [organizationsError, setOrganizationsError] = useState(null);
@@ -70,6 +72,9 @@ function OrganizationsPage() {
   });
   const [memberEditSubmitting, setMemberEditSubmitting] = useState(false);
   const [memberEditError, setMemberEditError] = useState(null);
+  const [editingTagsUser, setEditingTagsUser] = useState(null);        // <-- edycja tagów login
+  const [editTags, setEditTags] = useState([]);                        // <-- robocza lista tagów
+  const [deletingUsername, setDeletingUsername] = useState(null); // <-- NEW
 
   const selectedOrganization = useMemo(
     () => organizations.find((org) => org.id === selectedOrgId) ?? null,
@@ -150,6 +155,7 @@ function OrganizationsPage() {
         email: member.email ?? "",
         role: member.role,
         permissions: member.permissions ?? [],
+        tags: member.tags ?? [],                // <-- zachowaj tagi jeśli backend zwróci
       }));
       setMembers(normalized);
     } catch (error) {
@@ -344,6 +350,73 @@ function OrganizationsPage() {
     }
   };
 
+  // Sugerowane tagi: nazwy projektów + istniejące tagi członków
+  const projectTagSuggestions = useMemo(
+    () => projects.map(p => p.name).filter(Boolean),
+    [projects]
+  );
+  const memberDerivedTags = useMemo(() => {
+    const s = new Set();
+    members.forEach(m => (m.tags || []).forEach(t => t && s.add(t)));
+    return Array.from(s);
+  }, [members]);
+  const allTagSuggestions = useMemo(
+    () => Array.from(new Set([...projectTagSuggestions, ...memberDerivedTags])).sort(),
+    [projectTagSuggestions, memberDerivedTags]
+  );
+
+  const startEditTags = (member) => {
+    setEditingTagsUser(member.username);
+    setEditTags([...(member.tags || [])]);
+    setDeletingUsername(null); // ukryj ewentualne potwierdzenie usunięcia
+  };
+
+  const toggleExistingTag = (tag) => {
+    setEditTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+  };
+
+  const saveTags = () => {
+    setMembers(prev =>
+      prev.map(m =>
+        m.username === editingTagsUser ? { ...m, tags: [...editTags] } : m
+      )
+    );
+    setEditingTagsUser(null);
+    setEditTags([]);
+  };
+
+  const cancelTags = () => {
+    setEditingTagsUser(null);
+    setEditTags([]);
+  };
+
+  // Inline removal handlers
+  const askRemoveMember = (username) => {
+    setDeletingUsername(username);
+  };
+  const cancelRemoveMember = () => {
+    setDeletingUsername(null);
+  };
+  const confirmRemoveMember = async (memberId) => {
+    if (!selectedOrgId || !user?.username) return;
+    try {
+      await removeOrganizationMember(selectedOrgId, memberId, user.username);
+      await loadMembers(selectedOrgId);
+    } catch (error) {
+      setMemberError(
+        error.response?.data?.error ??
+          error.response?.data?.detail ??
+          "Nie udało się usunąć członka."
+      );
+    } finally {
+      setDeletingUsername(null);
+      if (editingMember?.username === memberId) {
+        setEditingMember(null);
+        setMemberEditForm({ first_name: "", last_name: "", email: "" });
+      }
+    }
+  };
+
   if (organizationsLoading && !selectedOrganization) {
     return (
       <div className="max-w-7xl mx-auto py-10 px-4">
@@ -375,7 +448,7 @@ function OrganizationsPage() {
   }
 
   return (
-    <div className="h-full overflow-auto max-w-7xl mx-auto px-4 py-8 flex flex-col gap-8">
+    <div className="h-full overflow-auto max-w-[1500px] mx-auto px-6 py-10 flex flex-col gap-10">
       {/* Sekcja organizacji (bez sticky) */}
       <section className="bg-slate-800 rounded-xl p-6 shadow flex flex-col lg:flex-row items-start justify-between gap-6">
         <div>
@@ -461,7 +534,7 @@ function OrganizationsPage() {
         </div>
       )}
 
-      {/* Sekcja członków (naprawiona) */}
+      {/* Sekcja członków */}
       <section className="bg-slate-800 rounded-xl shadow p-6 mb-6">
         <header className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-slate-100">Członkowie</h2>
@@ -473,19 +546,20 @@ function OrganizationsPage() {
         ) : members.length === 0 ? (
           <p className="text-slate-300">Brak członków w tej organizacji.</p>
         ) : (
-          <div className="overflow-x-auto max-h-[460px] overflow-y-auto rounded border border-slate-700/50">
-            <table className="w-full min-w-[900px] text-left">
+          <div className="overflow-x-auto max-h-[520px] overflow-y-auto rounded border border-slate-700/50">
+            <table className="w-full min-w-[1100px] text-left">
               <thead>
                 <tr className="text-slate-300">
                   <th className="py-2 px-4">Użytkownik</th>
                   <th className="py-2 px-4">Kontakt</th>
                   <th className="py-2 px-4">Rola</th>
+                  <th className="py-2 px-4 w-[340px]">Tagi</th> {/* stała szerokość */}
                   <th className="py-2 px-4">Akcje</th>
                 </tr>
               </thead>
               <tbody>
-                {members.map((member) => (
-                  <tr key={member.id} className="border-t border-slate-700 align-top">
+                {members.map(member => (
+                  <tr key={member.id} className="border-t border-slate-700 align-top h-[80px]">
                     <td className="py-2 px-4">
                       <strong className="text-slate-100">{member.username}</strong><br />
                       <small className="text-slate-300">{member.first_name} {member.last_name}</small>
@@ -511,24 +585,111 @@ function OrganizationsPage() {
                         </span>
                       )}
                     </td>
+                    <td className="py-2 px-4 w-[340px] align-top">
+                      {editingTagsUser === member.username ? (
+                        <div className="flex flex-wrap gap-2 overflow-y-auto max-h-[64px] pr-1">
+                          {allTagSuggestions.length > 0 ? allTagSuggestions.map(tag => {
+                            const active = editTags.includes(tag);
+                            return (
+                              <button
+                                key={tag}
+                                type="button"
+                                onClick={() => toggleExistingTag(tag)}
+                                className={`px-3 py-1 rounded-full text-xs font-medium border transition ${
+                                  active
+                                    ? "bg-violet-600/90 border-violet-500 text-white shadow-sm hover:bg-violet-500"
+                                    : "bg-slate-700/70 border-slate-600 text-slate-300 hover:bg-slate-600/70 hover:text-white"
+                                }`}
+                                title={active ? "Usuń z wybranych" : "Dodaj do wybranych"}
+                              >
+                                {tag}
+                              </button>
+                            );
+                          }) : (
+                            <span className="text-slate-500 text-xs italic">Brak dostępnych tagów</span>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap gap-1 max-h-[90px] overflow-y-auto max-w-[340px]">
+                          {(member.tags && member.tags.length > 0) ? (
+                            member.tags.map(tag => (
+                              <span
+                                key={tag}
+                                className="px-3 py-1 rounded-full text-xs bg-violet-700 text-white"
+                              >
+                                {tag}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-slate-500 italic text-xs">brak</span>
+                          )}
+                        </div>
+                      )}
+                    </td>
                     <td className="py-2 px-4">
                       {isAdmin ? (
-                        <div className="flex items-center gap-3">
-                          <button
-                            type="button"
-                            className="text-indigo-300 hover:underline"
-                            onClick={() => startEditMember(member)}
-                          >
-                            Edytuj
-                          </button>
-                          {member.user !== user?.id && (
-                            <button
-                              type="button"
-                              className="text-red-400 hover:underline"
-                              onClick={() => handleRemoveMember(member.username)}
-                            >
-                              Usuń
-                            </button>
+                        <div className="flex flex-wrap items-center gap-3">
+                          {editingTagsUser === member.username ? (
+                            <>
+                              <button
+                                type="button"
+                                className="text-green-400 hover:underline"
+                                onClick={saveTags}
+                              >
+                                Zapisz
+                              </button>
+                              <button
+                                type="button"
+                                className="text-slate-400 hover:underline"
+                                onClick={cancelTags}
+                              >
+                                Anuluj
+                              </button>
+                            </>
+                          ) : deletingUsername === member.username ? (
+                            <div className="flex items-center gap-2 text-[14px] font-medium"> {/* CHANGED */}
+                              <span className="text-red-400">Czy na pewno?</span>
+                              <button
+                                type="button"
+                                className="text-red-400 hover:underline font-normal"
+                                onClick={() => confirmRemoveMember(member.username)}
+                              >
+                                Tak
+                              </button>
+                              <button
+                                type="button"
+                                className="text-slate-400 hover:underline font-normal"
+                                onClick={cancelRemoveMember}
+                              >
+                                Nie
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                className="text-violet-400 hover:underline"
+                                onClick={() => startEditTags(member)}
+                              >
+                                Edytuj tagi
+                              </button>
+                              <button
+                                type="button"
+                                className="text-indigo-300 hover:underline"
+                                onClick={() => startEditMember(member)}
+                              >
+                                Edytuj dane
+                              </button>
+                              {member.user !== user?.id && (
+                                <button
+                                  type="button"
+                                  className="text-red-400 hover:underline"
+                                  onClick={() => askRemoveMember(member.username)}
+                                >
+                                  Usuń członka
+                                </button>
+                              )}
+                            </>
                           )}
                         </div>
                       ) : (

@@ -1,9 +1,9 @@
-import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
-import useAuth from '../../../auth/useAuth.js'
-import { Settings, Filter } from 'lucide-react'
-import { useEffect, useState, useRef } from 'react'
-import TagList from '../../dashboard/components/TagList.jsx'
-import { getAllProjects, getUserProjects } from '../../../api/projects.js'
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
+import useAuth from '../../../auth/useAuth.js';
+import { Settings, Filter } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ProjectsProvider } from '../components/ProjectsContext.jsx';
+import FiltersPanel from './FiltersPanel.jsx';
 
 const NAV_LINKS = [
   { to: '/dashboard', label: 'Pulpit organizacji' },
@@ -13,167 +13,45 @@ const NAV_LINKS = [
 ]
 
 function AppLayout() {
-  const { user, organization, logout } = useAuth()
-  const navigate = useNavigate()
-  const location = useLocation()
-  const projectJustCreated = location.state?.projectJustCreated
-  const projectJustUpdated = location.state?.projectJustUpdated
-  const fullName = `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.username
+  const { user, organization, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const projectJustCreated = location.state?.projectJustCreated;
+  const projectJustUpdated = location.state?.projectJustUpdated;
+  const fullName = `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.username;
 
-  // globalny stan filtrów
-  const [filtersOpen, setFiltersOpen] = useState(false)
-  const [tags, setTags] = useState([])
-  const [projects, setProjects] = useState([])
-  const [localProjects, setLocalProjects] = useState([])
-  const [selectedTags, setSelectedTags] = useState([])
-  const [logic, setLogic] = useState('AND')
-
-  const tagListRootRef = useRef(null)
-
-  const mergeProjectData = (baseList, extras) => {
-    const merged = Array.isArray(baseList) ? [...baseList] : []
-    
-    extras.filter(Boolean).forEach((extra) => {
-      if (!extra || typeof extra !== 'object') return
-      
-      const extraId = Number(extra.id)
-      
-      // Aktualizuj jeśli ma ID i już istnieje
-      if (Number.isFinite(extraId) && extraId > 0) {
-        const idx = merged.findIndex((p) => Number(p.id) === extraId)
-        if (idx >= 0) {
-          merged[idx] = { ...merged[idx], ...extra }
-          return
-        }
-      }
-      
-      // Pomiń jeśli ten sam name już istnieje (tymczasowy duplikat przed fetch)
-      if (extra.name && merged.some((p) => p.name === extra.name)) return
-      
-      merged.push(extra)
-    })
-    return merged
-  }
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [logic, setLogic] = useState('AND');
 
   useEffect(() => {
-    const params = new URLSearchParams(location.search)
-    setFiltersOpen(params.has('filters'))
-  }, [location.search])
-
-  // ukryj nagłówek "Tagi" i wewnętrzny przełącznik AND/OR z TagList
-  useEffect(() => {
-    if (!filtersOpen) return
-    const root = tagListRootRef.current
-    if (!root) return
-    const nodes = root.querySelectorAll('h1,h2,h3,h4,h5,h6,p,span,div')
-    nodes.forEach((el) => {
-      const text = (el.textContent || '').trim().toLowerCase()
-      if (text === 'tagi') el.style.display = 'none'
-    })
-    // schowaj grupę z przyciskami AND/OR wewnątrz TagList
-    const btns = Array.from(root.querySelectorAll('button'))
-    const group = btns.find((b) => ['AND', 'OR'].includes((b.textContent || '').trim().toUpperCase()))?.parentElement
-    if (group && root.contains(group)) group.style.display = 'none'
-  }, [filtersOpen])
+    const params = new URLSearchParams(location.search);
+    setFiltersOpen(params.has('filters'));
+  }, [location.search]);
 
   const openFilters = () => {
-    const params = new URLSearchParams(location.search)
+    const params = new URLSearchParams(location.search);
     if (!params.has('filters')) {
-      params.set('filters', '1')
-      navigate({ search: `?${params.toString()}` }, { replace: true })
+      params.set('filters', '1');
+      navigate({ search: `?${params.toString()}` }, { replace: true });
     }
-  }
+  };
   const closeFilters = () => {
-    const params = new URLSearchParams(location.search)
+    const params = new URLSearchParams(location.search);
     if (params.has('filters')) {
-      params.delete('filters')
-      navigate({ search: params.toString() ? `?${params.toString()}` : '' }, { replace: true })
+      params.delete('filters');
+      navigate({ search: params.toString() ? `?${params.toString()}` : '' }, { replace: true });
     }
-  }
+  };
   const toggleTag = (t) =>
-    setSelectedTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]))
-
-  useEffect(() => {
-    if (!organization?.id || !user?.username) {
-      setProjects([])
-      return
-    }
-
-    let ignore = false
-
-    async function loadProjects() {
-      try {
-        const fetcher = organization.role === 'admin' ? getAllProjects : getUserProjects
-        const data = await fetcher(organization.id, user.username)
-        if (ignore) return
-        
-        const fetchedProjects = Array.isArray(data) ? data : []
-        setProjects(mergeProjectData(fetchedProjects, localProjects))
-        
-        // Usuń lokalne duplikaty (po name lub ID)
-        setLocalProjects((cur) => 
-          cur.filter((local) => 
-            !fetchedProjects.some((fetched) => 
-              fetched.name === local.name || Number(fetched.id) === Number(local.id)
-            )
-          )
-        )
-      } catch (error) {
-        if (!ignore) setProjects(mergeProjectData([], localProjects))
-      }
-    }
-
-    loadProjects()
-
-    return () => {
-      ignore = true
-    }
-  }, [organization?.id, organization?.role, user?.username, location.key])
-
-  useEffect(() => {
-    if (!projectJustCreated && !projectJustUpdated) {
-      return
-    }
-
-    const extras = [projectJustCreated, projectJustUpdated]
-    setLocalProjects((current) => mergeProjectData(current, extras))
-    setProjects((current) => mergeProjectData(current, extras))
-  }, [projectJustCreated, projectJustUpdated])
-
-  useEffect(() => {
-    setLocalProjects([])
-    setProjects([])
-  }, [organization?.id])
-
-  useEffect(() => {
-    const collectedTags = new Set()
-    projects.forEach((project) => {
-      if (Array.isArray(project?.tags)) {
-        project.tags.forEach((tag) => {
-          if (typeof tag === 'string' && tag.trim()) {
-            collectedTags.add(tag.trim())
-          } else if (tag && typeof tag.name === 'string' && tag.name.trim()) {
-            collectedTags.add(tag.name.trim())
-          }
-        })
-      }
-    })
-    const projectNames = projects
-      .map((p) => (typeof p?.name === 'string' ? p.name.trim() : ''))
-      .filter(Boolean)
-    const normalizedTags = Array.from(collectedTags)
-    setTags(normalizedTags)
-    const validFilters = new Set([...normalizedTags, ...projectNames])
-    setSelectedTags((prev) => prev.filter((tag) => validFilters.has(tag)))
-  }, [projects])
+    setSelectedTags(prev => (prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]));
 
   const getLinkClassName = ({ isActive }) => {
     const base =
       'px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-150'
-    if (isActive) {
-      return `${base} bg-sky-500/20 text-sky-200 border border-sky-500/40`
-    }
-    return `${base} text-slate-300 hover:text-white hover:bg-slate-700/40`
+    return isActive
+      ? `${base} bg-sky-500/20 text-sky-200 border border-sky-500/40`
+      : `${base} text-slate-300 hover:text-white hover:bg-slate-700/40`
   }
 
   return (
@@ -230,86 +108,22 @@ function AppLayout() {
         </div>
       </header>
       <main className="flex-1 min-h-0 overflow-hidden">
-        <div className="h-full flex flex-col min-h-0">
+        <ProjectsProvider
+          projectJustCreated={projectJustCreated}
+          projectJustUpdated={projectJustUpdated}
+        >
           <Outlet />
-        </div>
-      </main>
-
-      {/* overlay globalnych filtrów */}
-      <div
-        onClick={closeFilters}
-        className={`fixed inset-0 z-[60] bg-slate-900/50 backdrop-blur-sm transition-opacity duration-300 ${filtersOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-      />
-
-      {/* globalny, wysuwany panel filtrów */}
-      <aside
-        className={`fixed left-0 top-0 z-[70] h-full w-[420px] max-w-[90vw] transform rounded-r-2xl border-r border-[rgba(148,163,184,0.35)] bg-[rgba(15,23,42,0.98)] shadow-[0_25px_60px_rgba(15,23,42,0.6)] transition-transform duration-300 ${filtersOpen ? 'translate-x-0' : '-translate-x-full'}`}
-      >
-        {/* header: lewo + pionowe wyśrodkowanie */}
-        <div className="flex items-center justify-between px-5 py-4">
-          <div className="flex items-center gap-3">
-            <h2 className="m-0 text-base font-semibold text-slate-200">Filtry</h2>
-            <div className="inline-flex items-center gap-2 rounded-full bg-slate-800/60 p-1">
-              <button
-                type="button"
-                onClick={() => setLogic('AND')}
-                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition ${
-                  logic === 'AND'
-                    ? 'bg-violet-600 text-white shadow-[0_8px_24px_rgba(124,58,237,0.45)]'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
-                }`}
-              >
-                AND
-              </button>
-              <button
-                type="button"
-                onClick={() => setLogic('OR')}
-                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition ${
-                  logic === 'OR'
-                    ? 'bg-violet-600 text-white shadow-[0_8px_24px_rgba(124,58,237,0.45)]'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
-                }`}
-              >
-                OR
-              </button>
-            </div>
-          </div>
-          <button
-            onClick={closeFilters}
-            className="rounded-lg p-2 text-slate-300 hover:bg-slate-700/40 transition"
-            aria-label="Zamknij filtry"
-          >
-            <span className="block h-5 w-5 leading-5 text-center">×</span>
-          </button>
-        </div>
-
-        <div ref={tagListRootRef} className="flex h-[calc(100%-64px-72px)] flex-col overflow-hidden px-5 py-4">
-          <TagList
-            tags={[...tags, ...projects.map((p) => p.name).filter(Boolean)]}
-            projects={projects}
+          <FiltersPanel
+            filtersOpen={filtersOpen}
+            openFilters={openFilters}
+            closeFilters={closeFilters}
             selectedTags={selectedTags}
             logic={logic}
             setLogic={setLogic}
             toggleTag={toggleTag}
           />
-        </div>
-
-        <div className="flex gap-2 border-t border-[rgba(148,163,184,0.2)] px-5 py-4">
-          <button
-            onClick={() => navigate('/organization/project/new')}
-            className="flex-1 rounded-[14px] bg-gradient-to-r from-violet-500 to-fuchsia-500 py-3 text-sm font-semibold text-white shadow-md shadow-violet-500/30 hover:brightness-110 transition"
-          >
-            nowy projekt
-          </button>
-          <button
-            onClick={() => navigate('/organization/tag/new')}
-            className="flex-1 rounded-[14px] bg-gradient-to-r from-violet-500 to-fuchsia-500 py-3 text-sm font-semibold text-white shadow-md shadow-violet-500/30 hover:brightness-110 transition"
-          >
-            nowy tag
-          </button>
-        </div>
-      </aside>
-
+        </ProjectsProvider>
+      </main>
       <footer className="border-t border-slate-800 bg-slate-950/90 py-4">
         <div className="mx-auto flex max-w-6xl items-center justify-center px-6">
           <p className="text-xs uppercase tracking-[0.3em] text-slate-500">

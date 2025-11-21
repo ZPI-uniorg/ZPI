@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { EVENTS, TAGS, PROJECTS } from "../../../api/fakeData.js";
+import { EVENTS, TAGS } from "../../../api/fakeData.js";
+import useAuth from "../../../auth/useAuth.js";
+import { useProjects } from "../../shared/components/ProjectsContext.jsx";
 import { Edit2, Eye } from "lucide-react";
 import TagCombinationsPicker from "../../shared/components/TagCombinationsPicker.jsx";
 
@@ -100,21 +102,23 @@ export default function EventEditPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { event: editingEvent, date: presetDate, time: presetTime } = location.state || {};
+  const { user } = useAuth();
+  const { projects } = useProjects();
 
   const [title, setTitle] = useState(editingEvent?.title || "");
   const [description, setDescription] = useState(editingEvent?.description || "");
   const [date, setDate] = useState(editingEvent?.date || presetDate || "");
   const [startTime, setStartTime] = useState(editingEvent?.start_time || presetTime || "");
   const [endTime, setEndTime] = useState(editingEvent?.end_time || "");
-  const [selectedTags, setSelectedTags] = useState(editingEvent?.tags || []);
   const [isEditing, setIsEditing] = useState(!editingEvent);
 
-  // NEW: combinations state (init from event.tagCombinations or event.tags)
   const [combinations, setCombinations] = useState(() => {
     if (editingEvent?.tagCombinations?.length) return editingEvent.tagCombinations;
     if (editingEvent?.tags?.length) return [editingEvent.tags];
     return [];
   });
+
+  const allSuggestions = [...projects.map((p) => p.name).filter(Boolean), ...TAGS];
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -163,17 +167,11 @@ export default function EventEditPage() {
     navigate("/calendar");
   };
 
-  const toggleTag = (tag) => {
-    setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
-  };
-
   return (
-    <div className="min-h-screen bg-[linear-gradient(145deg,#0f172a,#1e293b)] flex items-center justify-center p-8">
+    <div className="h-full flex items-center justify-center bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-8">
       <form
         onSubmit={handleSubmit}
-        className="bg-slate-900/95 rounded-3xl shadow-[0_30px_60px_rgba(15,23,42,0.45)] p-12 w-full max-w-4xl flex flex-col gap-8 border border-slate-700"
+        className="bg-slate-900/95 rounded-3xl shadow-[0_30px_60px_rgba(15,23,42,0.45)] p-12 w-full max-w-4xl flex flex-col gap-8 border border-slate-700 max-h-[90vh] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
       >
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-slate-100">
@@ -310,7 +308,7 @@ export default function EventEditPage() {
             <TagCombinationsPicker
               value={combinations}
               onChange={setCombinations}
-              suggestions={[...PROJECTS.map((p) => p.name), ...TAGS]}
+              suggestions={allSuggestions}
               label="Tagi / Projekty"
             />
           </div>
