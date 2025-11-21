@@ -17,6 +17,7 @@ from kanban.models import KanbanBoard
 from core.email_utils import send_new_user_credentials_email
 
 from .models import Membership, Organization, Tag, Project
+from organization_calendar.models import Event
 
 User = get_user_model()
 
@@ -1289,6 +1290,11 @@ def update_project(request, organization_id, project_id):
 
         if name:
             project.title = name
+
+            tag = project.tag
+            tag.name = name
+            tag.save()
+
         if description:
             project.description = description
         if start_dte:
