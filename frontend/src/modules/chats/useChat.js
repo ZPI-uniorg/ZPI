@@ -20,6 +20,11 @@ export function useChat(
   const [status, setStatus] = useState("connecting");
   const { user } = useAuth() || {};
 
+  // Pagination state
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+
   const socketRef = useRef(null);
   const currentChannelRef = useRef(channel);
   // StrictMode double-effect handling: we'll allow multiple runs and always teardown any existing socket first.
@@ -83,13 +88,13 @@ export function useChat(
 
       try {
         console.log("🔌 Getting access token...");
-        // Load message history for the selected channel
+        // Load message history for the selected channel (initial load with pagination)
         try {
           const queryParam = chatMap[channel]
             ? `chat_id=${chatMap[channel]}`
             : `channel=${encodeURIComponent(channel)}`;
           const historyRes = await fetch(
-            `${BACKEND_BASE}/api/messages/?${queryParam}`,
+            `${BACKEND_BASE}/api/messages/?${queryParam}&limit=10&offset=0`,
             { headers: { Accept: "application/json" } }
           );
           if (historyRes.ok) {
@@ -113,8 +118,10 @@ export function useChat(
                 msg.author_username === (user?.username || username),
             }));
             setMessages(loadedMessages);
+            setOffset(10);
+            setHasMore(historyData.has_more || false);
             console.log(
-              `📜 Loaded ${loadedMessages.length} messages from history for ${channel}`
+              `📜 Loaded ${loadedMessages.length} messages from history for ${channel}, hasMore: ${historyData.has_more}`
             );
           }
         } catch (historyErr) {
@@ -272,9 +279,72 @@ export function useChat(
       currentChannelRef.current = newChannel;
       setChannel(newChannel);
       setMessages([]);
+      // Reset pagination state
+      setOffset(0);
+      setHasMore(true);
     },
     [channel]
   );
+
+  // Load more (older) messages
+  const loadMoreMessages = useCallback(async () => {
+    if (!channel || loadingMore || !hasMore) return;
+
+    setLoadingMore(true);
+    try {
+      const queryParam = chatMap[channel]
+        ? `chat_id=${chatMap[channel]}`
+        : `channel=${encodeURIComponent(channel)}`;
+      const historyRes = await fetch(
+        `${BACKEND_BASE}/api/messages/?${queryParam}&limit=10&offset=${offset}`,
+        { headers: { Accept: "application/json" } }
+      );
+
+      if (historyRes.ok) {
+        const historyData = await historyRes.json();
+        const olderMessages = historyData.messages.map((msg) => ({
+          message_uuid: msg.message_uuid,
+          chat_id: msg.chat_id,
+          sender_id: msg.sender_id,
+          author_username: msg.author_username,
+          content: msg.content,
+          timestamp: msg.timestamp,
+          time: new Date(msg.timestamp).toLocaleTimeString("pl-PL", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          id: msg.message_uuid || msg.message_id,
+          author: msg.author_username,
+          text: msg.content,
+          mine:
+            (msg.sender_id && user?.id && msg.sender_id === user.id) ||
+            msg.author_username === (user?.username || username),
+        }));
+
+        if (olderMessages.length > 0) {
+          setMessages((prev) => [...olderMessages, ...prev]);
+          setOffset((prev) => prev + olderMessages.length);
+        }
+        setHasMore(historyData.has_more || false);
+        console.log(
+          `📜 Loaded ${olderMessages.length} older messages, hasMore: ${historyData.has_more}`
+        );
+      }
+    } catch (err) {
+      console.error("❌ Failed to load more messages:", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [
+    channel,
+    loadingMore,
+    hasMore,
+    offset,
+    chatMap,
+    user?.id,
+    user?.username,
+    username,
+  ]);
 
   // Send message
   const sendMessage = useCallback(
@@ -335,5 +405,8 @@ export function useChat(
     sendMessage,
     switchChannel,
     status,
+    loadMoreMessages,
+    hasMore,
+    loadingMore,
   };
 }

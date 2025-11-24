@@ -22,6 +22,9 @@ export default function ChatPage() {
     sendMessage,
     switchChannel,
     status,
+    loadMoreMessages,
+    hasMore,
+    loadingMore,
   } = useChat(null, currentUser, activeOrganization?.id);
   const [orgChannels, setOrgChannels] = useState(null);
   const [chatsLoading, setChatsLoading] = useState(false);
@@ -70,8 +73,8 @@ export default function ChatPage() {
   const disabled = status === "connecting";
   console.log(orgChannels);
   return (
-    <div className="h-full overflow-auto bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-4 md:p-6">
-      <div className="max-w-[1400px] mx-auto min-h-full flex flex-col gap-4">
+    <div className="h-full overflow-hidden bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-4 md:p-6">
+      <div className="max-w-[1400px] mx-auto h-full flex flex-col gap-4">
         <header className="flex items-center justify-between px-2">
           <h1 className="text-2xl font-semibold text-slate-100">{channel}</h1>
           <div className="flex items-center gap-3">
@@ -109,8 +112,13 @@ export default function ChatPage() {
             loading={chatsLoading}
           />
           {channel ? (
-            <section className="flex-1 flex flex-col">
-              <MessageList messages={messages} />
+            <section className="flex-1 min-h-0 flex flex-col">
+              <MessageList
+                messages={messages}
+                loadMoreMessages={loadMoreMessages}
+                hasMore={hasMore}
+                loadingMore={loadingMore}
+              />
               <form
                 onSubmit={handleSubmit}
                 className="border-t border-slate-700 pt-4 flex flex-col gap-3 mx-3 "

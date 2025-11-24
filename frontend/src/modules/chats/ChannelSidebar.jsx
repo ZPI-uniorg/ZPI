@@ -21,7 +21,7 @@ export default function ChannelSidebar({
     };
   });
   return (
-    <aside className="hidden md:flex w-64 flex-col gap-6 pr-4 border-r border-slate-700/60">
+    <aside className="flex w-56 flex-col gap-6 pr-4 border-r border-slate-700/60 shrink-0 min-w-[11rem]">
       <div>
         <p className="text-xs uppercase tracking-wide text-slate-400 mb-2">
           Chaty

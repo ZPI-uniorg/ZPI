@@ -1,12 +1,60 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 
-export default function MessageList({ messages }) {
+export default function MessageList({
+  messages,
+  loadMoreMessages,
+  hasMore,
+  loadingMore,
+}) {
   const endRef = useRef(null);
+  const containerRef = useRef(null);
+  const previousScrollHeightRef = useRef(0);
+
+  // Auto-scroll to bottom on new messages
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Handle scroll event to detect when user scrolls near top
+  const handleScroll = useCallback(() => {
+    const container = containerRef.current;
+    if (!container || !loadMoreMessages || !hasMore || loadingMore) return;
+
+    // If scrolled within 100px of the top, load more
+    if (container.scrollTop < 100) {
+      // Store current scroll height before loading
+      previousScrollHeightRef.current = container.scrollHeight;
+      loadMoreMessages();
+    }
+  }, [loadMoreMessages, hasMore, loadingMore]);
+
+  // Restore scroll position after prepending messages
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || previousScrollHeightRef.current === 0) return;
+
+    // Calculate the difference in scroll height
+    const newScrollHeight = container.scrollHeight;
+    const scrollDelta = newScrollHeight - previousScrollHeightRef.current;
+
+    // Adjust scroll position to maintain visual position
+    if (scrollDelta > 0) {
+      container.scrollTop += scrollDelta;
+      previousScrollHeightRef.current = 0;
+    }
+  }, [messages]);
+
   return (
-    <div className="flex-1 overflow-y-auto flex flex-col gap-4 pb-4 pr-4 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+    <div
+      ref={containerRef}
+      onScroll={handleScroll}
+      className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-4 pb-4 px-4 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
+    >
+      {loadingMore && hasMore && (
+        <div className="text-center py-2 text-slate-400 text-sm">
+          Ładowanie starszych wiadomości...
+        </div>
+      )}
       {messages.map((m) => (
         <div
           key={m.id}

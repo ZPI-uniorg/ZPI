@@ -70,6 +70,8 @@ def get_messages(request):
     try:
         chat_id = request.GET.get("chat_id")
         channel_name = request.GET.get("channel")
+        limit = int(request.GET.get("limit", 10))
+        offset = int(request.GET.get("offset", 0))
 
         if not chat_id and not channel_name:
             return JsonResponse({"error": "chat_id or channel required"}, status=400)
@@ -78,15 +80,26 @@ def get_messages(request):
         if chat_id:
             try:
                 chat = Chat.objects.get(chat_it=chat_id)
-                messages = Message.objects.filter(chat=chat).order_by("timestamp")
+                total_count = Message.objects.filter(chat=chat).count()
+                messages = Message.objects.filter(chat=chat).order_by("-timestamp")[offset:offset+limit]
+                # Reverse to get chronological order (oldest first in result)
+                messages = list(reversed(messages))
             except Chat.DoesNotExist:
                 return JsonResponse({"error": "Chat not found"}, status=404)
         else:
             # Fallback: lookup by channel name
-            messages = Message.objects.filter(channel=channel_name).order_by("timestamp")
+            total_count = Message.objects.filter(channel=channel_name).count()
+            messages = Message.objects.filter(channel=channel_name).order_by("-timestamp")[offset:offset+limit]
+            messages = list(reversed(messages))
 
         serializer = MessageSerializer(messages, many=True)
-        return JsonResponse({"messages": serializer.data}, status=200)
+        return JsonResponse({
+            "messages": serializer.data,
+            "total": total_count,
+            "limit": limit,
+            "offset": offset,
+            "has_more": (offset + limit) < total_count
+        }, status=200)
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
