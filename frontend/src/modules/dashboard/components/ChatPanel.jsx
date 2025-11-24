@@ -2,8 +2,15 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Maximize2 } from "lucide-react";
 
-export default function ChatPanel({ chats, query, setQuery, addChat }) {
+export default function ChatPanel({
+  chats,
+  query,
+  setQuery,
+  addChat,
+  loading = false,
+}) {
   const navigate = useNavigate();
+  console.log(chats);
   return (
     <section className="basis-[30%] grow h-full bg-[rgba(15,23,42,0.92)] rounded-[24px] p-5 shadow-[0_25px_50px_rgba(15,23,42,0.45)] text-slate-300 border border-[rgba(148,163,184,0.35)] flex flex-col min-h-0 overflow-hidden">
       <div className="flex items-center justify-between mb-3">
@@ -27,19 +34,37 @@ export default function ChatPanel({ chats, query, setQuery, addChat }) {
         />
       </div>
       <div className="flex-1 overflow-y-auto space-y-3 min-h-0 overscroll-contain">
-        {chats.length === 0 ? (
+        {loading ? (
+          <p className="text-slate-400 text-sm animate-pulse">
+            Ładowanie czatów...
+          </p>
+        ) : chats.length === 0 ? (
           <p className="text-slate-400 text-sm">Brak wyników.</p>
         ) : (
           chats.map((c) => (
             <div
-              key={c.id}
-              className="flex items-center gap-3 p-3 rounded-xl border border-slate-600/30 hover:border-slate-400/50 hover:bg-slate-800/30 transition-colors"
+              key={c.chat_it}
+              onClick={() =>
+                navigate(`/chat?channel=${encodeURIComponent(c.chat_it)}`)
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  navigate(`/chat?channel=${encodeURIComponent(c.chat_it)}`);
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              aria-label={`Otwórz czat ${c.title || "bez nazwy"}`}
+              className="flex items-center gap-3 p-3 rounded-xl border border-slate-600/30 hover:border-slate-400/50 hover:bg-slate-800/30 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-500/60"
             >
               <div className="w-10 h-10 rounded-full bg-slate-700/60 flex items-center justify-center text-[10px] font-medium">
-                {c.title.slice(0, 2).toUpperCase()}
+                {(c.title || "??").slice(0, 2).toUpperCase()}
               </div>
               <div className="flex-1">
-                <p className="font-medium text-sm">{c.title}</p>
+                <p className="font-medium text-sm">
+                  {c.title || "Unnamed Chat"}
+                </p>
                 {c.tags?.length ? (
                   <p className="text-[11px] text-slate-400">
                     {c.tags.join(", ")}

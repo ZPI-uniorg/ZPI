@@ -6,6 +6,7 @@ import MiniCalendar from "../components/MiniCalendar.jsx";
 import KanbanPreview from "../components/KanbanPreview.jsx";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useProjects } from "../../shared/components/ProjectsContext.jsx";
+import apiClient from "../../../api/client.js";
 
 export default function OrganizationDashboardPage() {
   const { organization: activeOrganization } = useAuth();
@@ -16,7 +17,40 @@ export default function OrganizationDashboardPage() {
 
   const { projects, projectsLoading, projectsError } = useProjects();
 
-  const [chats] = useState([]);
+  const [chats, setChats] = useState([]);
+  const [chatsLoading, setChatsLoading] = useState(false);
+  // Fetch chats from backend for active organization
+  useEffect(() => {
+    const orgId = activeOrganization?.id;
+    if (!orgId) return;
+    let cancelled = false;
+    setChatsLoading(true);
+    apiClient
+      .get("chats/", { params: { organization: orgId } })
+      .then((res) => {
+        if (cancelled) return;
+        const serverChats = (res.data?.chats || []).map((c) => ({
+          chat_it: c.chat_it,
+          title: c.name,
+          tags: [],
+          tagCombinations: [],
+        }));
+        setChats(serverChats);
+      })
+      .catch((e) => {
+        console.error(
+          "Chat list fetch failed",
+          e.response?.status,
+          e.response?.data || e.message
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setChatsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeOrganization?.id]);
   const [query, setQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState([]);
   const [logic, setLogic] = useState("AND");
@@ -43,7 +77,9 @@ export default function OrganizationDashboardPage() {
   }, [projectJustCreated, projectJustUpdated, navigate, location.pathname]);
 
   useEffect(() => {
-    setKanbanIndex((i) => (projects.length === 0 ? 0 : Math.min(i, projects.length - 1)));
+    setKanbanIndex((i) =>
+      projects.length === 0 ? 0 : Math.min(i, projects.length - 1)
+    );
   }, [projects.length, activeOrganization?.id]);
 
   const filteredChats = useMemo(() => {
@@ -53,7 +89,8 @@ export default function OrganizationDashboardPage() {
     if (selectedTags.length > 0) {
       result = result.filter((c) =>
         logic === "AND"
-          ? selectedTags.every((t) => c.tags?.includes(t)) && (c.tags || []).every((t) => selectedTags.includes(t))
+          ? selectedTags.every((t) => c.tags?.includes(t)) &&
+            (c.tags || []).every((t) => selectedTags.includes(t))
           : selectedTags.some((t) => c.tags?.includes(t))
       );
     }
@@ -66,11 +103,15 @@ export default function OrganizationDashboardPage() {
 
   const prevKanban = () => {
     setKanbanIndex((i) =>
-      projectList.length === 0 ? 0 : (i - 1 + projectList.length) % projectList.length
+      projectList.length === 0
+        ? 0
+        : (i - 1 + projectList.length) % projectList.length
     );
   };
   const nextKanban = () => {
-    setKanbanIndex((i) => (projectList.length === 0 ? 0 : (i + 1) % projectList.length));
+    setKanbanIndex((i) =>
+      projectList.length === 0 ? 0 : (i + 1) % projectList.length
+    );
   };
 
   return (
@@ -78,6 +119,7 @@ export default function OrganizationDashboardPage() {
       <div className="flex flex-1 min-h-0 gap-6 max-w-[90vw] mx-auto w-full overflow-hidden">
         <ChatPanel
           chats={filteredChats}
+          loading={chatsLoading}
           query={query}
           setQuery={setQuery}
           addChat={() => navigate("/chat/new")}

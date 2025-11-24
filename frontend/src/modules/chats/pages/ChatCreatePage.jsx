@@ -1,13 +1,17 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CHATS } from "../../../api/fakeData.js";
+import { useSearchParams } from "react-router-dom";
+import { CHATS } from "../../../api/fakeData.js"; // retained for compatibility
+import apiClient from "../../../api/client.js";
 import useAuth from "../../../auth/useAuth.js";
 import TagCombinationsPicker from "../../shared/components/TagCombinationsPicker.jsx";
 import { useProjects } from "../../shared/components/ProjectsContext.jsx";
 
 export default function ChatCreatePage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { organization } = useAuth();
+  const [searchParams] = useSearchParams();
+  const organizationId = searchParams.get("org") || null;
   const { projects } = useProjects();
   const [title, setTitle] = useState("");
   const [combinations, setCombinations] = useState([]);
@@ -18,13 +22,38 @@ export default function ChatCreatePage() {
     e.preventDefault();
     if (!title.trim()) return;
     const flatTags = Array.from(new Set((combinations || []).flat()));
-    CHATS.push({
-      id: `c${Date.now()}`,
-      title: title.trim(),
-      tags: flatTags,
-      tagCombinations: combinations,
-    });
-    navigate("/dashboard");
+    // Persist via backend API
+    const BACKEND_BASE =
+      typeof window !== "undefined"
+        ? import.meta.env?.VITE_BACKEND_URL ||
+          `${window.location.protocol}//localhost:8000`
+        : "http://localhost:8000";
+    const finalOrgId = organizationId || organization?.id;
+    if (!finalOrgId) {
+      console.error(
+        "No organization id available (query param 'org' or auth context)"
+      );
+      return;
+    }
+    const payload = {
+      name: title.trim(),
+      organization: finalOrgId,
+      permissions: flatTags,
+    };
+    apiClient
+      .post("chats/create/", payload)
+      .then(() => navigate("/dashboard"))
+      .catch((e) => {
+        if (e.response) {
+          console.error(
+            "Chat create failed",
+            e.response.status,
+            e.response.data
+          );
+        } else {
+          console.error("Chat create error", e.message);
+        }
+      });
   };
 
   return (
