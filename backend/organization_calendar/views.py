@@ -379,6 +379,7 @@ def create_event(request, organization_id):
         if start_time >= end_time:
             return JsonResponse({"error": "Invalid time range"}, status=400)
 
+
         for perm in permissions:
             if perm not in allowed_permissions:
                 return JsonResponse({"error": "Unauthorized permission assignment"}, status=403)
@@ -463,6 +464,9 @@ def update_event(request, organization_id, event_id):
         start_time = data.get("start_time")
         end_time = data.get("end_time")
         permissions_str = data.get("permissions")
+
+        if start_time >= end_time:
+            return JsonResponse({"error": "Invalid time range"}, status=400)
 
         if permissions_str:
             if membership.role != 'admin':

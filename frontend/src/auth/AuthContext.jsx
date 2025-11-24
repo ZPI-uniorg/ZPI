@@ -65,73 +65,57 @@ export function AuthProvider({ children }) {
 
   const establishSession = useCallback((session) => {
     if (!session) return
-    setTokens(session.token)
-    setUser(session.user)
+    if (session.access && session.refresh) {
+      setTokens({ access: session.access, refresh: session.refresh })
+    } else if (session.token) {
+      setTokens(session.token)
+    } else {
+      setTokens(null)
+    }
+    if (session.user) {
+      setUser(session.user)
+    } else if (session.sessionKey || session.access) {
+      // Backend nie zwraca user -> minimalny obiekt
+      setUser({
+        username: session.username || '',
+        first_name: session.first_name || '',
+        last_name: session.last_name || '',
+        email: session.email || '',
+        role: session.role || '', // brak – pozostaje pusty
+      })
+    }
     setOrganization(session.organization ?? null)
   }, [])
 
   const login = useCallback(
     async (credentials) => {
-      const rawOrganization = credentials.organization?.trim()
-      const organizationSlug = normalizeOrganizationSlug(rawOrganization)
-      if (!organizationSlug) {
-        throw new Error('Organization identifier is required')
-      }
-
-      const params = new URLSearchParams()
-      params.append('username', credentials.username ?? '')
-      params.append('password', credentials.password ?? '')
-
-      const response = await apiClient.post(
-        `auth/login/${encodeURIComponent(organizationSlug)}/`,
-        params,
-        {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-        },
-      )
-
-      const data = response.data ?? {}
-
-      if (data.status && data.status !== 'success') {
-        const errorMessage = data.message ?? 'Nie udało się zalogować.'
-        throw Object.assign(new Error(errorMessage), { response: { data } })
-      }
-
-      const session = {
-        token: {
-          access: data.access,
-          refresh: data.refresh,
-        },
-        user: data.user ?? {
-          username: credentials.username ?? '',
-        },
-        organization: data.organization
-          ? { ...data.organization, slug: organizationSlug, original: rawOrganization }
-          : { slug: organizationSlug, name: rawOrganization, original: rawOrganization },
-      }
-
-      establishSession(session)
-      return session.user
+      const org = credentials.organization || credentials.organization_name
+      if (!org) throw new Error('Brak identyfikatora organizacji')
+      const body = new URLSearchParams()
+      body.append('username', credentials.username)
+      body.append('password', credentials.password)
+      const response = await apiClient.post(`auth/login/${encodeURIComponent(org)}/`, body)
+      establishSession({ ...response.data, username: credentials.username })
+      return response.data.user || { username: credentials.username }
     },
     [establishSession],
   )
 
   const logout = useCallback(async () => {
-    const organizationSlug = organization?.slug?.trim()
-    if (organizationSlug) {
-      try {
-        await apiClient.post(`auth/logout/${encodeURIComponent(organizationSlug)}/`)
-      } catch (error) {
-        console.error('Failed to revoke session on server', error)
+    const orgSlug = organization?.slug || organization?.name
+    try {
+      if (orgSlug) {
+        await apiClient.post(`auth/logout/${encodeURIComponent(orgSlug)}/`)
+      } else {
+        await apiClient.post('auth/logout/')
       }
+    } catch (error) {
+      // silent
     }
-
     setTokens(null)
     setUser(null)
     setOrganization(null)
-  }, [tokens, organization])
+  }, [organization])
 
   const changePassword = useCallback(
     async ({ currentPassword, newPassword }) => {

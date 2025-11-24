@@ -1,7 +1,9 @@
-import React, { useRef, useEffect, useMemo } from 'react';
+import React, { useRef, useEffect, useMemo, useState } from 'react';
 import TagList from '../../dashboard/components/TagList.jsx';
 import { useNavigate } from 'react-router-dom';
 import { useProjects } from './ProjectsContext.jsx';
+import useAuth from '../../../auth/useAuth.js';
+import { getTags } from '../../../api/organizations.js';
 
 export default function FiltersPanel({
 	filtersOpen,
@@ -15,20 +17,38 @@ export default function FiltersPanel({
 	const tagListRootRef = useRef(null);
 	const navigate = useNavigate();
 	const { projects } = useProjects();
+	const { organization, user } = useAuth();
+	const [allTags, setAllTags] = useState([]);
+	const [tagsLoading, setTagsLoading] = useState(false);
 
-	// Wyciąganie unikalnych tagów z projektów + nazwy projektów
+	useEffect(() => {
+		if (!organization?.id || !user?.username) {
+			setAllTags([]);
+			return;
+		}
+		let ignore = false;
+		setTagsLoading(true);
+		getTags(organization.id, user.username)
+			.then(data => {
+				if (ignore) return;
+				setAllTags(Array.isArray(data) ? data : []);
+			})
+			.catch(() => {
+				if (!ignore) setAllTags([]);
+			})
+			.finally(() => {
+				if (!ignore) setTagsLoading(false);
+			});
+		return () => { ignore = true; };
+	}, [organization?.id, user?.username]);
+
+	const projectNames = useMemo(() => new Set(projects.map(p => p.name).filter(Boolean)), [projects]);
+
 	const tags = useMemo(() => {
-		const collected = new Set();
-		projects.forEach(p => {
-			if (Array.isArray(p?.tags)) {
-				p.tags.forEach(t => {
-					if (typeof t === 'string' && t.trim()) collected.add(t.trim());
-					else if (t && typeof t.name === 'string' && t.name.trim()) collected.add(t.name.trim());
-				});
-			}
-		});
-		return Array.from(collected);
-	}, [projects]);
+		return allTags
+			.map(t => t.name)
+			.filter(name => !projectNames.has(name));
+	}, [allTags, projectNames]);
 
 	const allFilterItems = useMemo(
 		() => [...tags, ...projects.map(p => p.name).filter(Boolean)],
@@ -98,14 +118,18 @@ export default function FiltersPanel({
 					ref={tagListRootRef}
 					className="flex h-[calc(100%-64px-72px)] flex-col overflow-hidden px-5 py-4"
 				>
-					<TagList
-						tags={allFilterItems}
-						projects={projects}
-						selectedTags={selectedTags}
-						logic={logic}
-						setLogic={setLogic}
-						toggleTag={toggleTag}
-					/>
+					{tagsLoading ? (
+						<p className="text-slate-400 text-sm">Ładowanie filtrów…</p>
+					) : (
+						<TagList
+							tags={allFilterItems}
+							projects={projects}
+							selectedTags={selectedTags}
+							logic={logic}
+							setLogic={setLogic}
+							toggleTag={toggleTag}
+						/>
+					)}
 				</div>
 
 				<div className="flex gap-2 border-t border-[rgba(148,163,184,0.2)] px-5 py-4">

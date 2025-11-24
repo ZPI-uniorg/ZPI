@@ -40,8 +40,20 @@ export function ProjectsProvider({ children, projectJustCreated, projectJustUpda
     setProjectsLoading(true);
     setProjectsError(null);
     try {
-      const fetcher = organization.role === 'admin' ? getAllProjects : getUserProjects;
-      const data = await fetcher(organization.id, user.username);
+      let data = [];
+      // Próba ALL (admin) nawet jeśli brak organization.role – backend sam zweryfikuje rolę
+      try {
+        data = await getAllProjects(organization.id, user.username);
+      } catch (innerErr) {
+        const status = innerErr?.response?.status;
+        const msg = innerErr?.response?.data?.error || innerErr?.response?.data?.detail || '';
+        if (status === 403 || status === 401 || /permission/i.test(msg)) {
+          // fallback do projektów użytkownika
+          data = await getUserProjects(organization.id, user.username);
+        } else {
+          throw innerErr;
+        }
+      }
       const fetched = Array.isArray(data) ? data : [];
       setProjects(mergeProjectData(fetched, localProjects));
       setLocalProjects(cur =>

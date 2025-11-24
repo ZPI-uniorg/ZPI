@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { EVENTS } from "../../../api/fakeData.js";
 import { ChevronLeft, ChevronRight, X, Calendar, CalendarClock } from "lucide-react";
 import CalendarMonthView from "../components/CalendarMonthView.jsx";
 import CalendarWeekView from "../components/CalendarWeekView.jsx";
+import useAuth from "../../../auth/useAuth.js";
+import { getUserEvents, getAllEvents } from "../../../api/events.js";
 
 const MONTHS = [
   "Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec",
@@ -30,6 +31,85 @@ export default function CalendarPage() {
   const today = new Date();
   const [date, setDate] = useState({ year: today.getFullYear(), month: today.getMonth(), day: today.getDate() });
   const [view, setView] = useState("month");
+  const { user, organization } = useAuth();
+  const [eventsLoading, setEventsLoading] = useState(false);
+  const [eventsError, setEventsError] = useState(null);
+  const [events, setEvents] = useState([]);
+
+  useEffect(() => {
+    if (!organization?.id || !user?.username) return;
+    let ignore = false;
+    setEventsLoading(true);
+    setEventsError(null);
+
+    const parseEventRow = (ev) => {
+      const rawStart = ev.start_time ? String(ev.start_time) : "";
+      const rawEnd = ev.end_time ? String(ev.end_time) : "";
+      // Akceptuj formaty: "YYYY-MM-DD HH:MM:SS", "YYYY-MM-DD HH:MM:SS+00:00", ISO
+      const splitStart = rawStart.includes("T")
+        ? rawStart.replace("T", " ").split(" ")
+        : rawStart.split(" ");
+      const splitEnd = rawEnd.includes("T")
+        ? rawEnd.replace("T", " ").split(" ")
+        : rawEnd.split(" ");
+      const datePart = splitStart[0] || "";
+      const startTimePart = (splitStart[1] || "").replace("+00:00", "").slice(0,5);
+      const endTimePart = (splitEnd[1] || "").replace("+00:00", "").slice(0,5);
+
+      const perms = ev.permissions || ev.tags || [];
+      const tagCombinations = perms
+        .filter(p => p.includes('+'))
+        .map(p => p.split('+').filter(Boolean));
+      const plainTags = perms.filter(p => !p.includes('+'));
+
+      return {
+        id: ev.event_id,
+        event_id: ev.event_id,
+        title: ev.name,
+        name: ev.name,
+        description: ev.description || "",
+        start_time: startTimePart || "",
+        end_time: endTimePart || "",
+        date: datePart,
+        tags: plainTags,
+        tagCombinations,
+      };
+    };
+
+    const fetch = async () => {
+      try {
+        let data;
+        if (organization.role === 'admin') {
+          data = await getAllEvents(organization.id, user.username);
+        } else {
+          data = await getUserEvents(organization.id, user.username);
+          // Fallback diagnostyczny: jeśli nic nie przyszło spróbuj pobrać pełną listę (może brak permissions)
+          if (Array.isArray(data) && data.length === 0) {
+            try {
+              const adminData = await getAllEvents(organization.id, user.username);
+              // Nie nadpisuj gdy brak uprawnień – tylko jeśli coś przyszło
+              if (adminData?.length) data = adminData;
+            } catch (_) { /* ignoruj */ }
+          }
+        }
+        if (ignore) return;
+        const mapped = (data || []).map(parseEventRow);
+        setEvents(mapped);
+      } catch (err) {
+        if (ignore) return;
+        setEventsError(
+          err?.response?.data?.error ??
+          err?.response?.data?.detail ??
+          "Nie udało się pobrać wydarzeń."
+        );
+      } finally {
+        if (!ignore) setEventsLoading(false);
+      }
+    };
+
+    fetch();
+    return () => { ignore = true; };
+  }, [organization?.id, organization?.role, user?.username]);
 
   const handlePrev = () => {
     if (view === "month") {
@@ -134,11 +214,20 @@ export default function CalendarPage() {
           </div>
         </div>
 
-        {view === "month" ? (
-          <CalendarMonthView year={year} month={month} events={EVENTS} />
-        ) : (
-          <CalendarWeekView weekDays={weekDays} events={EVENTS} />
+        {eventsError && (
+          <div className="text-xs text-red-400 px-2 mb-2">{eventsError}</div>
         )}
+        <div className="flex-1 min-h-0">
+          {eventsLoading ? (
+            <div className="flex h-full items-center justify-center text-slate-400 text-sm">
+              Ładowanie wydarzeń…
+            </div>
+          ) : view === "month" ? (
+            <CalendarMonthView year={year} month={month} events={events} />
+          ) : (
+            <CalendarWeekView weekDays={weekDays} events={events} />
+          )}
+        </div>
       </div>
     </div>
   );

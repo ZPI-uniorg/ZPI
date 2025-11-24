@@ -6,6 +6,7 @@ import {
   removeOrganizationMember,
   updateOrganizationMember,
   updateOrganizationMemberProfile,
+  updateMemberPermissions, // <-- DODANE
 } from "../../../api/organizations.js";
 import useAuth from "../../../auth/useAuth.js";
 import { useProjects } from "../../shared/components/ProjectsContext.jsx"; // <-- KONTEKST PROJEKTÓW
@@ -155,7 +156,7 @@ function OrganizationsPage() {
         email: member.email ?? "",
         role: member.role,
         permissions: member.permissions ?? [],
-        tags: member.tags ?? [],                // <-- zachowaj tagi jeśli backend zwróci
+        tags: member.permissions ?? [], // <-- Używaj permissions jako tagów z backendu
       }));
       setMembers(normalized);
     } catch (error) {
@@ -376,13 +377,31 @@ function OrganizationsPage() {
   };
 
   const saveTags = () => {
-    setMembers(prev =>
-      prev.map(m =>
-        m.username === editingTagsUser ? { ...m, tags: [...editTags] } : m
-      )
-    );
-    setEditingTagsUser(null);
-    setEditTags([]);
+    if (!editingTagsUser || !selectedOrgId || !user?.username) {
+      setEditingTagsUser(null);
+      setEditTags([]);
+      return;
+    }
+    // wyślij do backendu
+    updateMemberPermissions(selectedOrgId, editingTagsUser, user.username, editTags)
+      .then(() => {
+        setMembers(prev =>
+          prev.map(m =>
+            m.username === editingTagsUser ? { ...m, tags: [...editTags], permissions: [...editTags] } : m
+          )
+        );
+      })
+      .catch(err => {
+        setMemberError(
+          err?.response?.data?.error ??
+          err?.response?.data?.detail ??
+          "Nie udało się zapisać tagów użytkownika."
+        );
+      })
+      .finally(() => {
+        setEditingTagsUser(null);
+        setEditTags([]);
+      });
   };
 
   const cancelTags = () => {

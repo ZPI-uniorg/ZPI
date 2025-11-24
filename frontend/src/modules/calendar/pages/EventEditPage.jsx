@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { EVENTS, TAGS } from "../../../api/fakeData.js";
+import { TAGS } from "../../../api/fakeData.js";
 import useAuth from "../../../auth/useAuth.js";
 import { useProjects } from "../../shared/components/ProjectsContext.jsx";
 import { Edit2, Eye } from "lucide-react";
 import TagCombinationsPicker from "../../shared/components/TagCombinationsPicker.jsx";
+import { createEvent, updateEvent, deleteEvent } from "../../../api/events.js";
 
 // Generuj listę godzin co 15 minut
 const generateTimeOptions = () => {
@@ -102,15 +103,17 @@ export default function EventEditPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { event: editingEvent, date: presetDate, time: presetTime } = location.state || {};
-  const { user } = useAuth();
+  const { user, organization } = useAuth();
   const { projects } = useProjects();
 
-  const [title, setTitle] = useState(editingEvent?.title || "");
+  const [title, setTitle] = useState(editingEvent?.name || editingEvent?.title || ""); // CHANGED
   const [description, setDescription] = useState(editingEvent?.description || "");
   const [date, setDate] = useState(editingEvent?.date || presetDate || "");
   const [startTime, setStartTime] = useState(editingEvent?.start_time || presetTime || "");
   const [endTime, setEndTime] = useState(editingEvent?.end_time || "");
   const [isEditing, setIsEditing] = useState(!editingEvent);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
 
   const [combinations, setCombinations] = useState(() => {
     if (editingEvent?.tagCombinations?.length) return editingEvent.tagCombinations;
@@ -120,51 +123,72 @@ export default function EventEditPage() {
 
   const allSuggestions = [...projects.map((p) => p.name).filter(Boolean), ...TAGS];
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!title.trim() || !date) return;
-
-    // flatten unique tags from combinations
+    if (!title.trim() || !date || !organization?.id || !user?.username) return;
     const flatTags = Array.from(new Set((combinations || []).flat()));
-
-    if (editingEvent) {
-      const eventIndex = EVENTS.findIndex((ev) => ev.id === editingEvent.id);
-      if (eventIndex !== -1) {
-        EVENTS[eventIndex] = {
-          ...EVENTS[eventIndex],
-          title: title.trim(),
-          description: description.trim(),
-          date,
-          start_time: startTime,
-          end_time: endTime,
-          tags: flatTags,
-          tagCombinations: combinations, // keep combinations
-        };
+    setSubmitting(true);
+    setError(null);
+    try {
+      if (editingEvent?.event_id || editingEvent?.id) {
+        const updated = await updateEvent(
+          editingEvent.event_id || editingEvent.id,
+          user.username,
+          {
+            name: title.trim(),
+            description: description.trim(),
+            date,
+            start_time: startTime,
+            end_time: endTime,
+            combinations,            // <-- PRZEKAZUJ KOMBINACJE
+          }
+        );
+        (updated.permissions || []).forEach(tag => { if (!TAGS.includes(tag)) TAGS.push(tag) });
+      } else {
+        const created = await createEvent(
+          organization.id,
+          user.username,
+          {
+            name: title.trim(),
+            description: description.trim(),
+            date,
+            start_time: startTime,
+            end_time: endTime,
+            combinations,            // <-- PRZEKAZUJ KOMBINACJE
+          }
+        );
+        (created.permissions || []).forEach(tag => { if (!TAGS.includes(tag)) TAGS.push(tag) });
       }
-    } else {
-      const newEvent = {
-        id: `e${Date.now()}`,
-        title: title.trim(),
-        description: description.trim(),
-        date,
-        start_time: startTime,
-        end_time: endTime,
-        tags: flatTags,
-        tagCombinations: combinations,
-      };
-      EVENTS.push(newEvent);
+      navigate("/calendar");
+    } catch (err) {
+      setError(
+        err.response?.data?.error ??
+        err.response?.data?.detail ??
+        "Nie udało się zapisać wydarzenia."
+      );
+    } finally {
+      setSubmitting(false);
     }
-
-    navigate("/calendar");
   };
 
-  const handleDelete = () => {
-    if (!editingEvent) return;
-    const eventIndex = EVENTS.findIndex((ev) => ev.id === editingEvent.id);
-    if (eventIndex !== -1) {
-      EVENTS.splice(eventIndex, 1);
+  const handleDelete = async () => {
+    if (!editingEvent?.event_id && !editingEvent?.id) return;
+    if (!organization?.id || !user?.username) return;
+    if (!window.confirm("Czy na pewno usunąć to wydarzenie?")) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      await deleteEvent(editingEvent.event_id || editingEvent.id, user.username);
+      navigate("/calendar");
+    } catch (err) {
+      setError(
+        err.response?.data?.error ??
+        err.response?.data?.detail ??
+        "Nie udało się usunąć wydarzenia."
+      );
+    } finally {
+      setSubmitting(false);
     }
-    navigate("/calendar");
   };
 
   return (
@@ -197,6 +221,12 @@ export default function EventEditPage() {
             </button>
           </div>
         </div>
+
+        {error && (
+          <p className="text-red-400 bg-red-500/10 border border-red-500/40 rounded-lg px-4 py-3 text-sm">
+            {error}
+          </p>
+        )}
 
         {!isEditing && editingEvent ? (
           <div className="flex flex-col gap-6">
@@ -318,16 +348,17 @@ export default function EventEditPage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-between mt-4">
             <button
               type="submit"
-              disabled={!title.trim() || !date}
+              disabled={!title.trim() || !date || submitting}
               className="flex-1 sm:flex-none bg-gradient-to-r from-indigo-500 to-violet-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-8 py-3 rounded-xl text-sm font-semibold shadow hover:brightness-110 transition"
             >
-              {editingEvent ? "Zapisz zmiany" : "Utwórz wydarzenie"}
+              {submitting ? "Zapisywanie..." : editingEvent ? "Zapisz zmiany" : "Utwórz wydarzenie"}
             </button>
             {editingEvent && (
               <button
                 type="button"
                 onClick={handleDelete}
-                className="flex-1 sm:flex-none border border-red-500 px-8 py-3 rounded-xl text-sm text-red-400 bg-transparent hover:bg-red-500/10 transition font-semibold"
+                disabled={submitting}
+                className="flex-1 sm:flex-none border border-red-500 px-8 py-3 rounded-xl text-sm text-red-400 bg-transparent hover:bg-red-500/10 transition font-semibold disabled:opacity-40"
               >
                 Usuń wydarzenie
               </button>

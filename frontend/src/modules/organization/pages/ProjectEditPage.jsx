@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import useAuth from "../../../auth/useAuth.js";
+import { createProject, updateProject } from "../../../api/projects.js";
 import { getOrganizationMembers } from "../../../api/organizations.js";
-import { createProject } from "../../../api/projects.js";
 import Autocomplete from "../../shared/components/Autocomplete.jsx";
 
 export default function ProjectEditPage() {
@@ -20,6 +20,7 @@ export default function ProjectEditPage() {
   const [availableMembers, setAvailableMembers] = useState([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [error, setError] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
   const isEditing = Boolean(editingProject?.id);
 
   useEffect(() => {
@@ -40,8 +41,23 @@ export default function ProjectEditPage() {
           last_name: m.last_name ?? "",
           email: m.email ?? "",
           role: m.role,
+          permissions: m.permissions || [],
         }));
         setAvailableMembers(normalized);
+        if (editingProject?.id && members.length === 0) {
+          const prefill = normalized.filter(m => (m.permissions || []).includes(editingProject.name));
+          setMembers(prefill);
+        }
+        // USTAW KOORDYNATORA
+        if (editingProject?.coordinator_username && !coordinator) {
+          const coord = normalized.find(m => m.username === editingProject.coordinator_username);
+          if (coord) {
+            setCoordinator(coord);
+            setMembers(prev =>
+              prev.some(p => p.id === coord.id) ? prev : [...prev, coord]
+            );
+          }
+        }
       })
       .catch((err) => {
         if (ignore) return;
@@ -58,20 +74,35 @@ export default function ProjectEditPage() {
     return () => {
       ignore = true;
     };
-  }, [organization?.id, user?.username]);
+  }, [organization?.id, user?.username, editingProject?.id, editingProject?.name]); // CHANGED deps
+
+  const projectTagName = editingProject?.name || null;
 
   const filteredCoordinators = availableMembers.filter((m) =>
+    (m.role === 'coordinator' || m.role === 'admin') &&
     (m.first_name + " " + m.last_name + " " + m.username + " " + m.email)
       .toLowerCase()
       .includes(searchCoord.toLowerCase())
   );
+
   const filteredMembers = availableMembers
     .filter((m) => !members.some((mm) => mm.id === m.id))
     .filter((m) =>
       (m.first_name + " " + m.last_name + " " + m.username + " " + m.email)
         .toLowerCase()
         .includes(memberInput.toLowerCase())
-    );
+    )
+    .filter(m => {
+      if (!editingProject?.id || !projectTagName) return true;
+      return (m.permissions || []).includes(projectTagName);
+    });
+
+  const memberOptions = (filteredMembers.length > 0 ? filteredMembers : availableMembers
+    .filter((m) => !members.some((mm) => mm.id === m.id)))
+    .map(m => ({
+      ...m,
+      label: `${m.first_name} ${m.last_name} (${m.username})`,
+    }));
 
   const handleCoordinatorSelect = (m) => {
     setCoordinator(m);
@@ -89,11 +120,9 @@ export default function ProjectEditPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim() || !coordinator || members.length === 0) return;
-    if (!organization?.id || !user?.username) {
-      setError("Brakuje informacji o organizacji lub użytkowniku.");
-      return;
-    }
+    if (!organization?.id || !user?.username) return;
+    if (!name.trim() || members.length === 0) return;
+    setSubmitting(true);
     setError(null);
     // Domyślne daty – proste tworzenie bez dodatkowych pól
     const today = new Date();
@@ -105,20 +134,36 @@ export default function ProjectEditPage() {
       ).padStart(2, "0")}`;
 
     try {
-      await createProject(organization.id, user.username, {
-        name: name.trim(),
-        description: "",
-        start_dte: toISODate(today),
-        end_dte: toISODate(plus30),
-      });
-      
-      navigate("/dashboard", { state: { projectJustCreated: { name } } });
+      if (editingProject?.id) {
+        await updateProject(organization.id, editingProject.id, user.username, {
+          username: user.username,                 // DODANE
+          name: name.trim(),
+          description: "",
+          start_dte: toISODate(today),
+          end_dte: toISODate(plus30),
+          coordinator_username: coordinator?.username || null, // DODANE (jawnie)
+        });
+        navigate("/dashboard", { state: { projectJustUpdated: { id: editingProject.id, name: name.trim() } } });
+      } else {
+        const created = await createProject(organization.id, user.username, {
+          username: user.username,                 // DODANE
+          name: name.trim(),
+          description: "",
+          start_dte: toISODate(today),
+          end_dte: toISODate(plus30),
+          coordinator_username: coordinator?.username || null, // DODANE
+        });
+        const createdProject = created?.id ? created : { id: created?.project_id || Date.now(), name: name.trim() };
+        navigate("/dashboard", { state: { projectJustCreated: createdProject } });
+      }
     } catch (err) {
       setError(
         err?.response?.data?.error ??
           err?.response?.data?.detail ??
           "Nie udało się zapisać projektu."
       );
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -191,11 +236,11 @@ export default function ProjectEditPage() {
                 <Autocomplete
                   value={memberInput}
                   onChange={(v) => setMemberInput(v)}
-                  options={filteredMembers}
+                  options={memberOptions}
                   onSelect={handleMemberSelect}
                   placeholder="Dodaj członka (autocomplete)"
                   inputClassName="border border-slate-600 rounded-lg px-3 py-2 w-full bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
-                  getOptionLabel={(m) => `${m.first_name} ${m.last_name} (${m.username})`}
+                  getOptionLabel={(m) => m.label}
                 />
               </div>
               <div className="flex-1 overflow-y-auto flex flex-col gap-1">
@@ -239,7 +284,7 @@ export default function ProjectEditPage() {
           <button
             type="submit"
             className="bg-gradient-to-r from-indigo-500 to-violet-500 text-white px-10 py-3 rounded-xl text-lg font-semibold shadow hover:brightness-110 transition w-full md:w-auto disabled:opacity-50"
-            disabled={!name.trim() || !coordinator || members.length === 0}
+            disabled={!name.trim() || !coordinator || members.length === 0 || submitting}
           >
             {isEditing ? "Zapisz zmiany" : "Stwórz projekt"}
           </button>
