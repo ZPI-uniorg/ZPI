@@ -203,7 +203,9 @@ def get_user_events(request, organization_id, username):
         for event in Event.objects.filter(organization=organization):
             event_permissions = event.permissions.all()
 
-            if permission_to_access(permissions, event_permissions):
+            if len(event_permissions) == 0:
+                events.append(event)
+            elif permission_to_access(permissions, event_permissions):
                 events.append(event)
 
         events_data = []
@@ -335,43 +337,44 @@ def create_event(request, organization_id):
         organization = Organization.objects.get(id=organization_id)
         permissions_str = request.POST.get("permissions")
 
-        permissions_str_list = permissions_str.split(',')
-        permissions_names = []
-        permissions_ids = []
+        if len(permissions_str) > 0:
+            permissions_str_list = permissions_str.split(',')
+            permissions_names = []
+            permissions_ids = []
 
-        for permission in permissions_str_list:
-            temp = permission.split('+')
+            for permission in permissions_str_list:
+                temp = permission.split('+')
 
-            if len(temp) == 1:
-                permissions_names.append(temp[0])
-                permissions_ids.append(Tag.objects.filter(name=temp[0], organization__id=organization_id).first().id)
-            else:
-                for perm in temp:
-                    permissions_names.append(perm)
-
-                combinedTag = Tag.objects.filter(name=permission, organization__id=organization_id, combined=True).first()
-
-                if combinedTag:
-                    permissions_ids.append(combinedTag.id)
+                if len(temp) == 1:
+                    permissions_names.append(temp[0])
+                    permissions_ids.append(Tag.objects.filter(name=temp[0], organization__id=organization_id).first().id)
                 else:
-                    combinedTag = Tag.objects.create(
-                        name=permission,
-                        organization=organization,
-                        combined=True
-                    )
-
                     for perm in temp:
-                        basicTag = Tag.objects.filter(name=perm, organization__id=organization_id).first()
-                        if basicTag:
-                            CombinedTag.objects.create(
-                                combined_tag_id=combinedTag,
-                                basic_tag_id=basicTag
-                            )
+                        permissions_names.append(perm)
 
-                    permissions_ids.append(combinedTag.id)
+                    combinedTag = Tag.objects.filter(name=permission, organization__id=organization_id, combined=True).first()
+
+                    if combinedTag:
+                        permissions_ids.append(combinedTag.id)
+                    else:
+                        combinedTag = Tag.objects.create(
+                            name=permission,
+                            organization=organization,
+                            combined=True
+                        )
+
+                        for perm in temp:
+                            basicTag = Tag.objects.filter(name=perm, organization__id=organization_id).first()
+                            if basicTag:
+                                CombinedTag.objects.create(
+                                    combined_tag_id=combinedTag,
+                                    basic_tag_id=basicTag
+                                )
+
+                        permissions_ids.append(combinedTag.id)
 
 
-        permissions = Tag.objects.filter(name__in=permissions_names)
+            permissions = Tag.objects.filter(name__in=permissions_names)
 
         if not all([name, start_time, end_time]):
             return JsonResponse({"error": "Missing required fields"}, status=400)

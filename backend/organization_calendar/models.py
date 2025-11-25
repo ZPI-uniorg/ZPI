@@ -15,4 +15,5 @@ class Event(models.Model):
     permissions = models.ManyToManyField(
         "organizations.Tag",
         related_name="event_permissions",
+        blank=True,
     )
