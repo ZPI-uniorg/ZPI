@@ -52,22 +52,6 @@ export default function ChannelSidebar({
           )}
         </ul>
       </div>
-      <div>
-        <p className="text-xs uppercase tracking-wide text-slate-400 mb-2">
-          Użytkownicy
-        </p>
-        <ul className="flex flex-col gap-1">
-          {users.map((u) => (
-            <li
-              key={u}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-700/40 transition"
-            >
-              <span className="h-2 w-2 rounded-full bg-green-500" />
-              <span className="text-sm">{u}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
     </aside>
   );
 }

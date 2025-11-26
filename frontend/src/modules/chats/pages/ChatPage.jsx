@@ -78,21 +78,6 @@ export default function ChatPage() {
         <header className="flex items-center justify-between px-2">
           <h1 className="text-2xl font-semibold text-slate-100">{channel}</h1>
           <div className="flex items-center gap-3">
-            <span className="px-3 py-1 rounded-full text-xs font-medium bg-slate-700 text-slate-200">
-              Online: {onlineUsers.length}
-            </span>
-            <span
-              className={
-                "px-3 py-1 rounded-lg text-xs font-medium border " +
-                (status === "online"
-                  ? "border-green-500/40 text-green-400 bg-green-500/10"
-                  : status === "connecting"
-                  ? "border-yellow-500/40 text-yellow-400 bg-yellow-500/10"
-                  : "border-slate-600 text-slate-300")
-              }
-            >
-              {status}
-            </span>
             <button
               onClick={() => navigate("/dashboard")}
               className="p-2 rounded-lg hover:bg-slate-700/40 text-slate-300 transition"
@@ -129,6 +114,7 @@ export default function ChatPage() {
                     placeholder={`Napisz wiadomość`}
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
+                    maxLength="1000"
                     onKeyDown={(e) => {
                       if (
                         e.key === "Enter" &&
