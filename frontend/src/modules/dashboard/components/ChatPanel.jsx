@@ -45,12 +45,20 @@ export default function ChatPanel({
             <div
               key={c.chat_it}
               onClick={() =>
-                navigate(`/chat?channel=${encodeURIComponent(c.chat_it)}`)
+                navigate(
+                  `/chat?channel=${encodeURIComponent(
+                    c.title || c.name || c.chat_it
+                  )}`
+                )
               }
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  navigate(`/chat?channel=${encodeURIComponent(c.chat_it)}`);
+                  navigate(
+                    `/chat?channel=${encodeURIComponent(
+                      c.title || c.name || c.chat_it
+                    )}`
+                  );
                 }
               }}
               role="button"

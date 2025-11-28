@@ -14,6 +14,7 @@ export default function ChatPage() {
   const { organization: activeOrganization } = useAuth();
   const navigate = useNavigate();
   const currentUser = user?.username || "Me";
+  const initialChannel = searchParams.get("channel") || null;
   const {
     channel,
     channels,
@@ -25,7 +26,7 @@ export default function ChatPage() {
     loadMoreMessages,
     hasMore,
     loadingMore,
-  } = useChat(null, currentUser, activeOrganization?.id);
+  } = useChat(initialChannel, currentUser, activeOrganization?.id);
   const [orgChannels, setOrgChannels] = useState(null);
   const [chatsLoading, setChatsLoading] = useState(false);
 
