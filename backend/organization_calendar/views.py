@@ -347,12 +347,12 @@ def create_event(request, organization_id):
 
                 if len(temp) == 1:
                     permissions_names.append(temp[0])
-                    permissions_ids.append(Tag.objects.filter(name=temp[0], organization__id=organization_id).first().id)
+                    permissions_ids.append(Tag.objects.get(name=temp[0], organization__id=organization_id).id)
                 else:
                     for perm in temp:
                         permissions_names.append(perm)
 
-                    combinedTag = Tag.objects.filter(name=permission, organization__id=organization_id, combined=True).first()
+                    combinedTag = Tag.objects.get(name=permission, organization__id=organization_id, combined=True)
 
                     if combinedTag:
                         permissions_ids.append(combinedTag.id)

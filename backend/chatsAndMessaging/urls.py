@@ -9,11 +9,9 @@ from .views import (
 
 urlpatterns = [
     path("negotiate/", negotiate, name="negotiate"),
-    path("messages/", get_messages, name="get_messages"),
-    path("messages/save/", save_message, name="save_message"),
-    path("chats/", list_chats, name="list_chats"),
-    path("chats/<int:organization_id>/", list_chats, name="list_chats_by_org"),
-    path("chats/create/", create_chat, name="create_chat"),
+    path("messages/<int:organization_id>/", get_messages, name="get_messages"),
+    path("messages/save/<int:organization_id>/", save_message, name="save_message"),
+    path("chats/my/<int:organization_id>/<str:username>/", list_chats, name="list_chats_by_org"),
     path(
         "chats/<int:organization_id>/create/",
         create_chat,

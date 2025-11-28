@@ -11,8 +11,9 @@ from django.db.models import Q
 from azure.messaging.webpubsubservice import WebPubSubServiceClient
 
 from .models import Message, Chat
-from organizations.models import Membership, Organization, Tag
+from organizations.models import Membership, Organization, Tag, CombinedTag
 from .serializers import MessageSerializer, ChatSerializer
+from core.permissions_checker import permission_to_access, permission_to_add
 
 
 # -----------------------------
@@ -66,8 +67,11 @@ def negotiate(request):
 # -----------------------------
 @require_http_methods(["GET"])
 @csrf_exempt
-def get_messages(request):
+def get_messages(request, organization_id):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User not authenticated"}, status=401)
+
         chat_id = request.GET.get("chat_id")
         channel_name = request.GET.get("channel")
         limit = int(request.GET.get("limit", 10))
@@ -77,20 +81,24 @@ def get_messages(request):
             return JsonResponse({"error": "chat_id or channel required"}, status=400)
 
         # Try to find by chat_id first (preferred), then by channel name
-        if chat_id:
-            try:
-                chat = Chat.objects.get(chat_it=chat_id)
-                total_count = Message.objects.filter(chat=chat).count()
-                messages = Message.objects.filter(chat=chat).order_by("-timestamp")[offset:offset+limit]
-                # Reverse to get chronological order (oldest first in result)
-                messages = list(reversed(messages))
-            except Chat.DoesNotExist:
-                return JsonResponse({"error": "Chat not found"}, status=404)
-        else:
-            # Fallback: lookup by channel name
-            total_count = Message.objects.filter(channel=channel_name).count()
-            messages = Message.objects.filter(channel=channel_name).order_by("-timestamp")[offset:offset+limit]
+        if not chat_id:
+           return JsonResponse({"error": "chat_id required"}, status=400)
+
+        try:
+            chat = Chat.objects.get(chat_it=chat_id, organization_id=organization_id)
+            chat_permissions = chat.permissions.all()
+            user_membership = Membership.objects.get(user=request.user, organization_id=organization_id)
+            user_permissions = user_membership.permissions
+
+            if chat_permissions and not permission_to_access(user_permissions, chat_permissions):
+                return JsonResponse({"error": "Access denied to this chat"}, status=403)
+
+            total_count = Message.objects.filter(chat=chat).count()
+            messages = Message.objects.filter(chat=chat).order_by("-timestamp")[offset:offset+limit]
+            # Reverse to get chronological order (oldest first in result)
             messages = list(reversed(messages))
+        except Chat.DoesNotExist:
+            return JsonResponse({"error": "Chat not found"}, status=404)
 
         serializer = MessageSerializer(messages, many=True)
         return JsonResponse({
@@ -110,8 +118,11 @@ def get_messages(request):
 # -----------------------------
 @require_http_methods(["POST"])
 @csrf_exempt
-def save_message(request):
+def save_message(request, organization_id):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User not authenticated"}, status=401)
+
         # Parse JSON body if content-type is application/json
         if request.content_type and 'application/json' in request.content_type:
             try:
@@ -135,7 +146,7 @@ def save_message(request):
         channel_name = None
         if chat_id:
             try:
-                chat_obj = Chat.objects.get(chat_it=chat_id)
+                chat_obj = Chat.objects.get(chat_it=chat_id, organization_id=organization_id)
                 channel_name = chat_obj.name  # Use chat name as channel
             except Chat.DoesNotExist:
                 return JsonResponse({"error": "Chat not found"}, status=404)
@@ -179,8 +190,11 @@ def save_message(request):
 # -----------------------------
 @require_http_methods(["GET"])
 @csrf_exempt
-def list_chats(request, organization_id=None):
+def list_chats(request, organization_id, username):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User not authenticated"}, status=401)
+
         org_id = organization_id or request.GET.get("organization")
 
         if not org_id:
@@ -190,6 +204,15 @@ def list_chats(request, organization_id=None):
             )
 
         chats = Chat.objects.filter(organization_id=org_id).order_by("name")
+
+        for chat in chats:
+            chat_permissions = chat.permissions.all()
+            user_membership = Membership.objects.get(user=request.user, organization_id=org_id)
+            user_permissions = user_membership.permissions
+
+            if chat_permissions and not permission_to_access(user_permissions, chat_permissions):
+                chats = chats.exclude(chat_it=chat.chat_it)
+
         serializer = ChatSerializer(chats, many=True)
 
         return JsonResponse({"chats": serializer.data}, status=200)
@@ -205,6 +228,9 @@ def list_chats(request, organization_id=None):
 @csrf_exempt
 def create_chat(request, organization_id=None):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User not authenticated"}, status=401)
+
         # Parse JSON body if content-type is application/json
         if request.content_type and 'application/json' in request.content_type:
             try:
@@ -229,49 +255,62 @@ def create_chat(request, organization_id=None):
         except Organization.DoesNotExist:
             return JsonResponse({"error": "Organization not found"}, status=404)
 
-        # Create the chat
+        if len(permissions_raw) > 0:
+            permissions_str_list = permissions_raw.split(",")
+            permissions_names = []
+            permissions_ids = []
+
+            for permission in permissions_str_list:
+                temp = permission.split("+")
+
+                if len(temp) == 1:
+                    permissions_names.append(temp[0])
+                    permissions_ids.append(Tag.objects.get(name=temp[0], organization__id=organization_id).id)
+                else:
+                    for perm in temp:
+                        permissions_names.append(perm)
+
+                    combinedTag = Tag.objects.get(name=permission, organization__id=organization_id, combined=True)
+
+                    if combinedTag:
+                        permissions_ids.append(combinedTag.id)
+                    else:
+                        combinedTag = Tag.objects.create(
+                            name=permission,
+                            organization=organization,
+                            combined=True
+                        )
+
+                        for perm in temp:
+                            basicTag = Tag.objects.filter(name=perm, organization__id=organization_id).first()
+                            if basicTag:
+                                CombinedTag.objects.create(
+                                    combined_tag_id=combinedTag,
+                                    basic_tag_id=basicTag
+                                )
+
+                        permissions_ids.append(combinedTag.id)
+
+            permissions = Tag.objects.filter(name__in=permissions_names)
+
         chat = Chat.objects.create(
             name=name,
             organization=organization,
         )
 
-        # Handle permissions (tags) if provided
-        if permissions_raw:
-            # permissions_raw can be list of IDs or names
-            numeric_ids = []
-            name_values = []
+        membership = Membership.objects.get(user=request.user, organization_id=organization_id)
 
-            if isinstance(permissions_raw, str):
-                permissions_raw = [permissions_raw]
+        if membership.role != 'admin':
+            allowed_permissions = membership.permissions.all()
+        else:
+            allowed_permissions = Tag.objects.filter(organization_id=organization_id)
 
-            for val in permissions_raw:
-                sval = str(val).strip()
-                if sval.isdigit():
-                    numeric_ids.append(int(sval))
-                elif sval:
-                    name_values.append(sval)
+        for permission in permissions:
+            if permission not in allowed_permissions:
+                return JsonResponse({"error": "Insufficient permissions to assign the requested tags"}, status=403)
 
-            # Find existing tags
-            existing_tags = list(
-                Tag.objects.filter(
-                    Q(id__in=numeric_ids) | Q(name__in=name_values),
-                    organization_id=organization_id,
-                )
-            )
-
-            existing_names = {t.name for t in existing_tags}
-
-            # Create new tags for names that don't exist
-            new_tags = [
-                Tag.objects.create(name=nm, organization_id=organization_id)
-                for nm in name_values
-                if nm not in existing_names
-            ]
-
-            all_tags = existing_tags + new_tags
-
-            if all_tags:
-                chat.permissions.set(all_tags)
+        chat.permissions.set(Tag.objects.filter(id__in=permissions_ids))
+        chat.save()
 
         # Response payload
         serializer = ChatSerializer(chat)
