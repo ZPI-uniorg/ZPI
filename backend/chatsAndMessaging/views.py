@@ -37,6 +37,9 @@ service = WebPubSubServiceClient.from_connection_string(CONNECTION_STRING, hub=H
 @csrf_exempt
 def negotiate(request):
     try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User not authenticated"}, status=401)
+
         user_id = request.GET.get("userId", "anon")
 
         roles = [
@@ -221,6 +224,64 @@ def list_chats(request, organization_id, username):
         return JsonResponse({"error": str(e)}, status=400)
 
 
+@require_http_methods(["GET"])
+@csrf_exempt
+def list_chats_all(request, organization_id, username):
+    try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User not authenticated"}, status=401)
+
+        org_id = organization_id or request.GET.get("organization")
+        membership = Membership.objects.get(user=request.user, organization_id=org_id)
+
+        if membership.role != 'admin':
+            return JsonResponse({"error": "Only admins can access all chats"}, status=403)
+
+        chats = Chat.objects.filter(organization_id=org_id).order_by("name")
+
+        serializer = ChatSerializer(chats, many=True)
+
+        return JsonResponse({"chats": serializer.data}, status=200)
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@require_http_methods(["GET"])
+@csrf_exempt
+def list_chats_by_tag(request, organization_id, tag_id):
+    try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User not authenticated"}, status=401)
+
+        membership = Membership.objects.get(user=request.user, organization_id=organization_id)
+
+        if membership.role != 'admin':
+            if tag_id not in membership.permissions.values_list('id', flat=True):
+                return JsonResponse({"error": "Insufficient permissions to access chats with this tag"}, status=403)
+
+        organization = Organization.objects.get(id=organization_id)
+
+        chats = []
+
+        for chat in Chat.objects.filter(organization_id=organization.id):
+            if chat.permissions.filter(id=tag_id).exists():
+                chats.append(chat)
+            else:
+                combined_tags = chat.permissions.filter(combined=True)
+                for combined_tag in combined_tags:
+                    basic_tags = CombinedTag.objects.filter(combined_tag_id=combined_tag)
+                    basic_tag_ids = [bt.basic_tag_id.id for bt in basic_tags]
+                    if tag_id in basic_tag_ids:
+                        chats.append(chat)
+                        break
+
+        serializer = ChatSerializer(chats, many=True)
+
+        return JsonResponse({"chats": serializer.data}, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
 # -----------------------------
 # CREATE CHAT
 # -----------------------------
@@ -318,4 +379,5 @@ def create_chat(request, organization_id=None):
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
+
 
