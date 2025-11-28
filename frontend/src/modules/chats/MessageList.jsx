@@ -73,11 +73,12 @@ export default function MessageList({
           </div>
           <div
             className={
-              "group relative px-4 py-2 rounded-xl text-sm leading-relaxed whitespace-pre-wrap " +
+              "group relative px-4 py-2 rounded-xl text-sm leading-relaxed whitespace-pre-wrap break-words " +
               (m.mine
                 ? "bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-md"
                 : "bg-slate-800 text-slate-100 border border-slate-700")
             }
+            style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
           >
             {m.text}
           </div>
