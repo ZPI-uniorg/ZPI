@@ -7,9 +7,10 @@ import KanbanPreview from "../components/KanbanPreview.jsx";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useProjects } from "../../shared/components/ProjectsContext.jsx";
 import apiClient from "../../../api/client.js";
+import { getUserEvents, getAllEvents } from "../../../api/events.js";
 
 export default function OrganizationDashboardPage() {
-  const { organization: activeOrganization } = useAuth();
+  const { organization: activeOrganization, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const projectJustCreated = location.state?.projectJustCreated;
@@ -19,6 +20,8 @@ export default function OrganizationDashboardPage() {
 
   const [chats, setChats] = useState([]);
   const [chatsLoading, setChatsLoading] = useState(false);
+  const [events, setEvents] = useState([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
   // Fetch chats from backend for active organization
   useEffect(() => {
     const orgId = activeOrganization?.id;
@@ -51,6 +54,83 @@ export default function OrganizationDashboardPage() {
       cancelled = true;
     };
   }, [activeOrganization?.id]);
+  // Fetch events from backend
+  useEffect(() => {
+    if (!activeOrganization?.id || !user?.username) return;
+    let ignore = false;
+    setEventsLoading(true);
+
+    const parseEventRow = (ev) => {
+      const rawStart = ev.start_time ? String(ev.start_time) : "";
+      const rawEnd = ev.end_time ? String(ev.end_time) : "";
+      const splitStart = rawStart.includes("T")
+        ? rawStart.replace("T", " ").split(" ")
+        : rawStart.split(" ");
+      const splitEnd = rawEnd.includes("T")
+        ? rawEnd.replace("T", " ").split(" ")
+        : rawEnd.split(" ");
+      const datePart = splitStart[0] || "";
+      const startTimePart = (splitStart[1] || "")
+        .replace("+00:00", "")
+        .slice(0, 5);
+      const endTimePart = (splitEnd[1] || "").replace("+00:00", "").slice(0, 5);
+
+      const perms = ev.permissions || ev.tags || [];
+      const tagCombinations = perms
+        .filter((p) => p.includes("+"))
+        .map((p) => p.split("+").filter(Boolean));
+      const plainTags = perms.filter((p) => !p.includes("+"));
+
+      return {
+        id: ev.event_id,
+        event_id: ev.event_id,
+        title: ev.name,
+        name: ev.name,
+        description: ev.description || "",
+        start_time: startTimePart || "",
+        end_time: endTimePart || "",
+        date: datePart,
+        tags: plainTags,
+        tagCombinations,
+      };
+    };
+
+    const fetch = async () => {
+      try {
+        let data;
+        if (activeOrganization.role === "admin") {
+          data = await getAllEvents(activeOrganization.id, user.username);
+        } else {
+          data = await getUserEvents(activeOrganization.id, user.username);
+          if (Array.isArray(data) && data.length === 0) {
+            try {
+              const adminData = await getAllEvents(
+                activeOrganization.id,
+                user.username
+              );
+              if (adminData?.length) data = adminData;
+            } catch (_) {
+              /* ignore */
+            }
+          }
+        }
+        if (ignore) return;
+        const mapped = (data || []).map(parseEventRow);
+        setEvents(mapped);
+      } catch (err) {
+        if (ignore) return;
+        console.error("Failed to load events:", err);
+      } finally {
+        if (!ignore) setEventsLoading(false);
+      }
+    };
+
+    fetch();
+    return () => {
+      ignore = true;
+    };
+  }, [activeOrganization?.id, activeOrganization?.role, user?.username]);
+
   const [query, setQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState([]);
   const [logic, setLogic] = useState("AND");
@@ -126,7 +206,11 @@ export default function OrganizationDashboardPage() {
         />
         <div className="flex flex-col basis-[45%] grow gap-6 h-full min-h-0 overflow-hidden">
           <div className="flex-1 min-h-0 bg-[rgba(15,23,42,0.92)] rounded-[24px] p-4 shadow-[0_25px_50px_rgba(15,23,42,0.45)] flex items-start justify-center text-slate-300 border border-[rgba(148,163,184,0.35)] overflow-hidden">
-            <MiniCalendar selectedTags={selectedTags} logic={logic} />
+            <MiniCalendar
+              selectedTags={selectedTags}
+              logic={logic}
+              events={events}
+            />
           </div>
           <div className="flex-1 min-h-0 bg-[rgba(15,23,42,0.92)] rounded-[24px] p-4 shadow-[0_25px_50px_rgba(15,23,42,0.45)] flex flex-col text-slate-300 border border-[rgba(148,163,184,0.35)] overflow-hidden">
             <KanbanPreview
