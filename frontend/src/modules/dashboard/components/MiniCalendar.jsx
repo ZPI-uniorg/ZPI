@@ -45,12 +45,18 @@ function getEventsForDay(events, year, month, day, selectedTags) {
   const dayStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(
     day
   ).padStart(2, "0")}`;
-  return events.filter(
-    (ev) =>
-      ev.date === dayStr &&
-      (selectedTags.length === 0 ||
-        ev.tags.some((tag) => selectedTags.includes(tag)))
-  );
+  return events.filter((ev) => {
+    // Sprawdź czy wydarzenie obejmuje ten dzień (uwzględnij wydarzenia wielodniowe)
+    const startDate = ev.date;
+    const endDate = ev.endDate || ev.date;
+    const isInRange = dayStr >= startDate && dayStr <= endDate;
+    
+    if (!isInRange) return false;
+    
+    // Sprawdź tagi
+    if (selectedTags.length === 0) return true;
+    return ev.tags.some((tag) => selectedTags.includes(tag));
+  });
 }
 
 export default function MiniCalendar({
@@ -181,16 +187,39 @@ export default function MiniCalendar({
                   {day || ""}
                 </span>
                 <div className="absolute top-[14px] left-0.5 right-0.5 bottom-0.5 flex flex-col gap-0.5 overflow-hidden">
-                  {events.slice(0, 2).map((ev) => (
-                    <div
-                      key={ev.id}
-                      className="w-full truncate text-[9px] bg-violet-600/80 text-white px-0.5 rounded leading-tight h-[12px] flex-shrink-0 hover:bg-violet-500 transition"
-                      title={ev.title}
-                      onClick={(e) => handleEventClick(e, ev)}
-                    >
-                      {ev.title}
-                    </div>
-                  ))}
+                  {events.slice(0, 2).map((ev) => {
+                    const dayStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                    const isStart = dayStr === ev.date;
+                    const isEnd = dayStr === (ev.endDate || ev.date);
+                    const isMultiDay = ev.endDate && ev.endDate !== ev.date;
+                    
+                    let roundedClass = 'rounded';
+                    let arrow = '';
+                    
+                    if (isMultiDay) {
+                      if (isStart && !isEnd) {
+                        roundedClass = 'rounded-l rounded-r-sm';
+                        arrow = ' →';
+                      } else if (!isStart && isEnd) {
+                        roundedClass = 'rounded-r rounded-l-sm';
+                        arrow = '← ';
+                      } else if (!isStart && !isEnd) {
+                        roundedClass = 'rounded-sm';
+                        arrow = '← →';
+                      }
+                    }
+                    
+                    return (
+                      <div
+                        key={ev.id}
+                        className={`w-full truncate text-[9px] bg-violet-600/80 text-white px-0.5 ${roundedClass} leading-tight h-[12px] flex-shrink-0 hover:bg-violet-500 transition`}
+                        title={`${ev.title}${isMultiDay ? ` (${isStart ? 'początek' : isEnd ? 'koniec' : 'trwa'})` : ''}`}
+                        onClick={(e) => handleEventClick(e, ev)}
+                      >
+                        {arrow}{ev.title}
+                      </div>
+                    );
+                  })}
                   {events.length > 2 && (
                     <div className="text-[8px] text-slate-400 px-0.5 h-[10px] flex-shrink-0">
                       +{events.length - 2}
