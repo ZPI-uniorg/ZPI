@@ -106,9 +106,13 @@ export default function EventEditPage() {
   const { user, organization } = useAuth();
   const { projects } = useProjects();
 
+  const TITLE_MAX_LENGTH = 100;
+  const DESCRIPTION_MAX_LENGTH = 500;
+
   const [title, setTitle] = useState(editingEvent?.name || editingEvent?.title || ""); // CHANGED
   const [description, setDescription] = useState(editingEvent?.description || "");
   const [date, setDate] = useState(editingEvent?.date || presetDate || "");
+  const [endDate, setEndDate] = useState(editingEvent?.endDate || editingEvent?.date || presetDate || "");
   const [startTime, setStartTime] = useState(editingEvent?.start_time || presetTime || "");
   const [endTime, setEndTime] = useState(editingEvent?.end_time || "");
   const [isEditing, setIsEditing] = useState(!editingEvent);
@@ -117,27 +121,42 @@ export default function EventEditPage() {
 
   const [combinations, setCombinations] = useState(() => {
     if (editingEvent?.tagCombinations?.length) return editingEvent.tagCombinations;
-    if (editingEvent?.tags?.length) return [editingEvent.tags];
+    if (editingEvent?.tags?.length) return editingEvent.tags.map(t => [t]);
+    if (editingEvent?.permissions?.length) {
+      // Backend zwraca permissions jako płaską listę, konwertujemy na kombinacje
+      return editingEvent.permissions
+        .filter(Boolean)
+        .map(p => p.includes('+') ? p.split('+').filter(Boolean) : [p]);
+    }
     return [];
   });
 
-  const allSuggestions = [...projects.map((p) => p.name).filter(Boolean), ...TAGS];
+  const allSuggestions = Array.from(new Set([...projects.map((p) => p.name).filter(Boolean), ...TAGS]));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!title.trim() || !date || !organization?.id || !user?.username) return;
+    if (!title.trim() || !date || !endDate || !organization?.id || !user?.username) return;
+    
+    // Walidacja: data zakończenia nie może być wcześniejsza niż rozpoczęcia
+    if (endDate < date) {
+      setError("Data zakończenia nie może być wcześniejsza niż data rozpoczęcia.");
+      return;
+    }
+    
     const flatTags = Array.from(new Set((combinations || []).flat()));
     setSubmitting(true);
     setError(null);
     try {
       if (editingEvent?.event_id || editingEvent?.id) {
         const updated = await updateEvent(
+          organization.id,
           editingEvent.event_id || editingEvent.id,
           user.username,
           {
             name: title.trim(),
             description: description.trim(),
             date,
+            endDate,
             start_time: startTime,
             end_time: endTime,
             combinations,            // <-- PRZEKAZUJ KOMBINACJE
@@ -152,6 +171,7 @@ export default function EventEditPage() {
             name: title.trim(),
             description: description.trim(),
             date,
+            endDate,
             start_time: startTime,
             end_time: endTime,
             combinations,            // <-- PRZEKAZUJ KOMBINACJE
@@ -178,7 +198,7 @@ export default function EventEditPage() {
     setSubmitting(true);
     setError(null);
     try {
-      await deleteEvent(editingEvent.event_id || editingEvent.id, user.username);
+      await deleteEvent(organization.id, editingEvent.event_id || editingEvent.id, user.username);
       navigate("/calendar");
     } catch (err) {
       setError(
@@ -241,13 +261,23 @@ export default function EventEditPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <span className="text-sm text-slate-400 block mb-1">Data</span>
+                <span className="text-sm text-slate-400 block mb-1">Termin</span>
                 <span className="text-slate-200 font-medium">
                   {new Date(date).toLocaleDateString("pl-PL", {
                     day: "2-digit",
                     month: "long",
                     year: "numeric",
                   })}
+                  {endDate && endDate !== date && (
+                    <>
+                      {" - "}
+                      {new Date(endDate).toLocaleDateString("pl-PL", {
+                        day: "2-digit",
+                        month: "long",
+                        year: "numeric",
+                      })}
+                    </>
+                  )}
                 </span>
               </div>
 
@@ -283,55 +313,100 @@ export default function EventEditPage() {
         ) : (
           <div className="flex flex-col gap-6">
             <label className="flex flex-col gap-2">
-              <span className="text-slate-300 text-sm font-medium">Tytuł wydarzenia</span>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-300 text-sm font-medium">Tytuł wydarzenia</span>
+                <span className={`text-xs ${
+                  title.length > TITLE_MAX_LENGTH 
+                    ? 'text-red-400 font-semibold' 
+                    : title.length > TITLE_MAX_LENGTH * 0.9
+                    ? 'text-yellow-400'
+                    : 'text-slate-500'
+                }`}>
+                  {title.length}/{TITLE_MAX_LENGTH}
+                </span>
+              </div>
               <input
-                className="border border-slate-600 rounded-lg px-3 py-2 bg-slate-800 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
+                className={`border rounded-lg px-3 py-2 bg-slate-800 text-slate-100 placeholder:text-slate-400 focus:outline-none ${
+                  title.length > TITLE_MAX_LENGTH
+                    ? 'border-red-500 focus:border-red-500'
+                    : 'border-slate-600 focus:border-indigo-500'
+                }`}
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => setTitle(e.target.value.slice(0, TITLE_MAX_LENGTH))}
                 placeholder="Np. Spotkanie zespołu"
                 required
               />
             </label>
 
             <label className="flex flex-col gap-2">
-              <span className="text-slate-300 text-sm font-medium">Opis</span>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-300 text-sm font-medium">Opis</span>
+                <span className={`text-xs ${
+                  description.length > DESCRIPTION_MAX_LENGTH 
+                    ? 'text-red-400 font-semibold' 
+                    : description.length > DESCRIPTION_MAX_LENGTH * 0.9
+                    ? 'text-yellow-400'
+                    : 'text-slate-500'
+                }`}>
+                  {description.length}/{DESCRIPTION_MAX_LENGTH}
+                </span>
+              </div>
               <textarea
-                className="border border-slate-600 rounded-lg px-3 py-2 bg-slate-800 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 min-h-[120px] resize-y"
+                className={`border rounded-lg px-3 py-2 bg-slate-800 text-slate-100 placeholder:text-slate-400 focus:outline-none min-h-[120px] resize-y ${
+                  description.length > DESCRIPTION_MAX_LENGTH
+                    ? 'border-red-500 focus:border-red-500'
+                    : 'border-slate-600 focus:border-indigo-500'
+                }`}
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => setDescription(e.target.value.slice(0, DESCRIPTION_MAX_LENGTH))}
                 placeholder="Szczegółowy opis wydarzenia..."
               />
             </label>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <label className="flex flex-col gap-2">
-                <span className="text-slate-300 text-sm font-medium">Data</span>
-                <input
-                  type="date"
-                  className="border border-slate-600 rounded-lg px-3 py-2 bg-slate-800 text-slate-100 focus:outline-none focus:border-indigo-500"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  required
-                />
-              </label>
+            <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <label className="flex flex-col gap-2">
+                  <span className="text-slate-300 text-sm font-medium">Data rozpoczęcia</span>
+                  <input
+                    type="date"
+                    className="border border-slate-600 rounded-lg px-3 py-2 bg-slate-800 text-slate-100 focus:outline-none focus:border-indigo-500"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    required
+                  />
+                </label>
 
-              <label className="flex flex-col gap-2">
-                <span className="text-slate-300 text-sm font-medium">Od (godz.)</span>
-                <TimeSelect
-                  value={startTime}
-                  onChange={setStartTime}
-                  placeholder="-- Wybierz --"
-                />
-              </label>
+                <label className="flex flex-col gap-2">
+                  <span className="text-slate-300 text-sm font-medium">Data zakończenia</span>
+                  <input
+                    type="date"
+                    className="border border-slate-600 rounded-lg px-3 py-2 bg-slate-800 text-slate-100 focus:outline-none focus:border-indigo-500"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    required
+                  />
+                </label>
+              </div>
 
-              <label className="flex flex-col gap-2">
-                <span className="text-slate-300 text-sm font-medium">Do (godz.)</span>
-                <TimeSelect
-                  value={endTime}
-                  onChange={setEndTime}
-                  placeholder="-- Wybierz --"
-                />
-              </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <label className="flex flex-col gap-2">
+                  <span className="text-slate-300 text-sm font-medium">Godzina rozpoczęcia</span>
+                  <TimeSelect
+                    value={startTime}
+                    onChange={setStartTime}
+                    placeholder="-- Wybierz --"
+                  />
+                </label>
+
+                <label className="flex flex-col gap-2">
+                  <span className="text-slate-300 text-sm font-medium">Godzina zakończenia</span>
+                  <TimeSelect
+                    value={endTime}
+                    onChange={setEndTime}
+                    placeholder="-- Wybierz --"
+                  />
+                </label>
+              </div>
             </div>
 
             {/* REPLACED: simple tags -> combinations picker */}

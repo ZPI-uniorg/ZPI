@@ -218,6 +218,7 @@ def get_user_events(request, organization_id, username):
                     "start_time": event.start_time,
                     "end_time": event.end_time,
                     "organization_id": event.organization.id,
+                    "permissions": list(event.permissions.values_list('name', flat=True))
                 }
             )
 
@@ -347,7 +348,10 @@ def create_event(request, organization_id):
 
                 if len(temp) == 1:
                     permissions_names.append(temp[0])
-                    permissions_ids.append(Tag.objects.filter(name=temp[0], organization__id=organization_id).first().id)
+                    basicTag = Tag.objects.filter(name=temp[0], organization__id=organization_id).first()
+                    if not basicTag:
+                        basicTag = Tag.objects.create(name=temp[0], organization=organization)
+                    permissions_ids.append(basicTag.id)
                 else:
                     for perm in temp:
                         permissions_names.append(perm)
@@ -374,18 +378,19 @@ def create_event(request, organization_id):
                         permissions_ids.append(combinedTag.id)
 
 
-            permissions = Tag.objects.filter(name__in=permissions_names)
+            permissions = Tag.objects.filter(id__in=permissions_ids)
 
         if not all([name, start_time, end_time]):
             return JsonResponse({"error": "Missing required fields"}, status=400)
 
         if start_time >= end_time:
-            return JsonResponse({"error": "Invalid time range"}, status=400)
+            return JsonResponse({"error": "Nieprawidłowy zakres czasu"}, status=400)
 
-
-        for perm in permissions:
-            if perm not in allowed_permissions:
-                return JsonResponse({"error": "Unauthorized permission assignment"}, status=403)
+        # Only check permissions for non-admin users  
+        if membership.role != 'admin':
+            for perm in permissions:
+                if perm not in allowed_permissions:
+                    return JsonResponse({"error": "Unauthorized permission assignment"}, status=403)
 
         event = Event.objects.create(
             name=name,
@@ -468,8 +473,11 @@ def update_event(request, organization_id, event_id):
         end_time = data.get("end_time")
         permissions_str = data.get("permissions")
 
+        print(f"DEBUG update_event: permissions_str = '{permissions_str}'")
+        print(f"DEBUG update_event: data = {data}")
+
         if start_time >= end_time:
-            return JsonResponse({"error": "Invalid time range"}, status=400)
+            return JsonResponse({"error": "Nieprawidłowy zakres czasu"}, status=400)
 
         if permissions_str:
             if membership.role != 'admin':
@@ -486,7 +494,10 @@ def update_event(request, organization_id, event_id):
 
                 if len(temp) == 1:
                     permissions_names.append(temp[0])
-                    permissions_ids.append(Tag.objects.filter(name=temp[0], organization__id=organization_id).first().id)
+                    basicTag = Tag.objects.filter(name=temp[0], organization__id=organization_id).first()
+                    if not basicTag:
+                        basicTag = Tag.objects.create(name=temp[0], organization=Organization.objects.get(id=organization_id))
+                    permissions_ids.append(basicTag.id)
                 else:
                     for perm in temp:
                         permissions_names.append(perm)
@@ -512,13 +523,19 @@ def update_event(request, organization_id, event_id):
 
                         permissions_ids.append(combinedTag.id)
 
-            permissions = Tag.objects.filter(name__in=permissions_names)
+            permissions = Tag.objects.filter(id__in=permissions_ids)
 
-            for perm in permissions:
-                if perm not in allowed_permissions:
-                    return JsonResponse({"error": "Unauthorized permission assignment"}, status=403)
+            # Only check permissions for non-admin users
+            if membership.role != 'admin':
+                for perm in permissions:
+                    if perm not in allowed_permissions:
+                        return JsonResponse({"error": "Unauthorized permission assignment"}, status=403)
 
-            event.permissions.set(Tag.objects.filter(id__in=permissions_ids))
+            print(f"DEBUG: About to set permissions_ids = {permissions_ids}")
+            tags_to_set = Tag.objects.filter(id__in=permissions_ids)
+            print(f"DEBUG: Tags to set = {list(tags_to_set.values_list('id', 'name'))}")
+            event.permissions.set(tags_to_set)
+            print(f"DEBUG: After set, event.permissions.all() = {list(event.permissions.values_list('id', 'name'))}")
         if name:
             event.name = name
         if description:
@@ -529,6 +546,8 @@ def update_event(request, organization_id, event_id):
             event.end_time = end_time
 
         event.save()
+        
+        print(f"DEBUG: After save, event.permissions.all() = {list(event.permissions.values_list('id', 'name'))}")
 
         event_data = {
             "event_id": event.event_id,
@@ -539,6 +558,8 @@ def update_event(request, organization_id, event_id):
             "organization_id": event.organization.id,
             "permissions": list(event.permissions.values_list('name', flat=True))
         }
+        
+        print(f"DEBUG: Returning event_data with permissions = {event_data['permissions']}")
 
         return JsonResponse(event_data, status=200)
     except Event.DoesNotExist:
