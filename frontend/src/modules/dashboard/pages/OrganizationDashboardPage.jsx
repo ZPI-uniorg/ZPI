@@ -70,7 +70,6 @@ export default function OrganizationDashboardPage() {
         ? rawEnd.replace("T", " ").split(" ")
         : rawEnd.split(" ");
       const datePart = splitStart[0] || "";
-      const endDatePart = splitEnd[0] || "";
       const startTimePart = (splitStart[1] || "")
         .replace("+00:00", "")
         .slice(0, 5);
@@ -91,7 +90,6 @@ export default function OrganizationDashboardPage() {
         start_time: startTimePart || "",
         end_time: endTimePart || "",
         date: datePart,
-        endDate: endDatePart !== datePart ? endDatePart : null,
         tags: plainTags,
         tagCombinations,
       };

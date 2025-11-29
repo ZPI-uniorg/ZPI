@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, X, Calendar, CalendarClock, Download } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Calendar, CalendarClock } from "lucide-react";
 import CalendarMonthView from "../components/CalendarMonthView.jsx";
 import CalendarWeekView from "../components/CalendarWeekView.jsx";
 import useAuth from "../../../auth/useAuth.js";
@@ -53,7 +53,6 @@ export default function CalendarPage() {
         ? rawEnd.replace("T", " ").split(" ")
         : rawEnd.split(" ");
       const datePart = splitStart[0] || "";
-      const endDatePart = splitEnd[0] || datePart; // Data zakończenia z end_time
       const startTimePart = (splitStart[1] || "").replace("+00:00", "").slice(0,5);
       const endTimePart = (splitEnd[1] || "").replace("+00:00", "").slice(0,5);
 
@@ -72,7 +71,6 @@ export default function CalendarPage() {
         start_time: startTimePart || "",
         end_time: endTimePart || "",
         date: datePart,
-        endDate: endDatePart, // Dodajemy endDate
         tags: plainTags,
         tagCombinations,
       };
@@ -146,71 +144,6 @@ export default function CalendarPage() {
   const { year, month, day } = date;
   const weekDays = getWeekDays(year, month, day);
 
-  const exportToICS = () => {
-    let icsContent = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'PRODID:-//ZPI Calendar//EN',
-      'CALSCALE:GREGORIAN',
-      'METHOD:PUBLISH',
-    ];
-
-    events.forEach(ev => {
-      const startDateTime = `${ev.date.replace(/-/g, '')}T${ev.start_time.replace(/:/g, '')}00`;
-      const endDateTime = `${(ev.endDate || ev.date).replace(/-/g, '')}T${ev.end_time.replace(/:/g, '')}00`;
-      const now = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-      
-      icsContent.push('BEGIN:VEVENT');
-      icsContent.push(`UID:${ev.id}@zpi-calendar`);
-      icsContent.push(`DTSTAMP:${now}`);
-      icsContent.push(`DTSTART:${startDateTime}`);
-      icsContent.push(`DTEND:${endDateTime}`);
-      icsContent.push(`SUMMARY:${ev.title}`);
-      if (ev.description) {
-        icsContent.push(`DESCRIPTION:${ev.description.replace(/\n/g, '\\n')}`);
-      }
-      if (ev.tags && ev.tags.length > 0) {
-        icsContent.push(`CATEGORIES:${ev.tags.join(',')}`);
-      }
-      icsContent.push('END:VEVENT');
-    });
-
-    icsContent.push('END:VCALENDAR');
-
-    const blob = new Blob([icsContent.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `kalendarz_${organization?.name || 'zpi'}_${year}-${month + 1}.ics`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-  };
-
-  const exportToCSV = () => {
-    const csvRows = [
-      ['Tytuł', 'Data rozpoczęcia', 'Godzina rozpoczęcia', 'Data zakończenia', 'Godzina zakończenia', 'Opis', 'Tagi'].join(',')
-    ];
-
-    events.forEach(ev => {
-      const row = [
-        `"${ev.title.replace(/"/g, '""')}"`,
-        ev.date,
-        ev.start_time,
-        ev.endDate || ev.date,
-        ev.end_time,
-        `"${(ev.description || '').replace(/"/g, '""')}"`,
-        `"${(ev.tags || []).join(', ')}"`
-      ].join(',');
-      csvRows.push(row);
-    });
-
-    const blob = new Blob(['\ufeff' + csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `kalendarz_${organization?.name || 'zpi'}_${year}-${month + 1}.csv`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-  };
-
   const getWeekTitle = () => {
     const firstDay = weekDays[0];
     const lastDay = weekDays[6];
@@ -244,24 +177,6 @@ export default function CalendarPage() {
             </button>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={exportToICS}
-                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition flex items-center gap-2 text-sm"
-                title="Eksportuj do formatu ICS (kalendarz)"
-              >
-                <Download className="w-4 h-4" />
-                <span>ICS</span>
-              </button>
-              <button
-                onClick={exportToCSV}
-                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition flex items-center gap-2 text-sm"
-                title="Eksportuj do formatu CSV"
-              >
-                <Download className="w-4 h-4" />
-                <span>CSV</span>
-              </button>
-            </div>
             <div className="flex items-center gap-1 bg-slate-800 rounded-lg p-1">
               <button
                 onClick={() => setView("month")}

@@ -1,4 +1,4 @@
-from organizations.models import CombinedTag
+from organizations.models import Tag, CombinedTag
 
 def permission_to_access(user_permissions, required_permissions):
     basicTags = required_permissions.filter(combined=False)
