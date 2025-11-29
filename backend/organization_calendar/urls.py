@@ -9,6 +9,6 @@ urlpatterns = [
     path('events/tag/<int:organization_id>/<int:tag_id>/', get_events_by_tag, name='get_events_by_tag'),
     path('events/<int:organization_id>/<int:event_id>/', get_event, name='get_event_details'),
     path('events/create/<int:organization_id>/', create_event, name='create_event'),
-    path('events/delete/<int:event_id>/', delete_event, name='delete_event'),
-    path('events/update/<int:event_id>/', update_event, name='update_event'),
+    path('events/delete/<int:organization_id>/<int:event_id>/', delete_event, name='delete_event'),
+    path('events/update/<int:organization_id>/<int:event_id>/', update_event, name='update_event'),
 ]
