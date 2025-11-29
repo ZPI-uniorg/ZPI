@@ -4,8 +4,9 @@ from rest_framework_simplejwt.views import TokenRefreshView
 
 from organizations.views import (
     register_organization, get_user_organization, edit_organization, invite_member, get_organization_users,
-    remove_organization_member, change_member_role, update_member_profile, edit_permissions, get_all_tags, get_tags, create_tag, delete_tag,
-    create_project, update_project, get_projects, get_user_projects,
+    remove_organization_member, change_member_role, update_member_profile, edit_permissions, get_all_tags, get_tags,
+    create_tag, delete_tag,
+    create_project, update_project, get_projects, get_user_projects, get_user_membership,
 )
 
 from .views import login_view, logout_view, change_password_view, login_status_view
@@ -25,6 +26,7 @@ urlpatterns += router.urls
 urlpatterns += [
     path('register-organization/', register_organization, name='register_organization'),
     path('organization/<str:username>/', get_user_organization, name='get_user_organization'),
+    path('membership/<int:organization_id>/',  get_user_membership, name='get_organization_membership'),
     path('organization/update/<int:organization_id>/', edit_organization, name='edit_organization'),
     path('invite-member/<int:organization_id>/', invite_member, name='invite_member'),
     path('members/<int:organization_id>/', get_organization_users, name='get_organization_users'),

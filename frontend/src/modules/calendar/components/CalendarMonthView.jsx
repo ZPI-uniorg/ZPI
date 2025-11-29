@@ -27,7 +27,12 @@ function getMonthMatrix(year, month) {
 
 function getEventsForDay(events, year, month, day) {
   const dayStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-  return events.filter((ev) => ev.date === dayStr);
+  return events.filter((ev) => {
+    const startDate = ev.date;
+    const endDate = ev.endDate || ev.date;
+    // Wydarzenie jest widoczne jeśli dayStr jest między startDate a endDate
+    return dayStr >= startDate && dayStr <= endDate;
+  });
 }
 
 export default function CalendarMonthView({ year, month, events }) {
@@ -91,26 +96,45 @@ export default function CalendarMonthView({ year, month, events }) {
                     {day || ""}
                   </div>
                   <div className="flex flex-col gap-0.5 overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
-                    {dayEvents.map((ev) => (
-                      <div
-                        key={ev.id}
-                        className="group text-[11px] bg-violet-600/90 text-white px-1.5 py-1 rounded cursor-pointer hover:bg-violet-500 transition"
-                        title={ev.title}
-                        onClick={(e) => handleEventClick(e, ev)}
-                      >
-                        <div className="font-medium truncate">{ev.title}</div>
-                        <div className="flex flex-wrap gap-0.5 mt-0.5">
-                          {ev.tags.map((tag) => (
-                            <span
-                              key={tag}
-                              className="bg-fuchsia-700/80 px-1 rounded text-[9px]"
-                            >
-                              {tag}
-                            </span>
-                          ))}
+                    {dayEvents.map((ev) => {
+                      const dayStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                      const isStart = dayStr === ev.date;
+                      const isEnd = dayStr === (ev.endDate || ev.date);
+                      const isMultiDay = ev.endDate && ev.endDate !== ev.date;
+                      
+                      return (
+                        <div
+                          key={ev.id}
+                          className={`group text-[11px] text-white px-1.5 py-1 cursor-pointer hover:bg-violet-500 transition ${
+                            isMultiDay
+                              ? isStart
+                                ? "bg-violet-600/90 rounded-l rounded-r-sm"
+                                : isEnd
+                                ? "bg-violet-600/90 rounded-r rounded-l-sm"
+                                : "bg-violet-600/90 rounded-sm"
+                              : "bg-violet-600/90 rounded"
+                          }`}
+                          title={`${ev.title}${isMultiDay ? ` (${isStart ? 'początek' : isEnd ? 'koniec' : 'trwa'})` : ''}`}
+                          onClick={(e) => handleEventClick(e, ev)}
+                        >
+                          <div className="font-medium truncate flex items-center gap-1">
+                            {isMultiDay && !isStart && <span className="text-[8px]">←</span>}
+                            {ev.title}
+                            {isMultiDay && !isEnd && <span className="text-[8px]">→</span>}
+                          </div>
+                          <div className="flex flex-wrap gap-0.5 mt-0.5">
+                            {ev.tags.map((tag) => (
+                              <span
+                                key={tag}
+                                className="bg-fuchsia-700/80 px-1 rounded text-[9px]"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               );
