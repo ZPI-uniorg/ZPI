@@ -1,19 +1,16 @@
-# views.py (REFORMATTED TO MATCH KANBAN STYLE)
-
 import os
 import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.db import IntegrityError
-from django.db.models import Q
 
 from azure.messaging.webpubsubservice import WebPubSubServiceClient
 
 from .models import Message, Chat
 from organizations.models import Membership, Organization, Tag, CombinedTag
 from .serializers import MessageSerializer, ChatSerializer
-from core.permissions_checker import permission_to_access, permission_to_add
+from core.permissions_checker import permission_to_access
 
 
 # -----------------------------
@@ -197,23 +194,24 @@ def list_chats(request, organization_id):
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User not authenticated"}, status=401)
 
-        org_id = organization_id or request.GET.get("organization")
+        username = request.user.username
+        membership = Membership.objects.get(organization__id=organization_id, user__username=username)
 
-        if not org_id:
-            return JsonResponse(
-                {"error": "organization id required (path or ?organization=)"},
-                status=400,
-            )
+        if not membership:
+            return JsonResponse({"error": "Unauthorized access"}, status=403)
 
-        chats = Chat.objects.filter(organization_id=org_id).order_by("name")
+        organization = Organization.objects.get(id=organization_id)
+        user_permissions = membership.permissions.all()
 
-        for chat in chats:
+        chats = []
+
+        for chat in Chat.objects.filter(organization=organization):
             chat_permissions = chat.permissions.all()
-            user_membership = Membership.objects.get(user=request.user, organization_id=org_id)
-            user_permissions = user_membership.permissions
 
-            if chat_permissions and not permission_to_access(user_permissions, chat_permissions):
-                chats = chats.exclude(chat_id=chat.chat_id)
+            if len(user_permissions) == 0:
+                chats.append(chat)
+            elif permission_to_access(user_permissions, chat_permissions):
+                chats.append(chat)
 
         serializer = ChatSerializer(chats, many=True)
 
@@ -287,10 +285,17 @@ def list_chats_by_tag(request, organization_id, tag_id):
 # -----------------------------
 @require_http_methods(["POST"])
 @csrf_exempt
-def create_chat(request, organization_id=None):
+def create_chat(request, organization_id):
     try:
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User not authenticated"}, status=401)
+
+        membership = Membership.objects.get(user=request.user, organization_id=organization_id)
+
+        if membership.role != 'admin':
+            allowed_permissions = membership.permissions.all()
+        else:
+            allowed_permissions = Tag.objects.filter(organization__id=organization_id)
 
         # Parse JSON body if content-type is application/json
         if request.content_type and 'application/json' in request.content_type:
@@ -305,7 +310,7 @@ def create_chat(request, organization_id=None):
         name = data.get("name")
         body_org_id = data.get("organization")
         organization_id = organization_id or body_org_id
-        permissions_raw = data.get("permissions", [])
+        permissions_str = data.get("permissions")
 
         # Required fields check
         if not name or not organization_id:
@@ -316,59 +321,51 @@ def create_chat(request, organization_id=None):
         except Organization.DoesNotExist:
             return JsonResponse({"error": "Organization not found"}, status=404)
 
-        if len(permissions_raw) > 0:
-            permissions_str_list = permissions_raw.split(",")
-            permissions_names = []
-            permissions_ids = []
+        permissions_ids = []
+
+        if len(permissions_str) > 0:
+            permissions_str_list = permissions_str.split(',')
 
             for permission in permissions_str_list:
                 temp = permission.split("+")
 
                 if len(temp) == 1:
-                    permissions_names.append(temp[0])
-                    permissions_ids.append(Tag.objects.get(name=temp[0], organization__id=organization_id).id)
+                    tag = Tag.objects.get(name=temp[0], organization__id=organization_id)
+
+                    if tag not in allowed_permissions:
+                        return JsonResponse({"error": "Unauthorized permission assignment"}, status=403)
+
+                    permissions_ids.append(tag.id)
+
                 else:
-                    for perm in temp:
-                        permissions_names.append(perm)
+                    for tag_name in temp:
+                        if not allowed_permissions.filter(name=tag_name).exists():
+                            return JsonResponse({"error": "Unauthorized permission assignment"}, status=403)
 
                     combinedTag = Tag.objects.get(name=permission, organization__id=organization_id, combined=True)
 
                     if combinedTag:
                         permissions_ids.append(combinedTag.id)
                     else:
-                        combinedTag = Tag.objects.create(
+                        new_combined_tag = Tag.objects.create(
                             name=permission,
-                            organization=organization,
+                            organization=Organization.objects.get(id=organization_id),
                             combined=True
                         )
 
-                        for perm in temp:
-                            basicTag = Tag.objects.filter(name=perm, organization__id=organization_id).first()
-                            if basicTag:
-                                CombinedTag.objects.create(
-                                    combined_tag_id=combinedTag,
-                                    basic_tag_id=basicTag
-                                )
+                        for tag_name in temp:
+                            basic_tag = Tag.objects.get(name=tag_name, organization__id=organization_id)
+                            CombinedTag.objects.create(
+                                combined_tag_id=new_combined_tag,
+                                basic_tag_id=basic_tag
+                            )
 
-                        permissions_ids.append(combinedTag.id)
-
-            permissions = Tag.objects.filter(name__in=permissions_names)
+                        permissions_ids.append(new_combined_tag.id)
 
         chat = Chat.objects.create(
             name=name,
             organization=organization,
         )
-
-        membership = Membership.objects.get(user=request.user, organization_id=organization_id)
-
-        if membership.role != 'admin':
-            allowed_permissions = membership.permissions.all()
-        else:
-            allowed_permissions = Tag.objects.filter(organization_id=organization_id)
-
-        for permission in permissions:
-            if permission not in allowed_permissions:
-                return JsonResponse({"error": "Insufficient permissions to assign the requested tags"}, status=403)
 
         chat.permissions.set(Tag.objects.filter(id__in=permissions_ids))
         chat.save()
@@ -379,5 +376,3 @@ def create_chat(request, organization_id=None):
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
-
-
