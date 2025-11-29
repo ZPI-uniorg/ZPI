@@ -1,4 +1,3 @@
-from django.contrib.auth.models import Permission
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -74,6 +73,7 @@ def get_user_events(request, organization_id, username):
                 events.append(event)
 
         events_data = []
+
         for event in events:
             events_data.append(
                 {

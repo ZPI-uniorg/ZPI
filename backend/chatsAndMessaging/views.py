@@ -1,19 +1,16 @@
-# views.py (REFORMATTED TO MATCH KANBAN STYLE)
-
 import os
 import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.db import IntegrityError
-from django.db.models import Q
 
 from azure.messaging.webpubsubservice import WebPubSubServiceClient
 
 from .models import Message, Chat
 from organizations.models import Membership, Organization, Tag, CombinedTag
 from .serializers import MessageSerializer, ChatSerializer
-from core.permissions_checker import permission_to_access, permission_to_add
+from core.permissions_checker import permission_to_access
 
 
 # -----------------------------
@@ -379,5 +376,3 @@ def create_chat(request, organization_id):
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
-
-

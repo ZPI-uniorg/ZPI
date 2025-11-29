@@ -14,9 +14,5 @@ urlpatterns = [
     path("chats/my/<int:organization_id>/", list_chats, name="list_chats_by_org"),
     path("chats/all/<int:organization_id>/", list_chats_all, name="list_all_chats_by_org"),
     path("chats/tag/<int:organization_id>/<int:tag_id>/", list_chats_by_tag, name="list_chats_by_tag"),
-    path(
-        "chats/<int:organization_id>/create/",
-        create_chat,
-        name="create_chat_for_org",
-    ),
+    path("chats/<int:organization_id>/create/", create_chat, name="create_chat_for_org"),
 ]

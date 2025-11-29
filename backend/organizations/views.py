@@ -3,7 +3,6 @@ import json
 import secrets
 
 from django.contrib.auth import get_user_model
-from django.db import IntegrityError
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -17,7 +16,6 @@ from kanban.models import KanbanBoard
 from core.email_utils import send_new_user_credentials_email
 
 from .models import Membership, Organization, Tag, Project
-from organization_calendar.models import Event
 
 User = get_user_model()
 
@@ -141,6 +139,7 @@ def get_user_membership(request, organization_id):
         return JsonResponse({"error": "Membership not found"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
+
 
 @require_http_methods(["PUT"])
 @csrf_exempt
@@ -463,7 +462,8 @@ def edit_permissions(request, organization_id, username):
         for tag in tags_names:
             if not Tag.objects.filter(name=tag, organization__id=organization_id).exists():
                 return JsonResponse({"error": f"Tag '{tag}' does not exist"}, status=404)
-            if Tag.objects.filter(name=tag, organization__id=organization_id).first().combined:
+
+            if Tag.objects.get(name=tag, organization__id=organization_id).combined:
                 return JsonResponse({"error": f"Tag '{tag}' is a combined tag and cannot be assigned directly"}, status=400)
 
         member_membership = Membership.objects.get(organization__id=organization_id, user__username=username)
@@ -663,7 +663,7 @@ def create_project(request, organization_id):
         if membership.role == 'coordinator':
             coordinator_membership = membership
         elif requested_coordinator_username:
-            coordinator_membership = Membership.objects.filter(organization__id=organization_id, user__username=requested_coordinator_username).first()
+            coordinator_membership = Membership.objects.get(organization__id=organization_id, user__username=requested_coordinator_username)
 
             if not coordinator_membership:
                 return JsonResponse({"error": "Coordinator not found in organization"}, status=404)

@@ -6,7 +6,6 @@ from organizations.models import Organization, Membership, Project
 import json
 
 
-
 @require_http_methods(["GET"])
 @csrf_exempt
 def get_board(request, organization_id, project_id):
@@ -157,7 +156,6 @@ def update_column_position(request, organization_id, board_id, column_id):
         data = json.loads(request.body)
         position = data.get("position")
         username = request.user.username
-
 
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
         organization = Organization.objects.get(id=organization_id)
@@ -319,7 +317,6 @@ def add_task(request, organization_id, board_id, column_id):
         return JsonResponse({"error": "Kanban Column not found"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
-
 
 
 @require_http_methods(["PUT"])
