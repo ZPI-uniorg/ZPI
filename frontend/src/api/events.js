@@ -30,21 +30,21 @@ export async function createEvent(organizationId, actorUsername, payload) {
   params.append('name', payload.name || payload.title || '')
   params.append('description', payload.description || '')
   params.append('start_time', buildDateTime(payload.date, payload.start_time))
-  params.append('end_time', buildDateTime(payload.endDate || payload.date, payload.end_time))
+  params.append('end_time', buildDateTime(payload.date, payload.end_time))
   params.append('permissions', buildPermissionsString(payload.combinations || []))
   const response = await apiClient.post(`events/create/${organizationId}/`, params)
   return response.data
 }
 
-export async function updateEvent(organizationId, eventId, actorUsername, payload) {
+export async function updateEvent(eventId, actorUsername, payload) {
   const response = await apiClient.put(
-    `events/update/${organizationId}/${eventId}/`,
+    `events/update/${eventId}/`,
     {
       username: actorUsername,
       name: payload.name || payload.title || '',
       description: payload.description || '',
       start_time: buildDateTime(payload.date, payload.start_time),
-      end_time: buildDateTime(payload.endDate || payload.date, payload.end_time),
+      end_time: buildDateTime(payload.date, payload.end_time),
       permissions: buildPermissionsString(payload.combinations || []),
     },
     { headers: { 'Content-Type': 'application/json' } }
@@ -52,8 +52,8 @@ export async function updateEvent(organizationId, eventId, actorUsername, payloa
   return response.data
 }
 
-export async function deleteEvent(organizationId, eventId, actorUsername) {
-  await apiClient.delete(`events/delete/${organizationId}/${eventId}/`, {
+export async function deleteEvent(eventId, actorUsername) {
+  await apiClient.delete(`events/delete/${eventId}/`, {
     headers: { 'Content-Type': 'application/json' },
     data: { username: actorUsername },
   })

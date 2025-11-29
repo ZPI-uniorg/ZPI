@@ -26,36 +26,14 @@ export default function TagCombinationsPicker({
     .slice(0, 75);
 
   const handleMainSelect = (val) => {
-    // Sprawdź czy kombinacja [val] już istnieje
-    const exists = combinations.some(combo => 
-      combo.length === 1 && combo[0] === val
-    );
-    if (exists) return; // Nie dodawaj duplikatu
-    
     onChange([...(combinations || []), [val]]);
     setMainQuery("");
   };
 
   const handleSelect = (val) => {
     if (editingIndex === null) return;
-    const updatedCombo = [...combinations[editingIndex], val];
-    
-    // Sprawdź czy taka kombinacja już istnieje (ignorując kolejność)
-    const sortedNew = [...updatedCombo].sort().join('+');
-    const exists = combinations.some((combo, idx) => {
-      if (idx === editingIndex) return false; // Pomijamy edytowaną kombinację
-      const sortedExisting = [...combo].sort().join('+');
-      return sortedExisting === sortedNew;
-    });
-    
-    if (exists) {
-      // Jeśli kombinacja już istnieje, usuń edytowaną i zakończ edycję
-      handleRemoveCombo(editingIndex);
-      return;
-    }
-    
     const next = combinations.map((c, i) =>
-      i === editingIndex ? updatedCombo : c
+      i === editingIndex ? [...c, val] : c
     );
     onChange(next);
     setQuery("");
