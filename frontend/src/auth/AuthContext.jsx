@@ -95,8 +95,33 @@ export function AuthProvider({ children }) {
       body.append('username', credentials.username)
       body.append('password', credentials.password)
       const response = await apiClient.post(`auth/login/${encodeURIComponent(org)}/`, body)
-      establishSession({ ...response.data, username: credentials.username })
-      return response.data.user || { username: credentials.username }
+      
+      // Fetch user info to get user ID
+      let userId = null
+      try {
+        const userInfoResponse = await apiClient.get(`organizations/${response.data.organization.id}/members/`, {
+          params: { username: credentials.username }
+        })
+        const currentUser = userInfoResponse.data.members?.find(m => m.username === credentials.username)
+        userId = currentUser?.user_id || currentUser?.id
+      } catch (err) {
+        console.warn('Could not fetch user ID:', err)
+      }
+      
+      const userData = {
+        username: credentials.username,
+        id: userId,
+        first_name: response.data.first_name || '',
+        last_name: response.data.last_name || '',
+        email: response.data.email || '',
+        role: response.data.role || '',
+      }
+      
+      establishSession({ 
+        ...response.data, 
+        user: userData
+      })
+      return userData
     },
     [establishSession],
   )

@@ -21,3 +21,9 @@ body {
   margin: 0;
   min-height: 100vh;
 }
+
+/* Prevent body/page scrolling; delegate scroll to AppLayout main */
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}

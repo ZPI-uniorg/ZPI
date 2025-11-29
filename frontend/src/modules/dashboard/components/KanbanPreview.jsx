@@ -1,55 +1,35 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Maximize2 } from 'lucide-react';
 
 export default function KanbanPreview({ project, board, onPrev, onNext, loading, error }) {
   const navigate = useNavigate();
   const scrollRef = useRef(null);
-  const [isMouseOver, setIsMouseOver] = useState(false);
 
   useEffect(() => {
     const scrollContainer = scrollRef.current;
     if (!scrollContainer) return;
 
     const handleWheel = (e) => {
-      if (!isMouseOver) return;
       if (e.deltaY !== 0) {
         e.preventDefault();
         scrollContainer.scrollLeft += e.deltaY;
       }
     };
 
-    window.addEventListener('wheel', handleWheel, { passive: false });
-    return () => window.removeEventListener('wheel', handleWheel);
-  }, [isMouseOver]);
+    scrollContainer.addEventListener('wheel', handleWheel, { passive: false });
+    return () => scrollContainer.removeEventListener('wheel', handleWheel);
+  }, []);
 
   const handleFullscreen = () => {
     if (!project) return;
     navigate('/kanban', { state: { projectId: project.id } });
   };
 
-  if (loading) {
-    return (
-      <div className="flex w-full h-full items-center justify-center text-slate-400 text-sm">
-        Ładowanie projektów…
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex w-full h-full items-center justify-center">
-        <p className="text-red-400 bg-red-500/10 border border-red-500/40 rounded-lg px-4 py-3 text-sm max-w-md text-center">
-          {error}
-        </p>
-      </div>
-    );
-  }
-
   if (!project) {
     return (
       <div className="flex w-full h-full items-center justify-center text-slate-400 text-sm">
-        Brak projektów do podglądu
+        Brak projektów.
       </div>
     );
   }
@@ -91,28 +71,36 @@ export default function KanbanPreview({ project, board, onPrev, onNext, loading,
       </div>
 
       <div className="flex-1 min-h-0 overflow-hidden">
-        {board ? (
+        {loading ? (
+          <div className="flex w-full h-full items-center justify-center text-slate-400 text-sm">
+            Ładowanie tablicy...
+          </div>
+        ) : error ? (
+          <div className="flex w-full h-full items-center justify-center">
+            <p className="text-red-400 bg-red-500/10 border border-red-500/40 rounded-lg px-4 py-3 text-sm max-w-md text-center">
+              {error}
+            </p>
+          </div>
+        ) : board ? (
           <div
             ref={scrollRef}
-            onMouseEnter={() => setIsMouseOver(true)}
-            onMouseLeave={() => setIsMouseOver(false)}
             className="flex h-full gap-3 overflow-x-auto overflow-y-hidden overscroll-contain scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
           >
-            {(board.columns ?? []).map((col) => (
+            {board.columns.map((col) => (
               <div
-                key={col.id}
+                key={col.column_id}
                 className="flex flex-col min-h-0 min-w-[200px] flex-1 rounded-lg bg-slate-800/40 border border-slate-700"
               >
                 <div className="px-3 py-2 border-b border-slate-700 text-xs font-semibold text-slate-200 shrink-0">
-                  {col.name}
+                  {col.title}
                 </div>
                 <div className="flex-1 min-h-0 p-2 space-y-2 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
-                  {((col.items?.length ?? 0) === 0) && (
+                  {(col.tasks?.length ?? 0) === 0 && (
                     <div className="text-[11px] text-slate-500 italic">Pusto</div>
                   )}
-                  {(col.items ?? []).map((item) => (
+                  {(col.tasks ?? []).map((item) => (
                     <div
-                      key={item.id}
+                      key={item.task_id}
                       className="rounded-md bg-violet-600/80 hover:bg-violet-600 text-white px-2.5 py-2 text-xs cursor-pointer transition flex flex-col gap-1 min-h-[70px]"
                       title={item.title}
                       onClick={() =>
@@ -120,14 +108,14 @@ export default function KanbanPreview({ project, board, onPrev, onNext, loading,
                           state: {
                             task: item,
                             projectId: project.id,
-                            columnId: col.id,
+                            columnId: col.column_id,
                             returnTo: 'dashboard',
                           },
                         })
                       }
                     >
                       <div className="flex items-center justify-between gap-2 shrink-0">
-                        <span className="text-[10px] font-mono text-white/90 font-semibold">{item.taskId}</span>
+                        <span className="text-[10px] font-mono text-white/90 font-semibold">{item.task_id}</span>
                       </div>
                       <div
                         className="font-medium text-xs leading-tight flex-1 overflow-hidden"
@@ -139,9 +127,9 @@ export default function KanbanPreview({ project, board, onPrev, onNext, loading,
                       >
                         {item.title}
                       </div>
-                      {item.assignee && (
+                      {item.assigned_to && (
                         <div className="text-[10px] text-white/80 mt-auto truncate">
-                          {item.assignee.first_name} {item.assignee.last_name}
+                          {item.assigned_to.first_name} {item.assigned_to.last_name}
                         </div>
                       )}
                     </div>

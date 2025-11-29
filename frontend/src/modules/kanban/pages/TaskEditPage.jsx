@@ -1,24 +1,49 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { FAKE_MEMBERS, KANBAN_BOARDS } from "../../../api/fakeData.js";
+import useAuth from "../../../auth/useAuth.js";
+import { createTask, updateTask, deleteTask } from "../../../api/kanban.js";
+import { getOrganizationMembers } from "../../../api/organizations.js";
 import Autocomplete from "../../shared/components/Autocomplete.jsx";
 import { Edit2, Eye } from "lucide-react";
 
 export default function TaskEditPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { task: editingTask, projectId, columnId, returnTo = 'kanban' } = location.state || {};
+  const { user, organization } = useAuth();
+  const { task: editingTask, projectId, boardId, columnId, returnTo = 'kanban' } = location.state || {};
 
   const [title, setTitle] = useState(editingTask?.title || "");
   const [description, setDescription] = useState(editingTask?.description || "");
-  const [deadline, setDeadline] = useState(editingTask?.deadline || "");
-  const [assignee, setAssignee] = useState(editingTask?.assignee || null);
+  const [deadline, setDeadline] = useState(editingTask?.due_date || "");
+  const [assignee, setAssignee] = useState(null);
   const [search, setSearch] = useState("");
   const [isEditing, setIsEditing] = useState(!editingTask);
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const createdAt = editingTask?.createdAt || new Date().toISOString();
+  const createdAt = editingTask?.created_at || new Date().toISOString();
 
-  const filteredMembers = FAKE_MEMBERS.filter((m) =>
+  // Fetch members
+  useEffect(() => {
+    if (!organization?.id || !user?.username) return;
+    
+    getOrganizationMembers(organization.id, user.username)
+      .then((data) => {
+        setMembers(data.members || []);
+        
+        // Set assignee if editing task
+        if (editingTask?.assigned_to_id) {
+          const assigned = (data.members || []).find(m => m.id === editingTask.assigned_to_id);
+          if (assigned) setAssignee(assigned);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch members:", err);
+      });
+  }, [organization?.id, user?.username, editingTask?.assigned_to_id]);
+
+  const filteredMembers = members.filter((m) =>
     (m.first_name + " " + m.last_name + " " + m.username)
       .toLowerCase()
       .includes(search.toLowerCase())
@@ -29,62 +54,84 @@ export default function TaskEditPage() {
     setSearch("");
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!title.trim() || !projectId || !columnId) return;
-
-    const board = KANBAN_BOARDS[projectId];
-    if (!board) return;
-
-    const column = board.columns.find((col) => col.id === columnId);
-    if (!column) return;
-
-    if (editingTask) {
-      // Edycja
-      const taskIndex = column.items.findIndex((t) => t.id === editingTask.id);
-      if (taskIndex !== -1) {
-        column.items[taskIndex] = {
-          ...column.items[taskIndex],
-          title: title.trim(),
-          description: description.trim(),
-          deadline,
-          assignee,
-        };
-      }
-    } else {
-      // Tworzenie
-      const newTask = {
-        id: `t${Date.now()}`,
-        taskId: `ORG-${Date.now().toString().slice(-4)}`,
-        title: title.trim(),
-        description: description.trim(),
-        deadline,
-        assignee,
-        createdAt,
-      };
-      column.items.push(newTask);
+    if (!title.trim() || !projectId || !columnId || !boardId || !organization?.id || !user?.username) {
+      setError("Brak wymaganych danych");
+      return;
     }
 
-    if (returnTo === 'dashboard') {
-      navigate("/dashboard");
-    } else {
-      navigate("/kanban", { state: { projectId } });
+    const taskData = {
+      title: title.trim(),
+      description: description.trim(),
+      due_date: deadline || null,
+      assigned_to_id: assignee?.id || null,
+      status: editingTask?.status || 1, // 1 = TODO
+    };
+
+    try {
+      setLoading(true);
+      setError(null);
+      
+      if (editingTask) {
+        // Update existing task
+        await updateTask(
+          organization.id, 
+          boardId, 
+          columnId, 
+          editingTask.task_id, 
+          user.username,
+          taskData
+        );
+      } else {
+        // Create new task
+        const tasksInColumn = 0; // Could be passed from parent
+        await createTask(
+          organization.id,
+          boardId,
+          columnId,
+          user.username,
+          { ...taskData, position: tasksInColumn }
+        );
+      }
+
+      if (returnTo === 'dashboard') {
+        navigate("/dashboard");
+      } else {
+        navigate("/kanban", { state: { projectId } });
+      }
+    } catch (err) {
+      setError(err?.response?.data?.error || err?.response?.data?.detail || "Nie udało się zapisać zadania");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDelete = () => {
-    if (!editingTask || !projectId || !columnId) return;
-    const board = KANBAN_BOARDS[projectId];
-    if (!board) return;
+  const handleDelete = async () => {
+    if (!editingTask || !projectId || !columnId || !boardId || !organization?.id || !user?.username) return;
+    
+    if (!window.confirm("Czy na pewno chcesz usunąć to zadanie?")) return;
 
-    const column = board.columns.find((col) => col.id === columnId);
-    if (!column) return;
+    try {
+      setLoading(true);
+      setError(null);
+      
+      await deleteTask(
+        organization.id,
+        boardId,
+        columnId,
+        editingTask.task_id,
+        user.username
+      );
 
-    column.items = column.items.filter((t) => t.id !== editingTask.id);
-    if (returnTo === 'dashboard') {
-      navigate("/dashboard");
-    } else {
-      navigate("/kanban", { state: { projectId } });
+      if (returnTo === 'dashboard') {
+        navigate("/dashboard");
+      } else {
+        navigate("/kanban", { state: { projectId } });
+      }
+    } catch (err) {
+      setError(err?.response?.data?.error || err?.response?.data?.detail || "Nie udało się usunąć zadania");
+      setLoading(false);
     }
   };
 
@@ -127,10 +174,16 @@ export default function TaskEditPage() {
           </div>
         </div>
 
+        {error && (
+          <div className="p-3 bg-red-500/10 border border-red-500/40 rounded-lg text-red-400 text-sm">
+            {error}
+          </div>
+        )}
+
         {!isEditing && editingTask ? (
           <div className="flex flex-col gap-6">
             <div className="flex items-center gap-3 pb-4 border-b border-slate-700">
-              <span className="text-sm font-mono text-indigo-400 font-semibold">{editingTask.taskId}</span>
+              <span className="text-sm font-mono text-indigo-400 font-semibold">#{editingTask.task_id}</span>
               <span className="text-slate-500">•</span>
               <span className="text-xs text-slate-400">
                 Utworzono: {new Date(createdAt).toLocaleDateString("pl-PL", { 
@@ -171,7 +224,7 @@ export default function TaskEditPage() {
                 {assignee ? (
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-xs font-bold text-white">
-                      {assignee.first_name[0]}{assignee.last_name[0]}
+                      {assignee.first_name?.[0]}{assignee.last_name?.[0]}
                     </div>
                     <span className="text-slate-200 font-medium">
                       {assignee.first_name} {assignee.last_name}
@@ -245,18 +298,19 @@ export default function TaskEditPage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-between mt-4">
             <button
               type="submit"
-              disabled={!title.trim()}
+              disabled={!title.trim() || loading}
               className="flex-1 sm:flex-none bg-gradient-to-r from-indigo-500 to-violet-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-8 py-3 rounded-xl text-sm font-semibold shadow hover:brightness-110 transition"
             >
-              {editingTask ? "Zapisz zmiany" : "Utwórz zadanie"}
+              {loading ? "Zapisywanie..." : (editingTask ? "Zapisz zmiany" : "Utwórz zadanie")}
             </button>
             {editingTask && (
               <button
                 type="button"
                 onClick={handleDelete}
-                className="flex-1 sm:flex-none border border-red-500 px-8 py-3 rounded-xl text-sm text-red-400 bg-transparent hover:bg-red-500/10 transition font-semibold"
+                disabled={loading}
+                className="flex-1 sm:flex-none border border-red-500 px-8 py-3 rounded-xl text-sm text-red-400 bg-transparent hover:bg-red-500/10 transition font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Usuń zadanie
+                {loading ? "Usuwanie..." : "Usuń zadanie"}
               </button>
             )}
           </div>
