@@ -1,3 +1,4 @@
+from django.contrib.auth.models import Permission
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -15,7 +16,7 @@ def get_all_events(request, organization_id):
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User not authenticated"}, status=401)
 
-        username = request.GET.get("username")
+        username = request.user.username
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
 
         if membership.role != 'admin':
@@ -52,13 +53,15 @@ def get_user_events(request, organization_id, username):
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User not authenticated"}, status=401)
 
+        username = request.user.username
+
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
 
         if not membership:
             return JsonResponse({"error": "Unauthorized access"}, status=403)
 
         organization = Organization.objects.get(id=organization_id)
-        permissions = list(membership.permissions.all())
+        user_permissions = membership.permissions.all()
 
         events = []
 
@@ -67,7 +70,7 @@ def get_user_events(request, organization_id, username):
 
             if len(event_permissions) == 0:
                 events.append(event)
-            elif permission_to_access(permissions, event_permissions):
+            elif permission_to_access(user_permissions, event_permissions):
                 events.append(event)
 
         events_data = []
@@ -99,7 +102,7 @@ def get_events_by_tag(request, organization_id, tag_id):
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User not authenticated"}, status=401)
 
-        username = request.GET.get("username")
+        username = request.user.username
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
 
         if membership.role != 'admin':
@@ -118,8 +121,9 @@ def get_events_by_tag(request, organization_id, tag_id):
                     basic_tags = CombinedTag.objects.filter(combined_tag_id=combined_tag)
                     basic_tag_ids = [basic_tag.basic_tag_id.id for basic_tag in basic_tags]
                     if tag_id in basic_tag_ids:
-                        events.append(event)
-                        break
+                        if permission_to_access(membership.permissions, event.permissions.all()):
+                            events.append(event)
+                            break
 
         events_data = []
 
@@ -149,7 +153,7 @@ def get_event(request, organization_id, event_id):
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User not authenticated"}, status=401)
 
-        username = request.GET.get("username")
+        username = request.user.username
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
 
         event = Event.objects.get(event_id=event_id, organization__id=organization_id)
@@ -185,7 +189,7 @@ def create_event(request, organization_id):
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User not authenticated"}, status=401)
 
-        username = request.POST.get("username")
+        username = request.user.username
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
 
         if membership.role != 'admin':
@@ -200,55 +204,52 @@ def create_event(request, organization_id):
         organization = Organization.objects.get(id=organization_id)
         permissions_str = request.POST.get("permissions")
 
+        permissions_ids = []
+
         if len(permissions_str) > 0:
             permissions_str_list = permissions_str.split(',')
-            permissions_names = []
-            permissions_ids = []
 
             for permission in permissions_str_list:
-                temp = permission.split('+')
+                temp = permission.split("+")
 
                 if len(temp) == 1:
-                    permissions_names.append(temp[0])
-                    permissions_ids.append(Tag.objects.get(name=temp[0], organization__id=organization_id).id)
+                    tag = Tag.objects.get(name=temp[0], organization__id=organization_id)
+
+                    if tag not in allowed_permissions:
+                        return JsonResponse({"error": "Unauthorized permission assignment"}, status=403)
+
+                    permissions_ids.append(tag.id)
+
                 else:
-                    for perm in temp:
-                        permissions_names.append(perm)
+                    for tag_name in temp:
+                        if not allowed_permissions.filter(name=tag_name).exists():
+                            return JsonResponse({"error": "Unauthorized permission assignment"}, status=403)
 
                     combinedTag = Tag.objects.get(name=permission, organization__id=organization_id, combined=True)
 
                     if combinedTag:
                         permissions_ids.append(combinedTag.id)
                     else:
-                        combinedTag = Tag.objects.create(
+                        new_combined_tag = Tag.objects.create(
                             name=permission,
-                            organization=organization,
+                            organization=Organization.objects.get(id=organization_id),
                             combined=True
                         )
 
-                        for perm in temp:
-                            basicTag = Tag.objects.filter(name=perm, organization__id=organization_id).first()
-                            if basicTag:
-                                CombinedTag.objects.create(
-                                    combined_tag_id=combinedTag,
-                                    basic_tag_id=basicTag
-                                )
+                        for tag_name in temp:
+                            basic_tag = Tag.objects.get(name=tag_name, organization__id=organization_id)
+                            CombinedTag.objects.create(
+                                combined_tag_id=new_combined_tag,
+                                basic_tag_id=basic_tag
+                            )
 
-                        permissions_ids.append(combinedTag.id)
-
-
-            permissions = Tag.objects.filter(id__in=permissions_ids)
+                        permissions_ids.append(new_combined_tag.id)
 
         if not all([name, start_time, end_time]):
             return JsonResponse({"error": "Missing required fields"}, status=400)
 
         if start_time >= end_time:
             return JsonResponse({"error": "Nieprawidłowy zakres czasu"}, status=400)
-
-
-        for perm in permissions:
-            if perm not in allowed_permissions:
-                return JsonResponse({"error": "Unauthorized permission assignment"}, status=403)
 
         event = Event.objects.create(
             name=name,
@@ -274,6 +275,8 @@ def create_event(request, organization_id):
         return JsonResponse(event_data, status=201)
     except Organization.DoesNotExist:
         return JsonResponse({"error": "Organization not found"}, status=404)
+    except Tag.DoesNotExist:
+        return JsonResponse({"error": "Tag not found"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
@@ -286,7 +289,7 @@ def delete_event(request, organization_id, event_id):
             return JsonResponse({"error": "User not authenticated"}, status=401)
 
         data = json.loads(request.body)
-        username = data.get("username")
+        username = request.user.username
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
 
         event = Event.objects.get(event_id=event_id, organization__id=organization_id)
@@ -299,6 +302,7 @@ def delete_event(request, organization_id, event_id):
                 return JsonResponse({"error": "Unauthorized access"}, status=403)
 
         event.delete()
+
         return JsonResponse({"message": "Event deleted successfully"}, status=200)
     except Event.DoesNotExist:
         return JsonResponse({"error": "Event not found"}, status=404)
@@ -314,7 +318,7 @@ def update_event(request, organization_id, event_id):
             return JsonResponse({"error": "User not authenticated"}, status=401)
 
         data = json.loads(request.body)
-        username = data.get("username")
+        username = request.user.username
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
         event = Event.objects.get(event_id=event_id, organization__id=organization_id)
 
@@ -341,45 +345,43 @@ def update_event(request, organization_id, event_id):
                 allowed_permissions = Tag.objects.filter(organization__id=organization_id)
 
             permissions_str_list = permissions_str.split(',')
-            permissions_names = []
             permissions_ids = []
 
             for permission in permissions_str_list:
                 temp = permission.split('+')
 
                 if len(temp) == 1:
-                    permissions_names.append(temp[0])
-                    permissions_ids.append(Tag.objects.filter(name=temp[0], organization__id=organization_id).first().id)
-                else:
-                    for perm in temp:
-                        permissions_names.append(perm)
+                    tag = Tag.objects.get(name=temp[0], organization__id=organization_id)
 
-                    combinedTag = Tag.objects.filter(name=permission, organization__id=organization_id, combined=True).first()
+                    if tag not in allowed_permissions:
+                        return JsonResponse({"error": "Unauthorized permission assignment"}, status=403)
+
+                    permissions_ids.append(tag.id)
+
+                else:
+                    for tag_name in temp:
+                        if not allowed_permissions.filter(name=tag_name).exists():
+                            return JsonResponse({"error": "Unauthorized permission assignment"}, status=403)
+
+                    combinedTag = Tag.objects.get(name=permission, organization__id=organization_id, combined=True)
 
                     if combinedTag:
                         permissions_ids.append(combinedTag.id)
                     else:
-                        combinedTag = Tag.objects.create(
+                        new_combined_tag = Tag.objects.create(
                             name=permission,
                             organization=Organization.objects.get(id=organization_id),
                             combined=True
                         )
 
-                        for perm in temp:
-                            basicTag = Tag.objects.filter(name=perm, organization__id=organization_id).first()
-                            if basicTag:
-                                CombinedTag.objects.create(
-                                    combined_tag_id=combinedTag,
-                                    basic_tag_id=basicTag
-                                )
+                        for tag_name in temp:
+                            basic_tag = Tag.objects.get(name=tag_name, organization__id=organization_id)
+                            CombinedTag.objects.create(
+                                combined_tag_id=new_combined_tag,
+                                basic_tag_id=basic_tag
+                            )
 
-                        permissions_ids.append(combinedTag.id)
-
-            permissions = Tag.objects.filter(id__in=permissions_ids)
-
-            for perm in permissions:
-                if perm not in allowed_permissions:
-                    return JsonResponse({"error": "Unauthorized permission assignment"}, status=403)
+                        permissions_ids.append(new_combined_tag.id)
 
             event.permissions.set(Tag.objects.filter(id__in=permissions_ids))
         if name:

@@ -98,6 +98,7 @@ def get_user_organization(request, username):
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User is not authenticated"}, status=401)
 
+        username = request.user.username
         memberships = Membership.objects.filter(user__username=username)
 
         organizations = [
@@ -119,6 +120,28 @@ def get_user_organization(request, username):
         return JsonResponse({"error": str(e)}, status=400)
 
 
+@require_http_methods(["GET"])
+@csrf_exempt
+def get_user_membership(request, organization_id):
+    try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User is not authenticated"}, status=401)
+
+        username = request.user.username
+        membership = Membership.objects.get(organization__id=organization_id, user__username=username)
+
+        membership_data = {
+            "organization_id": membership.organization.id,
+            "user_id": membership.user.id,
+            "role": membership.role,
+            "permissions": list(membership.permissions.values_list('name', flat=True))
+        }
+        return JsonResponse(membership_data, status=200)
+    except Membership.DoesNotExist:
+        return JsonResponse({"error": "Membership not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
 @require_http_methods(["PUT"])
 @csrf_exempt
 def edit_organization(request, organization_id):
@@ -129,7 +152,7 @@ def edit_organization(request, organization_id):
         data = json.loads(request.body)
         name = data.get('name')
         description = data.get('description')
-        username = data.get('username')
+        username = request.user.username
 
         membership = Membership.objects.get(organization__id=organization_id, user__username=username)
 
@@ -172,7 +195,8 @@ def invite_member(request, organization_id):
         else:
             data = request.POST
 
-        username = data.get("username")
+        username = request.user.username
+
         if not username:
             return JsonResponse({"error": "Missing field: username"}, status=400)
 
@@ -256,7 +280,7 @@ def get_organization_users(request, organization_id):
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User is not authenticated"}, status=401)
 
-        username = request.GET.get('username')
+        username = request.user.username
         membership = Membership.objects.get(organization__id=organization_id, user__username=username)
 
         if membership.role not in ['admin', 'coordinator']:
@@ -291,7 +315,7 @@ def remove_organization_member(request, organization_id, username):
             return JsonResponse({"error": "User is not authenticated"}, status=401)
 
         data = json.loads(request.body)
-        admin_username = data.get('admin_username')
+        admin_username = request.user.username
 
         membership = Membership.objects.get(organization__id=organization_id, user__username=admin_username)
 
@@ -316,7 +340,7 @@ def change_member_role(request, organization_id, username):
             return JsonResponse({"error": "User is not authenticated"}, status=401)
 
         data = json.loads(request.body)
-        admin_username = data.get('admin_username')
+        admin_username = request.user.username
         new_role = data.get('new_role')
 
         membership = Membership.objects.get(organization__id=organization_id, user__username=admin_username)
@@ -357,7 +381,7 @@ def update_member_profile(request, organization_id, username):
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON payload"}, status=400)
 
-        admin_username = data.get('admin_username')
+        admin_username = request.user.username
 
         if not admin_username:
             return JsonResponse({"error": "Missing field: admin_username"}, status=400)
@@ -421,7 +445,7 @@ def edit_permissions(request, organization_id, username):
             return JsonResponse({"error": "User is not authenticated"}, status=401)
 
         data = json.loads(request.body)
-        admin_username = data.get('admin_username')
+        admin_username = request.user.username
         tags_names = data.get('tags', [])
 
         membership = Membership.objects.get(organization__id=organization_id, user__username=admin_username)
@@ -431,6 +455,7 @@ def edit_permissions(request, organization_id, username):
 
         if membership.role == 'coordinator':
             allowed_tags = list(membership.permissions.values_list('name', flat=True))
+
             for tag in tags_names:
                 if tag not in allowed_tags:
                     return JsonResponse({"error": "Permission denied for some tags"}, status=403)
@@ -465,7 +490,7 @@ def get_all_tags(request, organization_id):
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User is not authenticated"}, status=401)
 
-        username = request.GET.get('username')
+        username = request.user.username
         membership = Membership.objects.get(organization__id=organization_id, user__username=username)
 
         if membership.role != 'admin':
@@ -492,12 +517,10 @@ def get_tags(request, organization_id):
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User is not authenticated"}, status=401)
 
-        username = request.GET.get('username')
+        username = request.user.username
         membership = Membership.objects.get(organization__id=organization_id, user__username=username)
 
-        tags_names = list(membership.permissions.values_list('name', flat=True))
-
-        tags = Tag.objects.filter(name__in=tags_names, organization__id=organization_id)
+        tags = membership.permissions.all()
 
         tags = [
             {
@@ -513,7 +536,6 @@ def get_tags(request, organization_id):
         return JsonResponse({"error": str(e)}, status=400)
 
 
-
 @require_http_methods(["POST"])
 @csrf_exempt
 def create_tag(request, organization_id):
@@ -521,7 +543,7 @@ def create_tag(request, organization_id):
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User is not authenticated"}, status=401)
 
-        username = request.POST.get('username')
+        username = request.user.username
         membership = Membership.objects.get(organization__id=organization_id, user__username=username)
 
         if membership.role != 'admin':
@@ -571,8 +593,7 @@ def delete_tag(request, organization_id, tag_name):
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User is not authenticated"}, status=401)
 
-        data = json.loads(request.body)
-        username = data.get('username')
+        username = request.user.username
         membership = Membership.objects.get(organization__id=organization_id, user__id=username)
 
         if membership.role != 'admin':
@@ -597,7 +618,7 @@ def create_project(request, organization_id):
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User is not authenticated"}, status=401)
 
-        username = request.POST.get('username')
+        username = request.user.username
         membership = Membership.objects.get(organization__id=organization_id, user__username=username)
 
         if membership.role not in ['admin', 'coordinator']:
@@ -693,8 +714,14 @@ def update_project(request, organization_id, project_id):
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User is not authenticated"}, status=401)
 
+        username = request.user.username
+        membership = Membership.objects.get(organization__id=organization_id, user__username=username)
+
+        if membership.role not in ['admin', 'coordinator']:
+            return JsonResponse({"error": "Permission denied"}, status=403)
+
+
         data = json.loads(request.body)
-        username = data.get('username')
         name = data.get('name')
         description = data.get('description')
         start_dte_raw = data.get('start_dte')
@@ -702,10 +729,6 @@ def update_project(request, organization_id, project_id):
         coordinator_username = data.get('coordinator_username')
 
         project = Project.objects.get(id=project_id)
-        membership = Membership.objects.get(organization__id=organization_id, user__username=username)
-
-        if membership.role not in ['admin', 'coordinator']:
-            return JsonResponse({"error": "Permission denied"}, status=403)
 
         if membership.role == 'coordinator' and project.coordinator != membership.user:
             return JsonResponse({"error": "Permission denied"}, status=403)
@@ -743,10 +766,11 @@ def update_project(request, organization_id, project_id):
             if not coordinator_username:
                 project.coordinator = None
             else:
-                coordinator_membership = Membership.objects.filter(
+                coordinator_membership = Membership.objects.get(
                     organization__id=organization_id,
                     user__username=coordinator_username,
-                ).first()
+                )
+
                 if not coordinator_membership:
                     return JsonResponse({"error": "Coordinator not found in organization"}, status=404)
                 if coordinator_membership.role == 'member':
@@ -783,10 +807,7 @@ def get_projects(request, organization_id):
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User is not authenticated"}, status=401)
 
-        username = request.GET.get('username')
-
-        if not username:
-            return JsonResponse({"error": "Missing field: username"}, status=400)
+        username = request.user.username
 
         membership = Membership.objects.get(
             organization__id=organization_id,
@@ -813,12 +834,12 @@ def get_user_projects(request, organization_id):
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User is not authenticated"}, status=401)
 
-        username=request.GET.get('username')
+        username=request.user.username
         membership = Membership.objects.get(organization__id=organization_id, user__username=username)
 
-        tags = list(membership.permissions.values_list('name', flat=True))
+        tags = membership.permissions.all()
 
-        projects = Project.objects.filter(organization__id=organization_id, tag__name__in=tags)
+        projects = Project.objects.filter(organization__id=organization_id, tag__in=tags)
 
         project_list = [_project_to_dict(project) for project in projects]
 
@@ -835,7 +856,7 @@ def add_tag_to_user(request, organization_id, username):
             return JsonResponse({"error": "User is not authenticated"}, status=401)
 
         data = json.loads(request.body)
-        admin_username = data.get('admin_username')
+        admin_username = request.user.username
         tag_name = data.get('tag_name')
 
         membership = Membership.objects.get(organization__id=organization_id, user__username=admin_username)
@@ -869,7 +890,7 @@ def remove_tag_from_user(request, organization_id, username):
             return JsonResponse({"error": "User is not authenticated"}, status=401)
 
         data = json.loads(request.body)
-        admin_username = data.get('admin_username')
+        admin_username = request.user.username
         tag_name = data.get('tag_name')
 
         membership = Membership.objects.get(organization__id=organization_id, user__username=admin_username)

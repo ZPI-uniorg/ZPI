@@ -14,7 +14,7 @@ def get_board(request, organization_id, project_id):
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User not authenticated"}, status=401)
 
-        username = request.GET.get("username")
+        username = request.user.username
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
 
         project = Project.objects.get(project_id=project_id)
@@ -49,7 +49,7 @@ def get_board_with_content(request, organization_id, project_id):
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User not authenticated"}, status=401)
 
-        username = request.GET.get("username")
+        username = request.user.username
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
 
         project = Project.objects.get(project_id=project_id)
@@ -109,7 +109,7 @@ def add_column(request, organization_id, board_id):
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User not authenticated"}, status=401)
 
-        username = request.POST.get("username")
+        username = request.user.username
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
@@ -156,7 +156,7 @@ def update_column_position(request, organization_id, board_id, column_id):
 
         data = json.loads(request.body)
         position = data.get("position")
-        username = data.get("username")
+        username = request.user.username
 
 
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
@@ -200,8 +200,8 @@ def delete_column(request, organization_id, board_id, column_id):
             return JsonResponse({"error": "User not authenticated"}, status=401)
 
         data = json.loads(request.body)
-        user_id = data.get("user_id")
-        membership = Membership.objects.get(user__id=user_id, organization__id=organization_id)
+        username = request.user.username
+        membership = Membership.objects.get(user__id=username, organization__id=organization_id)
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
 
@@ -230,7 +230,7 @@ def get_column(request, organization_id, board_id, column_id):
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User not authenticated"}, status=401)
 
-        username = request.GET.get("username")
+        username = request.user.username
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
@@ -265,7 +265,7 @@ def add_task(request, organization_id, board_id, column_id):
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User not authenticated"}, status=401)
 
-        username = request.POST.get("username")
+        username = request.user.username
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
@@ -330,7 +330,7 @@ def update_task(request, organization_id, board_id, column_id, task_id):
             return JsonResponse({"error": "User not authenticated"}, status=401)
 
         data = json.loads(request.body)
-        username = data.get("username")
+        username = request.user.username
 
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
         organization = Organization.objects.get(id=organization_id)
@@ -395,7 +395,7 @@ def delete_task(request, organization_id, board_id, column_id, task_id):
             return JsonResponse({"error": "User not authenticated"}, status=401)
 
         data = json.loads(request.body)
-        username = data.get("username")
+        username = request.user.username
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
@@ -429,7 +429,7 @@ def get_task(request, organization_id, board_id, column_id, task_id):
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User not authenticated"}, status=401)
 
-        username = request.GET.get("username")
+        username = request.user.username
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
