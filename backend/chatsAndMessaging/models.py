@@ -2,7 +2,7 @@ from django.db import models
 
 
 class Chat(models.Model):
-    chat_it = models.AutoField(primary_key=True)
+    chat_id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255)
     organization = models.ForeignKey(
         "organizations.Organization",

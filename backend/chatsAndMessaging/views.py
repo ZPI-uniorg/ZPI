@@ -163,8 +163,7 @@ def save_message(request, organization_id):
                 if not author_username:
                     author_username = sender_obj.username
             except User.DoesNotExist:
-                if not author_username:
-                    author_username = "Guest"
+                return JsonResponse({"error": "Sender user not found"}, status=404)
 
         if not channel_name:
             channel_name = "general"
@@ -193,7 +192,7 @@ def save_message(request, organization_id):
 # -----------------------------
 @require_http_methods(["GET"])
 @csrf_exempt
-def list_chats(request, organization_id, username):
+def list_chats(request, organization_id):
     try:
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User not authenticated"}, status=401)
@@ -214,7 +213,7 @@ def list_chats(request, organization_id, username):
             user_permissions = user_membership.permissions
 
             if chat_permissions and not permission_to_access(user_permissions, chat_permissions):
-                chats = chats.exclude(chat_it=chat.chat_it)
+                chats = chats.exclude(chat_id=chat.chat_id)
 
         serializer = ChatSerializer(chats, many=True)
 
@@ -226,7 +225,7 @@ def list_chats(request, organization_id, username):
 
 @require_http_methods(["GET"])
 @csrf_exempt
-def list_chats_all(request, organization_id, username):
+def list_chats_all(request, organization_id):
     try:
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User not authenticated"}, status=401)
@@ -273,8 +272,9 @@ def list_chats_by_tag(request, organization_id, tag_id):
                     basic_tags = CombinedTag.objects.filter(combined_tag_id=combined_tag)
                     basic_tag_ids = [bt.basic_tag_id.id for bt in basic_tags]
                     if tag_id in basic_tag_ids:
-                        chats.append(chat)
-                        break
+                        if permission_to_access(membership.permissions, chat.permissions.all()):
+                            chats.append(chat)
+                            break
 
         serializer = ChatSerializer(chats, many=True)
 
