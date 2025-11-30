@@ -17,6 +17,7 @@ import {
   Edit2,
   Trash2,
   Check,
+  ChevronDown,
 } from "lucide-react";
 
 export default function KanbanPage() {
@@ -35,25 +36,45 @@ export default function KanbanPage() {
 
   const [index, setIndex] = useState(0);
   const [board, setBoard] = useState(null);
-  const [boardLoading, setBoardLoading] = useState(false);
+  const [boardLoading, setBoardLoading] = useState(true); // Start as true
   const [boardError, setBoardError] = useState(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const [draggedItem, setDraggedItem] = useState(null);
   const [draggedFrom, setDraggedFrom] = useState(null);
   // Rename state
   const [editingColumnId, setEditingColumnId] = useState(null);
   const [editingColumnName, setEditingColumnName] = useState("");
+  // Project dropdown state
+  const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
 
   useEffect(() => {
-    if (!initialProjectId) {
-      setIndex(0);
-      return;
+    if (projects.length === 0 || isInitialized) return;
+
+    // Try to restore from localStorage first
+    const savedProjectId = localStorage.getItem("kanban_selected_project_id");
+
+    if (initialProjectId) {
+      const idx = projects.findIndex(
+        (p) => String(p.id) === String(initialProjectId)
+      );
+      const newIndex = idx >= 0 ? idx : 0;
+      setIndex(newIndex);
+      // Save to localStorage
+      if (idx >= 0) {
+        localStorage.setItem(
+          "kanban_selected_project_id",
+          String(initialProjectId)
+        );
+      }
+    } else if (savedProjectId) {
+      // Restore from localStorage on initial load
+      const idx = projects.findIndex((p) => String(p.id) === savedProjectId);
+      setIndex(idx >= 0 ? idx : 0);
     }
-    const idx = projects.findIndex(
-      (p) => String(p.id) === String(initialProjectId)
-    );
-    setIndex(idx >= 0 ? idx : 0);
-  }, [initialProjectId, projects.length]); // tylko length, nie cała tablica
+
+    setIsInitialized(true);
+  }, [projects, initialProjectId, isInitialized]);
 
   const totalProjects = projects.length;
   const safeIndex =
@@ -65,6 +86,7 @@ export default function KanbanPage() {
   useEffect(() => {
     if (!project || !organization?.id || !user?.username) {
       setBoard(null);
+      setBoardLoading(false);
       return;
     }
 
@@ -103,6 +125,18 @@ export default function KanbanPage() {
   const next = () => {
     if (totalProjects === 0) return;
     setIndex((i) => (i + 1) % totalProjects);
+  };
+
+  const selectProject = (projectIndex) => {
+    setIndex(projectIndex);
+    setProjectDropdownOpen(false);
+    // Save to localStorage
+    if (projects[projectIndex]) {
+      localStorage.setItem(
+        "kanban_selected_project_id",
+        String(projects[projectIndex].id)
+      );
+    }
   };
 
   useEffect(() => {
@@ -386,11 +420,7 @@ export default function KanbanPage() {
     return (
       <div className="h-full flex flex-col bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-4">
         <div className="flex items-center justify-between mb-4 px-2">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-slate-700/40 animate-pulse"></div>
-            <div className="h-8 w-48 rounded-lg bg-slate-700/40 animate-pulse"></div>
-            <div className="w-10 h-10 rounded-lg bg-slate-700/40 animate-pulse"></div>
-          </div>
+          <div className="h-11 w-64 rounded-lg bg-slate-700/40 animate-pulse"></div>
           <div className="flex items-center gap-3">
             <div className="h-10 w-32 rounded-lg bg-slate-700/40 animate-pulse"></div>
             <div className="h-10 w-32 rounded-lg bg-slate-700/40 animate-pulse"></div>
@@ -444,24 +474,46 @@ export default function KanbanPage() {
   return (
     <div className="h-full flex flex-col bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-4">
       <div className="flex items-center justify-between mb-4 px-2">
-        <div className="flex items-center gap-3">
+        <div className="relative">
           <button
-            onClick={prev}
-            className="p-2 rounded-lg hover:bg-slate-700/40 text-slate-300 transition"
-            aria-label="Poprzedni projekt"
+            onClick={() => setProjectDropdownOpen(!projectDropdownOpen)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800/60 hover:bg-slate-700/60 text-slate-100 transition border border-slate-700"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <h1 className="text-xl font-semibold">{project.name}</h1>
+            <ChevronDown
+              className={`w-5 h-5 transition-transform ${
+                projectDropdownOpen ? "rotate-180" : ""
+              }`}
+            />
           </button>
-          <h1 className="text-2xl font-semibold text-slate-100 min-w-[200px] text-center">
-            {project.name}
-          </h1>
-          <button
-            onClick={next}
-            className="p-2 rounded-lg hover:bg-slate-700/40 text-slate-300 transition"
-            aria-label="Następny projekt"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
+          {projectDropdownOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-10"
+                onClick={() => setProjectDropdownOpen(false)}
+              ></div>
+              <div className="absolute top-full left-0 mt-2 w-64 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-20 max-h-96 overflow-y-auto">
+                {projects.map((proj, idx) => (
+                  <button
+                    key={proj.id}
+                    onClick={() => selectProject(idx)}
+                    className={`w-full px-4 py-3 text-left hover:bg-slate-700/60 transition flex items-center justify-between ${
+                      idx === safeIndex
+                        ? "bg-slate-700/40 text-indigo-400"
+                        : "text-slate-200"
+                    } ${idx === 0 ? "rounded-t-lg" : ""} ${
+                      idx === projects.length - 1
+                        ? "rounded-b-lg"
+                        : "border-b border-slate-700"
+                    }`}
+                  >
+                    <span className="font-medium">{proj.name}</span>
+                    {idx === safeIndex && <Check className="w-4 h-4" />}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <button

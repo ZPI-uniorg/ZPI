@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import useAuth from "../../../auth/useAuth.js";
 import { createTask, updateTask, deleteTask } from "../../../api/kanban.js";
-import { getOrganizationMembers } from "../../../api/organizations.js";
+import { getProjectMembers } from "../../../api/organizations.js";
 import Autocomplete from "../../shared/components/Autocomplete.jsx";
 import { Edit2, Eye } from "lucide-react";
 
@@ -32,17 +32,26 @@ export default function TaskEditPage() {
 
   const createdAt = editingTask?.created_at || new Date().toISOString();
 
-  // Fetch members
+  // Fetch project members only
   useEffect(() => {
-    if (!organization?.id || !user?.username) return;
+    if (!organization?.id || !user?.username || !projectId) return;
 
-    getOrganizationMembers(organization.id, user.username)
+    getProjectMembers(organization.id, projectId, user.username)
       .then((data) => {
-        setMembers(data.members || []);
+        console.log("Fetched members:", data);
+        const normalized = (data || []).map((m) => ({
+          id: m.user_id ?? m.id ?? m.username,
+          username: m.username,
+          first_name: m.first_name ?? "",
+          last_name: m.last_name ?? "",
+          email: m.email ?? "",
+          role: m.role,
+        }));
+        setMembers(normalized);
 
         // Set assignee if editing task
         if (editingTask?.assigned_to_id) {
-          const assigned = (data.members || []).find(
+          const assigned = normalized.find(
             (m) => m.id === editingTask.assigned_to_id
           );
           if (assigned) setAssignee(assigned);
@@ -51,13 +60,24 @@ export default function TaskEditPage() {
       .catch((err) => {
         console.error("Failed to fetch members:", err);
       });
-  }, [organization?.id, user?.username, editingTask?.assigned_to_id]);
+  }, [
+    organization?.id,
+    user?.username,
+    projectId,
+    editingTask?.assigned_to_id,
+  ]);
 
-  const filteredMembers = members.filter((m) =>
-    (m.first_name + " " + m.last_name + " " + m.username)
+  const filteredMembers = members.filter((m) => {
+    if (!search || search.trim() === "") return true; // Show all when empty
+    return (m.first_name + " " + m.last_name + " " + m.username)
       .toLowerCase()
-      .includes(search.toLowerCase())
-  );
+      .includes(search.toLowerCase());
+  });
+
+  const memberOptions = filteredMembers.map((m) => ({
+    ...m,
+    label: `${m.first_name} ${m.last_name} (${m.username})`,
+  }));
 
   const handleAssigneeSelect = (m) => {
     setAssignee(m);
@@ -325,13 +345,11 @@ export default function TaskEditPage() {
                     setSearch(v);
                     setAssignee(null);
                   }}
-                  options={filteredMembers}
+                  options={memberOptions}
                   onSelect={handleAssigneeSelect}
                   placeholder="Wybierz osobę..."
                   inputClassName="border border-slate-600 rounded-lg px-3 py-2 bg-slate-800 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
-                  getOptionLabel={(m) =>
-                    `${m.first_name} ${m.last_name} (${m.username})`
-                  }
+                  getOptionLabel={(m) => m.label}
                 />
                 {assignee && (
                   <div className="text-xs text-slate-400 mt-1">

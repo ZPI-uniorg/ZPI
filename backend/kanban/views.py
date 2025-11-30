@@ -63,18 +63,27 @@ def get_board_with_content(request, organization_id, project_id):
         columns_data = []
         for column in columns:
             tasks = Task.objects.filter(column=column)
-            tasks_data = [
-                {
+            tasks_data = []
+            for task in tasks:
+                assigned_payload = None
+                if task.assigned_to:
+                    assigned_payload = {
+                        "id": task.assigned_to.id,
+                        "username": task.assigned_to.username,
+                        "first_name": task.assigned_to.first_name,
+                        "last_name": task.assigned_to.last_name,
+                        "email": task.assigned_to.email,
+                    }
+                tasks_data.append({
                     "task_id": task.task_id,
                     "title": task.title,
                     "description": task.description,
                     "position": task.position,
                     "due_date": task.due_date,
                     "assigned_to_id": task.assigned_to.id if task.assigned_to else None,
+                    "assigned_to": assigned_payload,
                     "status": task.status,
-                }
-                for task in tasks
-            ]
+                })
             columns_data.append({
                 "column_id": column.column_id,
                 "title": column.title,
