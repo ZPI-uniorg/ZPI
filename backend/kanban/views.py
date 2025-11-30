@@ -155,6 +155,7 @@ def update_column_position(request, organization_id, board_id, column_id):
 
         data = json.loads(request.body)
         position = data.get("position")
+        title = data.get("title")
         username = request.user.username
 
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
@@ -166,10 +167,14 @@ def update_column_position(request, organization_id, board_id, column_id):
 
         column = KanbanColumn.objects.get(column_id=column_id, board=board)
 
-        if position is None:
-            return JsonResponse({"error": "Position not found"}, status=404)
+        # Allow updating title without requiring position.
+        if position is None and title is None:
+            return JsonResponse({"error": "No fields to update"}, status=400)
 
-        column.position = position
+        if position is not None:
+            column.position = position
+        if title:
+            column.title = title
         column.save()
 
         column_data = {

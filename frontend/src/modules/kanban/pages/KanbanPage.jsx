@@ -184,55 +184,34 @@ export default function KanbanPage() {
 
     if (!fromColumn || !toColumn) return;
 
+    // Optimistic move snapshot for rollback
+    const prevBoard = board;
+    const taskToMove = { ...draggedItem };
+    fromColumn.tasks = fromColumn.tasks.filter(
+      (item) => item.task_id !== draggedItem.task_id
+    );
+    toColumn.tasks.push(taskToMove);
+    setBoard({ ...board });
+    setDraggedItem(null);
+    setDraggedFrom(null);
+
     try {
-      // Update locally for immediate feedback
-      const taskToMove = { ...draggedItem };
-      fromColumn.tasks = fromColumn.tasks.filter(
-        (item) => item.task_id !== draggedItem.task_id
-      );
-      toColumn.tasks.push(taskToMove);
-      setBoard({ ...board });
-
-      setDraggedItem(null);
-      setDraggedFrom(null);
-
-      // Update task on backend - move to new column
       await updateTask(
         organization.id,
         board.board_id,
-        draggedFrom, // original column
+        draggedFrom,
         draggedItem.task_id,
         user.username,
-        { column_id: targetColumnId } // move to target column
+        { new_column_id: targetColumnId }
       );
-
-      // Refresh board to get updated state
-      const data = await getBoardWithContent(
-        organization.id,
-        project.id,
-        user.username
-      );
-      setBoard(data);
+      // Background refetch (do not block UI)
+      getBoardWithContent(organization.id, project.id, user.username)
+        .then((data) => setBoard(data))
+        .catch(() => {});
     } catch (err) {
       console.error("Failed to move task:", err);
-      setBoardError(
-        err?.response?.data?.error ||
-          err?.response?.data?.detail ||
-          "Nie udało się przenieść zadania"
-      );
-      // Refresh on error
-      try {
-        const data = await getBoardWithContent(
-          organization.id,
-          project.id,
-          user.username
-        );
-        setBoard(data);
-      } catch (refreshErr) {
-        console.error("Failed to refresh board:", refreshErr);
-      }
-      setDraggedItem(null);
-      setDraggedFrom(null);
+      // Rollback
+      setBoard(prevBoard);
     }
   };
 
@@ -248,8 +227,19 @@ export default function KanbanPage() {
   const handleAddColumn = async () => {
     if (!project || !board || !organization?.id || !user?.username) return;
 
+    // Optimistic UI: add temp column immediately
+    const prevBoard = board;
+    const tempColumnId = `temp-${Date.now()}`;
+    const newColumn = {
+      column_id: tempColumnId,
+      title: "Nowa kolumna",
+      position: columns.length,
+      tasks: [],
+    };
+    const nextColumns = [...columns, newColumn];
+    setBoard({ ...board, columns: nextColumns });
+
     try {
-      setBoardLoading(true);
       await createColumn(
         organization.id,
         board.board_id,
@@ -257,22 +247,14 @@ export default function KanbanPage() {
         "Nowa kolumna",
         columns.length
       );
-
-      // Refresh board data
-      const data = await getBoardWithContent(
-        organization.id,
-        project.id,
-        user.username
-      );
-      setBoard(data);
+      // Background refetch to get real column_id
+      getBoardWithContent(organization.id, project.id, user.username)
+        .then((data) => setBoard(data))
+        .catch(() => {});
     } catch (err) {
-      setBoardError(
-        err?.response?.data?.error ||
-          err?.response?.data?.detail ||
-          "Nie udało się dodać kolumny"
-      );
-    } finally {
-      setBoardLoading(false);
+      console.error("Failed to add column:", err);
+      // Rollback
+      setBoard(prevBoard);
     }
   };
 
@@ -306,8 +288,17 @@ export default function KanbanPage() {
       return;
     }
 
+    // Optimistic UI: update local state immediately
+    const prevBoard = board;
+    const nextColumns = columns.map((c) =>
+      c.column_id === editingColumnId ? { ...c, title: name } : c
+    );
+    setBoard({ ...board, columns: nextColumns });
+    setEditingColumnId(null);
+    setEditingColumnName("");
+
     try {
-      setBoardLoading(true);
+      // Fire server request in background
       await updateColumn(
         organization.id,
         board.board_id,
@@ -315,28 +306,16 @@ export default function KanbanPage() {
         user.username,
         { title: name }
       );
-
-      // Refresh board data
-      const data = await getBoardWithContent(
-        organization.id,
-        project.id,
-        user.username
-      );
-      setBoard(data);
-
-      setEditingColumnId(null);
-      setEditingColumnName("");
+      // Background refetch to reconcile
+      getBoardWithContent(organization.id, project.id, user.username)
+        .then((data) => setBoard(data))
+        .catch(() => {});
     } catch (err) {
-      setBoardError(
-        err?.response?.data?.error ||
-          err?.response?.data?.detail ||
-          "Nie udało się zmienić nazwy kolumny"
-      );
-      // Reset editing state on error
-      setEditingColumnId(null);
-      setEditingColumnName("");
+      console.error("Failed to rename column:", err);
+      // Rollback on error
+      setBoard(prevBoard);
     } finally {
-      setBoardLoading(false);
+      // no loading state for smooth animations
     }
   };
 
@@ -376,41 +355,70 @@ export default function KanbanPage() {
     console.log("User object:", user); // Debug
     console.log("User ID:", user?.id); // Debug
 
+    // Optimistic UI: remove column locally
+    const prevBoard = board;
+    const nextColumns = columns.filter((c) => c.column_id !== colId);
+    setBoard({ ...board, columns: nextColumns });
+    if (draggedFrom === colId) {
+      setDraggedFrom(null);
+      setDraggedItem(null);
+    }
+    if (editingColumnId === colId) {
+      handleRenameCancel();
+    }
+
     try {
-      setBoardLoading(true);
       await deleteColumn(organization.id, board.board_id, colId);
-
-      // Refresh board data
-      const data = await getBoardWithContent(
-        organization.id,
-        project.id,
-        user.username
-      );
-      setBoard(data);
-
-      if (draggedFrom === colId) {
-        setDraggedFrom(null);
-        setDraggedItem(null);
-      }
-      if (editingColumnId === colId) {
-        handleRenameCancel();
-      }
+      // Background refetch
+      getBoardWithContent(organization.id, project.id, user.username)
+        .then((data) => setBoard(data))
+        .catch(() => {});
     } catch (err) {
-      console.error("Delete column error:", err); // Debug
-      setBoardError(
-        err?.response?.data?.error ||
-          err?.response?.data?.detail ||
-          "Nie udało się usunąć kolumny"
-      );
+      console.error("Delete column error:", err);
+      // Rollback
+      setBoard(prevBoard);
     } finally {
-      setBoardLoading(false);
+      // no loading state for smooth animations
     }
   };
 
-  if (loading) {
+  if (loading || boardLoading) {
     return (
-      <div className="h-full bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-8 flex items-center justify-center text-slate-400">
-        Ładowanie projektów…
+      <div className="h-full flex flex-col bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-4">
+        <div className="flex items-center justify-between mb-4 px-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-slate-700/40 animate-pulse"></div>
+            <div className="h-8 w-48 rounded-lg bg-slate-700/40 animate-pulse"></div>
+            <div className="w-10 h-10 rounded-lg bg-slate-700/40 animate-pulse"></div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-32 rounded-lg bg-slate-700/40 animate-pulse"></div>
+            <div className="h-10 w-32 rounded-lg bg-slate-700/40 animate-pulse"></div>
+            <div className="w-10 h-10 rounded-lg bg-slate-700/40 animate-pulse"></div>
+          </div>
+        </div>
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <div className="flex h-full gap-4 p-1">
+            {[1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className="flex flex-col min-h-0 w-[calc(25%-12px)] min-w-[340px] max-w-[420px] rounded-lg bg-slate-800/60 border border-slate-700 shrink-0"
+              >
+                <div className="px-4 py-3 border-b border-slate-700">
+                  <div className="h-5 w-32 bg-slate-700/60 rounded animate-pulse"></div>
+                </div>
+                <div className="flex-1 p-3 space-y-2">
+                  {[1, 2, 3].map((j) => (
+                    <div
+                      key={j}
+                      className="h-24 rounded-lg bg-slate-700/40 animate-pulse"
+                    ></div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -514,11 +522,7 @@ export default function KanbanPage() {
       )}
 
       <div className="flex-1 min-h-0 overflow-hidden">
-        {boardLoading ? (
-          <div className="h-full flex items-center justify-center text-slate-400">
-            Ładowanie tablicy Kanban...
-          </div>
-        ) : !board ? (
+        {!board ? (
           <div className="h-full flex items-center justify-center text-slate-400">
             Nie znaleziono tablicy Kanban dla tego projektu
           </div>

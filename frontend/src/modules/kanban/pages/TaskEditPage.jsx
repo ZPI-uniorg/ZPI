@@ -10,10 +10,18 @@ export default function TaskEditPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, organization } = useAuth();
-  const { task: editingTask, projectId, boardId, columnId, returnTo = 'kanban' } = location.state || {};
+  const {
+    task: editingTask,
+    projectId,
+    boardId,
+    columnId,
+    returnTo = "kanban",
+  } = location.state || {};
 
   const [title, setTitle] = useState(editingTask?.title || "");
-  const [description, setDescription] = useState(editingTask?.description || "");
+  const [description, setDescription] = useState(
+    editingTask?.description || ""
+  );
   const [deadline, setDeadline] = useState(editingTask?.due_date || "");
   const [assignee, setAssignee] = useState(null);
   const [search, setSearch] = useState("");
@@ -27,14 +35,16 @@ export default function TaskEditPage() {
   // Fetch members
   useEffect(() => {
     if (!organization?.id || !user?.username) return;
-    
+
     getOrganizationMembers(organization.id, user.username)
       .then((data) => {
         setMembers(data.members || []);
-        
+
         // Set assignee if editing task
         if (editingTask?.assigned_to_id) {
-          const assigned = (data.members || []).find(m => m.id === editingTask.assigned_to_id);
+          const assigned = (data.members || []).find(
+            (m) => m.id === editingTask.assigned_to_id
+          );
           if (assigned) setAssignee(assigned);
         }
       })
@@ -56,7 +66,14 @@ export default function TaskEditPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!title.trim() || !projectId || !columnId || !boardId || !organization?.id || !user?.username) {
+    if (
+      !title.trim() ||
+      !projectId ||
+      !columnId ||
+      !boardId ||
+      !organization?.id ||
+      !user?.username
+    ) {
       setError("Brak wymaganych danych");
       return;
     }
@@ -69,53 +86,59 @@ export default function TaskEditPage() {
       status: editingTask?.status || 1, // 1 = TODO
     };
 
+    // Optimistic: navigate immediately, let request finish in background
+    if (returnTo === "dashboard") {
+      navigate("/dashboard");
+    } else {
+      navigate("/kanban", { state: { projectId } });
+    }
+
     try {
-      setLoading(true);
-      setError(null);
-      
       if (editingTask) {
         // Update existing task
         await updateTask(
-          organization.id, 
-          boardId, 
-          columnId, 
-          editingTask.task_id, 
+          organization.id,
+          boardId,
+          columnId,
+          editingTask.task_id,
           user.username,
           taskData
         );
       } else {
         // Create new task
         const tasksInColumn = 0; // Could be passed from parent
-        await createTask(
-          organization.id,
-          boardId,
-          columnId,
-          user.username,
-          { ...taskData, position: tasksInColumn }
-        );
-      }
-
-      if (returnTo === 'dashboard') {
-        navigate("/dashboard");
-      } else {
-        navigate("/kanban", { state: { projectId } });
+        await createTask(organization.id, boardId, columnId, user.username, {
+          ...taskData,
+          position: tasksInColumn,
+        });
       }
     } catch (err) {
-      setError(err?.response?.data?.error || err?.response?.data?.detail || "Nie udało się zapisać zadania");
-    } finally {
-      setLoading(false);
+      console.error("Failed to save task:", err);
+      // Task will be missing on refetch; user can try again
     }
   };
 
   const handleDelete = async () => {
-    if (!editingTask || !projectId || !columnId || !boardId || !organization?.id || !user?.username) return;
-    
+    if (
+      !editingTask ||
+      !projectId ||
+      !columnId ||
+      !boardId ||
+      !organization?.id ||
+      !user?.username
+    )
+      return;
+
     if (!window.confirm("Czy na pewno chcesz usunąć to zadanie?")) return;
 
+    // Optimistic: navigate immediately, delete in background
+    if (returnTo === "dashboard") {
+      navigate("/dashboard");
+    } else {
+      navigate("/kanban", { state: { projectId } });
+    }
+
     try {
-      setLoading(true);
-      setError(null);
-      
       await deleteTask(
         organization.id,
         boardId,
@@ -123,20 +146,14 @@ export default function TaskEditPage() {
         editingTask.task_id,
         user.username
       );
-
-      if (returnTo === 'dashboard') {
-        navigate("/dashboard");
-      } else {
-        navigate("/kanban", { state: { projectId } });
-      }
     } catch (err) {
-      setError(err?.response?.data?.error || err?.response?.data?.detail || "Nie udało się usunąć zadania");
-      setLoading(false);
+      console.error("Failed to delete task:", err);
+      // Task will reappear on refetch; user can retry
     }
   };
 
   const handleBack = () => {
-    if (returnTo === 'dashboard') {
+    if (returnTo === "dashboard") {
       navigate("/dashboard");
     } else {
       navigate("/kanban", { state: { projectId } });
@@ -151,7 +168,11 @@ export default function TaskEditPage() {
       >
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-slate-100">
-            {editingTask ? (isEditing ? "Edytuj zadanie" : "Szczegóły zadania") : "Nowe zadanie"}
+            {editingTask
+              ? isEditing
+                ? "Edytuj zadanie"
+                : "Szczegóły zadania"
+              : "Nowe zadanie"}
           </h1>
           <div className="flex gap-2">
             {editingTask && (
@@ -160,7 +181,11 @@ export default function TaskEditPage() {
                 className="border border-slate-600 px-4 py-2 rounded-lg text-slate-200 hover:bg-slate-700/40 transition flex items-center gap-2"
                 onClick={() => setIsEditing(!isEditing)}
               >
-                {isEditing ? <Eye className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />}
+                {isEditing ? (
+                  <Eye className="w-4 h-4" />
+                ) : (
+                  <Edit2 className="w-4 h-4" />
+                )}
                 {isEditing ? "Podgląd" : "Edytuj"}
               </button>
             )}
@@ -183,21 +208,28 @@ export default function TaskEditPage() {
         {!isEditing && editingTask ? (
           <div className="flex flex-col gap-6">
             <div className="flex items-center gap-3 pb-4 border-b border-slate-700">
-              <span className="text-sm font-mono text-indigo-400 font-semibold">#{editingTask.task_id}</span>
+              <span className="text-sm font-mono text-indigo-400 font-semibold">
+                #{editingTask.task_id}
+              </span>
               <span className="text-slate-500">•</span>
               <span className="text-xs text-slate-400">
-                Utworzono: {new Date(createdAt).toLocaleDateString("pl-PL", { 
-                  day: "2-digit", 
-                  month: "long", 
-                  year: "numeric" 
+                Utworzono:{" "}
+                {new Date(createdAt).toLocaleDateString("pl-PL", {
+                  day: "2-digit",
+                  month: "long",
+                  year: "numeric",
                 })}
               </span>
             </div>
-            
+
             <div>
-              <h2 className="text-xl font-semibold text-slate-100 mb-2">{title}</h2>
+              <h2 className="text-xl font-semibold text-slate-100 mb-2">
+                {title}
+              </h2>
               {description ? (
-                <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">{description}</p>
+                <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">
+                  {description}
+                </p>
               ) : (
                 <p className="text-slate-500 italic">Brak opisu</p>
               )}
@@ -205,26 +237,31 @@ export default function TaskEditPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-700">
               <div>
-                <span className="text-sm text-slate-400 block mb-1">Termin</span>
+                <span className="text-sm text-slate-400 block mb-1">
+                  Termin
+                </span>
                 {deadline ? (
                   <span className="text-slate-200 font-medium">
-                    {new Date(deadline).toLocaleDateString("pl-PL", { 
-                      day: "2-digit", 
-                      month: "long", 
-                      year: "numeric" 
+                    {new Date(deadline).toLocaleDateString("pl-PL", {
+                      day: "2-digit",
+                      month: "long",
+                      year: "numeric",
                     })}
                   </span>
                 ) : (
                   <span className="text-slate-500 italic">Nie ustawiono</span>
                 )}
               </div>
-              
+
               <div>
-                <span className="text-sm text-slate-400 block mb-1">Przypisana osoba</span>
+                <span className="text-sm text-slate-400 block mb-1">
+                  Przypisana osoba
+                </span>
                 {assignee ? (
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-xs font-bold text-white">
-                      {assignee.first_name?.[0]}{assignee.last_name?.[0]}
+                      {assignee.first_name?.[0]}
+                      {assignee.last_name?.[0]}
                     </div>
                     <span className="text-slate-200 font-medium">
                       {assignee.first_name} {assignee.last_name}
@@ -239,7 +276,9 @@ export default function TaskEditPage() {
         ) : (
           <div className="flex flex-col gap-6">
             <label className="flex flex-col gap-2">
-              <span className="text-slate-300 text-sm font-medium">Nazwa zadania</span>
+              <span className="text-slate-300 text-sm font-medium">
+                Nazwa zadania
+              </span>
               <input
                 className="border border-slate-600 rounded-lg px-3 py-2 bg-slate-800 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
                 value={title}
@@ -261,7 +300,9 @@ export default function TaskEditPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <label className="flex flex-col gap-2">
-                <span className="text-slate-300 text-sm font-medium">Termin (deadline)</span>
+                <span className="text-slate-300 text-sm font-medium">
+                  Termin (deadline)
+                </span>
                 <input
                   type="date"
                   className="border border-slate-600 rounded-lg px-3 py-2 bg-slate-800 text-slate-100 focus:outline-none focus:border-indigo-500"
@@ -271,9 +312,15 @@ export default function TaskEditPage() {
               </label>
 
               <div className="flex flex-col gap-2">
-                <span className="text-slate-300 text-sm font-medium">Osoba przypisana</span>
+                <span className="text-slate-300 text-sm font-medium">
+                  Osoba przypisana
+                </span>
                 <Autocomplete
-                  value={assignee ? `${assignee.first_name} ${assignee.last_name}` : search}
+                  value={
+                    assignee
+                      ? `${assignee.first_name} ${assignee.last_name}`
+                      : search
+                  }
                   onChange={(v) => {
                     setSearch(v);
                     setAssignee(null);
@@ -282,7 +329,9 @@ export default function TaskEditPage() {
                   onSelect={handleAssigneeSelect}
                   placeholder="Wybierz osobę..."
                   inputClassName="border border-slate-600 rounded-lg px-3 py-2 bg-slate-800 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
-                  getOptionLabel={(m) => `${m.first_name} ${m.last_name} (${m.username})`}
+                  getOptionLabel={(m) =>
+                    `${m.first_name} ${m.last_name} (${m.username})`
+                  }
                 />
                 {assignee && (
                   <div className="text-xs text-slate-400 mt-1">
@@ -301,7 +350,11 @@ export default function TaskEditPage() {
               disabled={!title.trim() || loading}
               className="flex-1 sm:flex-none bg-gradient-to-r from-indigo-500 to-violet-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-8 py-3 rounded-xl text-sm font-semibold shadow hover:brightness-110 transition"
             >
-              {loading ? "Zapisywanie..." : (editingTask ? "Zapisz zmiany" : "Utwórz zadanie")}
+              {loading
+                ? "Zapisywanie..."
+                : editingTask
+                ? "Zapisz zmiany"
+                : "Utwórz zadanie"}
             </button>
             {editingTask && (
               <button
