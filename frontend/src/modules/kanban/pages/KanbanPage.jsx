@@ -2,8 +2,22 @@ import React, { useState, useRef, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import useAuth from "../../../auth/useAuth.js";
 import { useProjects } from "../../shared/components/ProjectsContext.jsx";
-import { getBoardWithContent, createColumn, deleteColumn, updateColumn, updateTask } from "../../../api/kanban.js";
-import { ChevronLeft, ChevronRight, X, Plus, Edit2, Trash2, Check } from "lucide-react";
+import {
+  getBoardWithContent,
+  createColumn,
+  deleteColumn,
+  updateColumn,
+  updateTask,
+} from "../../../api/kanban.js";
+import {
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Plus,
+  Edit2,
+  Trash2,
+  Check,
+} from "lucide-react";
 
 export default function KanbanPage() {
   const navigate = useNavigate();
@@ -13,7 +27,11 @@ export default function KanbanPage() {
   const scrollAnimationRef = useRef(null);
   const [isMouseOver, setIsMouseOver] = useState(false);
   const { user, organization } = useAuth();
-  const { projects, projectsLoading: loading, projectsError: error } = useProjects();
+  const {
+    projects,
+    projectsLoading: loading,
+    projectsError: error,
+  } = useProjects();
 
   const [index, setIndex] = useState(0);
   const [board, setBoard] = useState(null);
@@ -38,7 +56,8 @@ export default function KanbanPage() {
   }, [initialProjectId, projects.length]); // tylko length, nie cała tablica
 
   const totalProjects = projects.length;
-  const safeIndex = totalProjects === 0 ? 0 : Math.min(index, totalProjects - 1);
+  const safeIndex =
+    totalProjects === 0 ? 0 : Math.min(index, totalProjects - 1);
   const project = totalProjects === 0 ? null : projects[safeIndex] || null;
   const columns = Array.isArray(board?.columns) ? board.columns : [];
 
@@ -60,7 +79,11 @@ export default function KanbanPage() {
       })
       .catch((err) => {
         if (ignore) return;
-        setBoardError(err?.response?.data?.error || err?.response?.data?.detail || "Nie udało się pobrać tablicy Kanban");
+        setBoardError(
+          err?.response?.data?.error ||
+            err?.response?.data?.detail ||
+            "Nie udało się pobrać tablicy Kanban"
+        );
         setBoard(null);
       })
       .finally(() => {
@@ -94,19 +117,19 @@ export default function KanbanPage() {
       }
     };
 
-    window.addEventListener('wheel', handleWheel, { passive: false });
-    return () => window.removeEventListener('wheel', handleWheel);
+    window.addEventListener("wheel", handleWheel, { passive: false });
+    return () => window.removeEventListener("wheel", handleWheel);
   }, [isMouseOver]);
 
   const handleDragStart = (e, item, columnId) => {
     setDraggedItem(item);
     setDraggedFrom(columnId);
-    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.effectAllowed = "move";
   };
 
   const handleDragOver = (e) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+    e.dataTransfer.dropEffect = "move";
 
     if (!draggedItem || !scrollRef.current) return;
 
@@ -122,7 +145,7 @@ export default function KanbanPage() {
 
     const scroll = () => {
       if (!scrollRef.current) return;
-      
+
       const distanceFromLeft = mouseX - rect.left;
       const distanceFromRight = rect.right - mouseX;
 
@@ -140,7 +163,15 @@ export default function KanbanPage() {
 
   const handleDrop = async (e, targetColumnId) => {
     e.preventDefault();
-    if (!draggedItem || !draggedFrom || !board || !organization?.id || !user?.username || !project) return;
+    if (
+      !draggedItem ||
+      !draggedFrom ||
+      !board ||
+      !organization?.id ||
+      !user?.username ||
+      !project
+    )
+      return;
 
     if (draggedFrom === targetColumnId) {
       setDraggedItem(null);
@@ -148,21 +179,23 @@ export default function KanbanPage() {
       return;
     }
 
-    const fromColumn = columns.find(col => col.column_id === draggedFrom);
-    const toColumn = columns.find(col => col.column_id === targetColumnId);
+    const fromColumn = columns.find((col) => col.column_id === draggedFrom);
+    const toColumn = columns.find((col) => col.column_id === targetColumnId);
 
     if (!fromColumn || !toColumn) return;
 
     try {
       // Update locally for immediate feedback
       const taskToMove = { ...draggedItem };
-      fromColumn.tasks = fromColumn.tasks.filter(item => item.task_id !== draggedItem.task_id);
+      fromColumn.tasks = fromColumn.tasks.filter(
+        (item) => item.task_id !== draggedItem.task_id
+      );
       toColumn.tasks.push(taskToMove);
       setBoard({ ...board });
-      
+
       setDraggedItem(null);
       setDraggedFrom(null);
-      
+
       // Update task on backend - move to new column
       await updateTask(
         organization.id,
@@ -172,16 +205,28 @@ export default function KanbanPage() {
         user.username,
         { column_id: targetColumnId } // move to target column
       );
-      
+
       // Refresh board to get updated state
-      const data = await getBoardWithContent(organization.id, project.id, user.username);
+      const data = await getBoardWithContent(
+        organization.id,
+        project.id,
+        user.username
+      );
       setBoard(data);
     } catch (err) {
       console.error("Failed to move task:", err);
-      setBoardError(err?.response?.data?.error || err?.response?.data?.detail || "Nie udało się przenieść zadania");
+      setBoardError(
+        err?.response?.data?.error ||
+          err?.response?.data?.detail ||
+          "Nie udało się przenieść zadania"
+      );
       // Refresh on error
       try {
-        const data = await getBoardWithContent(organization.id, project.id, user.username);
+        const data = await getBoardWithContent(
+          organization.id,
+          project.id,
+          user.username
+        );
         setBoard(data);
       } catch (refreshErr) {
         console.error("Failed to refresh board:", refreshErr);
@@ -202,16 +247,30 @@ export default function KanbanPage() {
 
   const handleAddColumn = async () => {
     if (!project || !board || !organization?.id || !user?.username) return;
-    
+
     try {
       setBoardLoading(true);
-      await createColumn(organization.id, board.board_id, user.username, "Nowa kolumna", columns.length);
-      
+      await createColumn(
+        organization.id,
+        board.board_id,
+        user.username,
+        "Nowa kolumna",
+        columns.length
+      );
+
       // Refresh board data
-      const data = await getBoardWithContent(organization.id, project.id, user.username);
+      const data = await getBoardWithContent(
+        organization.id,
+        project.id,
+        user.username
+      );
       setBoard(data);
     } catch (err) {
-      setBoardError(err?.response?.data?.error || err?.response?.data?.detail || "Nie udało się dodać kolumny");
+      setBoardError(
+        err?.response?.data?.error ||
+          err?.response?.data?.detail ||
+          "Nie udało się dodać kolumny"
+      );
     } finally {
       setBoardLoading(false);
     }
@@ -224,7 +283,14 @@ export default function KanbanPage() {
   };
 
   const handleRenameSave = async () => {
-    if (!project || !editingColumnId || !organization?.id || !user?.username || !board) return;
+    if (
+      !project ||
+      !editingColumnId ||
+      !organization?.id ||
+      !user?.username ||
+      !board
+    )
+      return;
     const name = editingColumnName.trim();
     if (!name) {
       // empty -> cancel, keep old name
@@ -232,7 +298,7 @@ export default function KanbanPage() {
       setEditingColumnName("");
       return;
     }
-    
+
     const col = columns.find((c) => c.column_id === editingColumnId);
     if (!col || col.title === name) {
       setEditingColumnId(null);
@@ -242,16 +308,30 @@ export default function KanbanPage() {
 
     try {
       setBoardLoading(true);
-      await updateColumn(organization.id, board.board_id, editingColumnId, user.username, { title: name });
-      
+      await updateColumn(
+        organization.id,
+        board.board_id,
+        editingColumnId,
+        user.username,
+        { title: name }
+      );
+
       // Refresh board data
-      const data = await getBoardWithContent(organization.id, project.id, user.username);
+      const data = await getBoardWithContent(
+        organization.id,
+        project.id,
+        user.username
+      );
       setBoard(data);
-      
+
       setEditingColumnId(null);
       setEditingColumnName("");
     } catch (err) {
-      setBoardError(err?.response?.data?.error || err?.response?.data?.detail || "Nie udało się zmienić nazwy kolumny");
+      setBoardError(
+        err?.response?.data?.error ||
+          err?.response?.data?.detail ||
+          "Nie udało się zmienić nazwy kolumny"
+      );
       // Reset editing state on error
       setEditingColumnId(null);
       setEditingColumnName("");
@@ -277,30 +357,37 @@ export default function KanbanPage() {
 
   const handleDeleteColumn = async (colId) => {
     if (!project || !board || !organization?.id || !user?.username) return;
-    
+
     const col = columns.find((c) => c.column_id === colId);
     if (!col) return;
-    
+
     const hasItems = (col.tasks?.length ?? 0) > 0;
-    if (hasItems && !window.confirm("Usunąć kolumnę? Zadania w niej zostaną utracone.")) {
+    if (
+      hasItems &&
+      !window.confirm("Usunąć kolumnę? Zadania w niej zostaną utracone.")
+    ) {
       return;
     }
-    
+
     if (!hasItems && !window.confirm("Usunąć tę kolumnę?")) {
       return;
     }
-    
-    console.log('User object:', user); // Debug
-    console.log('User ID:', user?.id); // Debug
-    
+
+    console.log("User object:", user); // Debug
+    console.log("User ID:", user?.id); // Debug
+
     try {
       setBoardLoading(true);
-      await deleteColumn(organization.id, board.board_id, colId, user.id);
-      
+      await deleteColumn(organization.id, board.board_id, colId);
+
       // Refresh board data
-      const data = await getBoardWithContent(organization.id, project.id, user.username);
+      const data = await getBoardWithContent(
+        organization.id,
+        project.id,
+        user.username
+      );
       setBoard(data);
-      
+
       if (draggedFrom === colId) {
         setDraggedFrom(null);
         setDraggedItem(null);
@@ -309,8 +396,12 @@ export default function KanbanPage() {
         handleRenameCancel();
       }
     } catch (err) {
-      console.error('Delete column error:', err); // Debug
-      setBoardError(err?.response?.data?.error || err?.response?.data?.detail || "Nie udało się usunąć kolumny");
+      console.error("Delete column error:", err); // Debug
+      setBoardError(
+        err?.response?.data?.error ||
+          err?.response?.data?.detail ||
+          "Nie udało się usunąć kolumny"
+      );
     } finally {
       setBoardLoading(false);
     }
@@ -335,7 +426,9 @@ export default function KanbanPage() {
   if (!project) {
     return (
       <div className="h-full bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-8 flex items-center justify-center text-slate-400">
-        {totalProjects === 0 ? "Brak projektów w organizacji." : "Brak wybranego projektu"}
+        {totalProjects === 0
+          ? "Brak projektów w organizacji."
+          : "Brak wybranego projektu"}
       </div>
     );
   }
@@ -368,8 +461,8 @@ export default function KanbanPage() {
             disabled={boardLoading || !board}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-slate-100 transition ${
               boardLoading || !board
-                ? 'bg-slate-700/40 cursor-not-allowed'
-                : 'bg-slate-700/60 hover:bg-slate-700'
+                ? "bg-slate-700/40 cursor-not-allowed"
+                : "bg-slate-700/60 hover:bg-slate-700"
             }`}
             aria-label="Dodaj kolumnę"
             title={!board ? "Ładowanie tablicy..." : "Dodaj kolumnę"}
@@ -378,15 +471,27 @@ export default function KanbanPage() {
             <span className="text-sm font-semibold">Dodaj kolumnę</span>
           </button>
           <button
-            onClick={() => navigate("/kanban/task/new", { state: { projectId: project.id, boardId: board?.board_id, columnId: columns[0]?.column_id } })}
+            onClick={() =>
+              navigate("/kanban/task/new", {
+                state: {
+                  projectId: project.id,
+                  boardId: board?.board_id,
+                  columnId: columns[0]?.column_id,
+                },
+              })
+            }
             disabled={boardLoading || columns.length === 0}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-white transition ${
               boardLoading || columns.length === 0
-                ? 'bg-indigo-600/40 cursor-not-allowed'
-                : 'bg-indigo-600 hover:bg-indigo-500'
+                ? "bg-indigo-600/40 cursor-not-allowed"
+                : "bg-indigo-600 hover:bg-indigo-500"
             }`}
             aria-label="Nowe zadanie"
-            title={columns.length === 0 ? "Najpierw dodaj kolumnę" : "Dodaj nowe zadanie"}
+            title={
+              columns.length === 0
+                ? "Najpierw dodaj kolumnę"
+                : "Dodaj nowe zadanie"
+            }
           >
             <Plus className="w-5 h-5" />
             <span className="text-sm font-semibold">Nowe zadanie</span>
@@ -419,7 +524,9 @@ export default function KanbanPage() {
           </div>
         ) : columns.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center gap-4 text-slate-300">
-            <div className="text-slate-400 text-sm">Brak kolumn w tym kanbanie.</div>
+            <div className="text-slate-400 text-sm">
+              Brak kolumn w tym kanbanie.
+            </div>
             <button
               onClick={handleAddColumn}
               className="px-5 py-2 rounded-lg bg-slate-700/60 hover:bg-slate-700 text-slate-100 transition flex items-center gap-2"
@@ -435,7 +542,7 @@ export default function KanbanPage() {
             onMouseLeave={() => setIsMouseOver(false)}
             className="flex h-full gap-4 overflow-x-auto overflow-y-hidden overscroll-contain scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent p-1"
           >
-            {columns.map(col => (
+            {columns.map((col) => (
               <div
                 key={col.column_id}
                 className="flex flex-col min-h-0 w-[calc(25%-12px)] min-w-[340px] max-w-[420px] rounded-lg bg-slate-800/60 border border-slate-700 shrink-0"
@@ -457,9 +564,17 @@ export default function KanbanPage() {
                   )}
                   <div className="flex items-center gap-1 shrink-0">
                     <button
-                      onClick={() => (editingColumnId === col.column_id ? handleRenameSave() : handleStartRename(col))}
+                      onClick={() =>
+                        editingColumnId === col.column_id
+                          ? handleRenameSave()
+                          : handleStartRename(col)
+                      }
                       className="p-1.5 rounded hover:bg-slate-700/50 text-slate-300"
-                      title={editingColumnId === col.column_id ? "Zapisz nazwę" : "Zmień nazwę"}
+                      title={
+                        editingColumnId === col.column_id
+                          ? "Zapisz nazwę"
+                          : "Zmień nazwę"
+                      }
                     >
                       {editingColumnId === col.column_id ? (
                         <Check className="w-4 h-4" />
@@ -476,41 +591,47 @@ export default function KanbanPage() {
                     </button>
                   </div>
                 </div>
-                <div
-                  className="flex-1 min-h-0 p-3 space-y-2 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
-                >
-                  {((col.tasks?.length ?? 0) === 0) && (
+                <div className="flex-1 min-h-0 p-3 space-y-2 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+                  {(col.tasks?.length ?? 0) === 0 && (
                     <div className="text-xs text-slate-500 italic">Pusto</div>
                   )}
-                  {(col.tasks ?? []).map(item => (
+                  {(col.tasks ?? []).map((item) => (
                     <div
                       key={item.task_id}
                       className={`rounded-lg bg-violet-600/90 hover:bg-violet-500 text-white px-3 py-3 text-sm cursor-pointer transition flex flex-col gap-2 shadow-sm min-h-[90px] ${
-                        draggedItem?.task_id === item.task_id ? 'opacity-50' : ''
+                        draggedItem?.task_id === item.task_id
+                          ? "opacity-50"
+                          : ""
                       }`}
                       title={item.title}
                       draggable
-                      onDragStart={(e) => handleDragStart(e, item, col.column_id)}
+                      onDragStart={(e) =>
+                        handleDragStart(e, item, col.column_id)
+                      }
                       onDragEnd={handleDragEnd}
-                      onClick={() => navigate('/kanban/task/edit', {
-                        state: {
-                          task: item,
-                          projectId: project.id,
-                          boardId: board.board_id,
-                          columnId: col.column_id,
-                          returnTo: 'kanban'
-                        }
-                      })}
+                      onClick={() =>
+                        navigate("/kanban/task/edit", {
+                          state: {
+                            task: item,
+                            projectId: project.id,
+                            boardId: board.board_id,
+                            columnId: col.column_id,
+                            returnTo: "kanban",
+                          },
+                        })
+                      }
                     >
                       <div className="flex items-center justify-between gap-2 shrink-0">
-                        <span className="text-xs font-mono text-white/95 font-semibold">#{item.task_id}</span>
+                        <span className="text-xs font-mono text-white/95 font-semibold">
+                          #{item.task_id}
+                        </span>
                       </div>
                       <div
                         className="font-medium text-sm leading-tight flex-1 overflow-hidden"
                         style={{
-                          display: '-webkit-box',
+                          display: "-webkit-box",
                           WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
+                          WebkitBoxOrient: "vertical",
                         }}
                       >
                         {item.title}
@@ -518,14 +639,18 @@ export default function KanbanPage() {
                       {item.assigned_to ? (
                         <div className="flex items-center gap-2 mt-auto">
                           <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-bold text-white">
-                            {item.assigned_to.first_name?.[0] || '?'}{item.assigned_to.last_name?.[0] || '?'}
+                            {item.assigned_to.first_name?.[0] || "?"}
+                            {item.assigned_to.last_name?.[0] || "?"}
                           </div>
                           <span className="text-xs text-white/90 truncate">
-                            {item.assigned_to.first_name} {item.assigned_to.last_name}
+                            {item.assigned_to.first_name}{" "}
+                            {item.assigned_to.last_name}
                           </span>
                         </div>
                       ) : (
-                        <div className="text-xs text-white/60 italic mt-auto">Nieprzypisane</div>
+                        <div className="text-xs text-white/60 italic mt-auto">
+                          Nieprzypisane
+                        </div>
                       )}
                     </div>
                   ))}

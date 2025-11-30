@@ -197,9 +197,8 @@ def delete_column(request, organization_id, board_id, column_id):
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User not authenticated"}, status=401)
 
-        data = json.loads(request.body)
         username = request.user.username
-        membership = Membership.objects.get(user__id=username, organization__id=organization_id)
+        membership = Membership.objects.get(user__username=username, organization__id=organization_id)
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
 
@@ -345,12 +344,22 @@ def update_task(request, organization_id, board_id, column_id, task_id):
         due_date = data.get("due_date")
         assigned_to_id = data.get("assigned_to_id")
         status = data.get("status")
+        # Support moving task to a different column: prefer "new_column_id" but allow "column_id" in body.
+        new_column_id = data.get("new_column_id") or data.get("column_id")
+
+        if new_column_id and str(new_column_id) != str(column.column_id):
+            # Validate target column belongs to same board.
+            new_column = KanbanColumn.objects.get(column_id=new_column_id, board=board)
+            # If no explicit position provided, append to end of target column.
+            if position is None:
+                position = Task.objects.filter(column=new_column).count()
+            task.column = new_column
 
         if title:
             task.title = title
         if description:
             task.description = description
-        if position:
+        if position is not None:  # Allow position == 0
             task.position = position
         if due_date:
             task.due_date = due_date
