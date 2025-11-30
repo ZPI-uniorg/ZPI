@@ -36,11 +36,11 @@ export default function ChatPage() {
     let cancelled = false;
     setChatsLoading(true);
     apiClient
-      .get("chats/", { params: { organization: activeOrganization?.id } })
+      .get(`chats/my/${activeOrganization?.id}`)
       .then((res) => {
         if (cancelled) return;
         const serverChats = (res.data?.chats || []).map((c) => ({
-          chat_it: c.chat_it,
+          chat_id: c.chat_id,
           title: c.name,
           tags: [],
           tagCombinations: [],

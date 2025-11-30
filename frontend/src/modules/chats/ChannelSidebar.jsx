@@ -11,13 +11,13 @@ export default function ChannelSidebar({
     }
     return {
       key:
-        c.chat_it ||
+        c.chat_id ||
         c.id ||
         c.name ||
         c.title ||
         Math.random().toString(36).slice(2),
-      label: c.name || c.title || c.chat_it || "bez-nazwy",
-      value: c.name || c.title || c.chat_it || c.id,
+      label: c.name || c.title || c.chat_id || "bez-nazwy",
+      value: c.name || c.title || c.chat_id || c.id,
     };
   });
   return (

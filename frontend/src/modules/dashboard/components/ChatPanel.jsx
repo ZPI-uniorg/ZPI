@@ -43,11 +43,11 @@ export default function ChatPanel({
         ) : (
           chats.map((c) => (
             <div
-              key={c.chat_it}
+              key={c.chat_id}
               onClick={() =>
                 navigate(
                   `/chat?channel=${encodeURIComponent(
-                    c.title || c.name || c.chat_it
+                    c.title || c.name || c.chat_id
                   )}`
                 )
               }
@@ -56,7 +56,7 @@ export default function ChatPanel({
                   e.preventDefault();
                   navigate(
                     `/chat?channel=${encodeURIComponent(
-                      c.title || c.name || c.chat_it
+                      c.title || c.name || c.chat_id
                     )}`
                   );
                 }

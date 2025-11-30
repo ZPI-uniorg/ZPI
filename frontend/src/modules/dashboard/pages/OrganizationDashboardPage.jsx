@@ -29,7 +29,7 @@ export default function OrganizationDashboardPage() {
     let cancelled = false;
     setChatsLoading(true);
     apiClient
-      .get("chats/", { params: { organization: orgId } })
+      .get(`chats/my/${orgId}`)
       .then((res) => {
         if (cancelled) return;
         const serverChats = (res.data?.chats || []).map((c) => ({
