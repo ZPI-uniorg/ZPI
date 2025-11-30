@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import useAuth from "../../auth/useAuth.js";
+import apiClient from "../../api/client.js";
 
 const BACKEND_BASE =
   typeof window !== "undefined"
@@ -13,12 +14,12 @@ export function useChat(
   organizationId = null
 ) {
   const [channel, setChannel] = useState(initialChannel);
-  const [channels, setChannels] = useState([]); // array of chat objects {chat_it, name}
-  const [chatMap, setChatMap] = useState({}); // name -> chat_it
+  const [channels, setChannels] = useState([]); // array of chat objects {chat_id, name}
+  const [chatMap, setChatMap] = useState({}); // name -> chat_id
   const [messages, setMessages] = useState([]);
   const [onlineUsers, _setOnlineUsers] = useState([]);
   const [status, setStatus] = useState("connecting");
-  const { user } = useAuth() || {};
+  const { user, tokens } = useAuth() || {};
 
   // Pagination state
   const [offset, setOffset] = useState(0);
@@ -40,11 +41,14 @@ export function useChat(
     const abort = new AbortController();
     (async () => {
       try {
+        const headers = { Accept: "application/json" };
+        if (tokens?.access) headers.Authorization = `Bearer ${tokens.access}`;
         const res = await fetch(
-          `${BACKEND_BASE}/api/chats/?organization=${organizationId}`,
+          `${BACKEND_BASE}/api/chats/my/${organizationId}/`,
           {
             signal: abort.signal,
-            headers: { Accept: "application/json" },
+            credentials: "include",
+            headers,
           }
         );
         if (!res.ok) throw new Error(`Failed chats load: ${res.status}`);
@@ -53,7 +57,7 @@ export function useChat(
         const filtered = chats.filter((c) => !!c.name);
         setChannels(filtered);
         const mapping = Object.fromEntries(
-          filtered.map((c) => [c.name, c.chat_it])
+          filtered.map((c) => [c.name, c.chat_id])
         );
         setChatMap(mapping);
       } catch (e) {
@@ -61,7 +65,7 @@ export function useChat(
       }
     })();
     return () => abort.abort();
-  }, [organizationId]);
+  }, [organizationId, tokens?.access]);
 
   // Auto-connect on mount and reconnect on channel/username/organization change
   useEffect(() => {
@@ -93,9 +97,11 @@ export function useChat(
           const queryParam = chatMap[channel]
             ? `chat_id=${chatMap[channel]}`
             : `channel=${encodeURIComponent(channel)}`;
+          const headers = { Accept: "application/json" };
+          if (tokens?.access) headers.Authorization = `Bearer ${tokens.access}`;
           const historyRes = await fetch(
-            `${BACKEND_BASE}/api/messages/?${queryParam}&limit=10&offset=0`,
-            { headers: { Accept: "application/json" } }
+            `${BACKEND_BASE}/api/messages/${organizationId}/?${queryParam}&limit=10&offset=0`,
+            { credentials: "include", headers }
           );
           if (historyRes.ok) {
             const historyData = await historyRes.json();
@@ -132,8 +138,12 @@ export function useChat(
         const negotiateUrl = `${BACKEND_BASE}/api/negotiate/?userId=${encodeURIComponent(
           username
         )}`;
+        const negotiateHeaders = { Accept: "application/json" };
+        if (tokens?.access)
+          negotiateHeaders.Authorization = `Bearer ${tokens.access}`;
         const res = await fetch(negotiateUrl, {
-          headers: { Accept: "application/json" },
+          credentials: "include",
+          headers: negotiateHeaders,
         });
 
         if (!res.ok) {
@@ -295,9 +305,11 @@ export function useChat(
       const queryParam = chatMap[channel]
         ? `chat_id=${chatMap[channel]}`
         : `channel=${encodeURIComponent(channel)}`;
+      const headers = { Accept: "application/json" };
+      if (tokens?.access) headers.Authorization = `Bearer ${tokens.access}`;
       const historyRes = await fetch(
-        `${BACKEND_BASE}/api/messages/?${queryParam}&limit=10&offset=${offset}`,
-        { headers: { Accept: "application/json" } }
+        `${BACKEND_BASE}/api/messages/${organizationId}/?${queryParam}&limit=10&offset=${offset}`,
+        { credentials: "include", headers }
       );
 
       if (historyRes.ok) {
@@ -344,6 +356,8 @@ export function useChat(
     user?.id,
     user?.username,
     username,
+    tokens?.access,
+    organizationId,
   ]);
 
   // Send message
@@ -385,16 +399,26 @@ export function useChat(
       socketRef.current.socket.send(JSON.stringify(payload));
 
       // Persist
-      fetch(`${BACKEND_BASE}/api/messages/save/`, {
+      const saveHeaders = { "Content-Type": "application/json" };
+      if (tokens?.access) saveHeaders.Authorization = `Bearer ${tokens.access}`;
+      fetch(`${BACKEND_BASE}/api/messages/save/${organizationId}/`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        headers: saveHeaders,
         body: JSON.stringify(outbound),
       }).catch((err) => console.error("❌ Failed to save message:", err));
 
       // Don't add optimistic UI update - wait for broadcast from server
       // This prevents duplicate messages
     },
-    [username, user?.id, user?.username, chatMap]
+    [
+      username,
+      user?.id,
+      user?.username,
+      chatMap,
+      tokens?.access,
+      organizationId,
+    ]
   );
 
   return {

@@ -21,7 +21,10 @@ export default function ChatCreatePage() {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!title.trim()) return;
-    const flatTags = Array.from(new Set((combinations || []).flat()));
+    // Convert combinations to backend format: "tag1+tag2,tag3"
+    const permissionsStr = (combinations || [])
+      .map((combo) => combo.join("+"))
+      .join(",");
     // Persist via backend API
     const BACKEND_BASE =
       typeof window !== "undefined"
@@ -38,10 +41,10 @@ export default function ChatCreatePage() {
     const payload = {
       name: title.trim(),
       organization: finalOrgId,
-      permissions: flatTags,
+      permissions: permissionsStr,
     };
     apiClient
-      .post("chats/create/", payload)
+      .post(`chats/${finalOrgId}/create/`, payload)
       .then(() => navigate("/dashboard"))
       .catch((e) => {
         if (e.response) {
