@@ -85,10 +85,10 @@ def get_messages(request, organization_id):
            return JsonResponse({"error": "chat_id required"}, status=400)
 
         try:
-            chat = Chat.objects.get(chat_it=chat_id, organization_id=organization_id)
+            chat = Chat.objects.get(chat_id=chat_id, organization_id=organization_id)
             chat_permissions = chat.permissions.all()
             user_membership = Membership.objects.get(user=request.user, organization_id=organization_id)
-            user_permissions = user_membership.permissions
+            user_permissions = user_membership.permissions.all()
 
             if chat_permissions and not permission_to_access(user_permissions, chat_permissions):
                 return JsonResponse({"error": "Access denied to this chat"}, status=403)
@@ -146,7 +146,7 @@ def save_message(request, organization_id):
         channel_name = None
         if chat_id:
             try:
-                chat_obj = Chat.objects.get(chat_it=chat_id, organization_id=organization_id)
+                chat_obj = Chat.objects.get(chat_id=chat_id, organization_id=organization_id)
                 channel_name = chat_obj.name  # Use chat name as channel
             except Chat.DoesNotExist:
                 return JsonResponse({"error": "Chat not found"}, status=404)
@@ -270,7 +270,7 @@ def list_chats_by_tag(request, organization_id, tag_id):
                     basic_tags = CombinedTag.objects.filter(combined_tag_id=combined_tag)
                     basic_tag_ids = [bt.basic_tag_id.id for bt in basic_tags]
                     if tag_id in basic_tag_ids:
-                        if permission_to_access(membership.permissions, chat.permissions.all()):
+                        if permission_to_access(membership.permissions.all(), chat.permissions.all()):
                             chats.append(chat)
                             break
 
