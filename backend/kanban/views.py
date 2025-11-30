@@ -63,18 +63,27 @@ def get_board_with_content(request, organization_id, project_id):
         columns_data = []
         for column in columns:
             tasks = Task.objects.filter(column=column)
-            tasks_data = [
-                {
+            tasks_data = []
+            for task in tasks:
+                assigned_payload = None
+                if task.assigned_to:
+                    assigned_payload = {
+                        "id": task.assigned_to.id,
+                        "username": task.assigned_to.username,
+                        "first_name": task.assigned_to.first_name,
+                        "last_name": task.assigned_to.last_name,
+                        "email": task.assigned_to.email,
+                    }
+                tasks_data.append({
                     "task_id": task.task_id,
                     "title": task.title,
                     "description": task.description,
                     "position": task.position,
                     "due_date": task.due_date,
                     "assigned_to_id": task.assigned_to.id if task.assigned_to else None,
+                    "assigned_to": assigned_payload,
                     "status": task.status,
-                }
-                for task in tasks
-            ]
+                })
             columns_data.append({
                 "column_id": column.column_id,
                 "title": column.title,
@@ -155,6 +164,7 @@ def update_column_position(request, organization_id, board_id, column_id):
 
         data = json.loads(request.body)
         position = data.get("position")
+        title = data.get("title")
         username = request.user.username
 
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
@@ -166,10 +176,14 @@ def update_column_position(request, organization_id, board_id, column_id):
 
         column = KanbanColumn.objects.get(column_id=column_id, board=board)
 
-        if position is None:
-            return JsonResponse({"error": "Position not found"}, status=404)
+        # Allow updating title without requiring position.
+        if position is None and title is None:
+            return JsonResponse({"error": "No fields to update"}, status=400)
 
-        column.position = position
+        if position is not None:
+            column.position = position
+        if title:
+            column.title = title
         column.save()
 
         column_data = {
@@ -197,9 +211,8 @@ def delete_column(request, organization_id, board_id, column_id):
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User not authenticated"}, status=401)
 
-        data = json.loads(request.body)
         username = request.user.username
-        membership = Membership.objects.get(user__id=username, organization__id=organization_id)
+        membership = Membership.objects.get(user__username=username, organization__id=organization_id)
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
 
@@ -345,12 +358,22 @@ def update_task(request, organization_id, board_id, column_id, task_id):
         due_date = data.get("due_date")
         assigned_to_id = data.get("assigned_to_id")
         status = data.get("status")
+        # Support moving task to a different column: prefer "new_column_id" but allow "column_id" in body.
+        new_column_id = data.get("new_column_id") or data.get("column_id")
+
+        if new_column_id and str(new_column_id) != str(column.column_id):
+            # Validate target column belongs to same board.
+            new_column = KanbanColumn.objects.get(column_id=new_column_id, board=board)
+            # If no explicit position provided, append to end of target column.
+            if position is None:
+                position = Task.objects.filter(column=new_column).count()
+            task.column = new_column
 
         if title:
             task.title = title
         if description:
             task.description = description
-        if position:
+        if position is not None:  # Allow position == 0
             task.position = position
         if due_date:
             task.due_date = due_date
