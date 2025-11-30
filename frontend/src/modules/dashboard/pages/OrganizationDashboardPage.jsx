@@ -8,6 +8,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useProjects } from "../../shared/components/ProjectsContext.jsx";
 import apiClient from "../../../api/client.js";
 import { getUserEvents, getAllEvents } from "../../../api/events.js";
+import { getBoardWithContent } from '../../../api/kanban.js';
 
 export default function OrganizationDashboardPage() {
   const { organization: activeOrganization, user } = useAuth();
@@ -18,10 +19,17 @@ export default function OrganizationDashboardPage() {
 
   const { projects, projectsLoading, projectsError } = useProjects();
 
+  const projectList = projects;
+  const [kanbanIndex, setKanbanIndex] = useState(0);
+  const currentProject = projectList[kanbanIndex] || null;
+
   const [chats, setChats] = useState([]);
   const [chatsLoading, setChatsLoading] = useState(false);
   const [events, setEvents] = useState([]);
   const [eventsLoading, setEventsLoading] = useState(false);
+  const [kanbanBoard, setKanbanBoard] = useState(null);
+  const [kanbanLoading, setKanbanLoading] = useState(false);
+  const [kanbanError, setKanbanError] = useState(null);
   // Fetch chats from backend for active organization
   useEffect(() => {
     const orgId = activeOrganization?.id;
@@ -70,7 +78,6 @@ export default function OrganizationDashboardPage() {
         ? rawEnd.replace("T", " ").split(" ")
         : rawEnd.split(" ");
       const datePart = splitStart[0] || "";
-      const endDatePart = splitEnd[0] || "";
       const startTimePart = (splitStart[1] || "")
         .replace("+00:00", "")
         .slice(0, 5);
@@ -91,7 +98,6 @@ export default function OrganizationDashboardPage() {
         start_time: startTimePart || "",
         end_time: endTimePart || "",
         date: datePart,
-        endDate: endDatePart !== datePart ? endDatePart : null,
         tags: plainTags,
         tagCombinations,
       };
@@ -133,10 +139,35 @@ export default function OrganizationDashboardPage() {
     };
   }, [activeOrganization?.id, activeOrganization?.role, user?.username]);
 
+  useEffect(() => {
+    if (!currentProject || !activeOrganization?.id || !user?.username) {
+      setKanbanBoard(null);
+      return;
+    }
+    let ignore = false;
+    setKanbanLoading(true);
+    setKanbanError(null);
+    getBoardWithContent(activeOrganization.id, currentProject.id, user.username)
+      .then((data) => {
+        if (!ignore) setKanbanBoard(data);
+      })
+      .catch((err) => {
+        if (!ignore) setKanbanError(err?.response?.data?.error || err?.response?.data?.detail || 'Nie udało się pobrać tablicy Kanban');
+        setKanbanBoard(null);
+      })
+      .finally(() => {
+        if (!ignore) setKanbanLoading(false);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [currentProject?.id, activeOrganization?.id, user?.username]);
+
   const [query, setQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState([]);
   const [logic, setLogic] = useState("AND");
-  const [kanbanIndex, setKanbanIndex] = useState(0);
+  // (removed duplicate declarations)
+  const currentBoard = currentProject ? KANBAN_BOARDS[currentProject.id] : null;
 
   useEffect(() => {
     if (!projectJustCreated) return;
@@ -179,10 +210,6 @@ export default function OrganizationDashboardPage() {
     return result;
   }, [chats, query, selectedTags, logic]);
 
-  const projectList = projects;
-  const currentProject = projectList[kanbanIndex] || null;
-  const currentBoard = currentProject ? KANBAN_BOARDS[currentProject.id] : null;
-
   const prevKanban = () => {
     setKanbanIndex((i) =>
       projectList.length === 0
@@ -217,11 +244,11 @@ export default function OrganizationDashboardPage() {
           <div className="flex-1 min-h-0 bg-[rgba(15,23,42,0.92)] rounded-[24px] p-4 shadow-[0_25px_50px_rgba(15,23,42,0.45)] flex flex-col text-slate-300 border border-[rgba(148,163,184,0.35)] overflow-hidden">
             <KanbanPreview
               project={currentProject}
-              board={currentBoard}
+              board={kanbanBoard}
               onPrev={prevKanban}
               onNext={nextKanban}
-              loading={projectsLoading}
-              error={projectsError}
+              loading={kanbanLoading || projectsLoading}
+              error={kanbanError || projectsError}
             />
           </div>
         </div>

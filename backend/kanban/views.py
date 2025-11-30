@@ -16,9 +16,9 @@ def get_board(request, organization_id, project_id):
         username = request.user.username
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
 
-        project = Project.objects.get(project_id=project_id)
+        project = Project.objects.get(id=project_id)
 
-        if membership.role != 'admin' and project.tag not in membership.permissions:
+        if membership.role != 'admin' and project.tag not in membership.permissions.all():
             return JsonResponse({"error": "Permission denied"}, status=403)
 
         organization = Organization.objects.get(id=organization_id)
@@ -51,9 +51,9 @@ def get_board_with_content(request, organization_id, project_id):
         username = request.user.username
         membership = Membership.objects.get(user__username=username, organization__id=organization_id)
 
-        project = Project.objects.get(project_id=project_id)
+        project = Project.objects.get(id=project_id)
 
-        if membership.role != 'admin' and project.tag not in membership.permissions:
+        if membership.role != 'admin' and project.tag not in membership.permissions.all():
             return JsonResponse({"error": "Permission denied"}, status=403)
 
         organization = Organization.objects.get(id=organization_id)

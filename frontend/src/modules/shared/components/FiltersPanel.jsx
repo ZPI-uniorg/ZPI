@@ -49,9 +49,12 @@ export default function FiltersPanel({
     [projects]
   );
 
-  const tags = useMemo(() => {
-    return allTags.map((t) => t.name).filter((name) => !projectNames.has(name));
-  }, [allTags, projectNames]);
+	const tags = useMemo(() => {
+        return allTags
+            .map(t => t.name)
+            .filter(name => !projectNames.has(name))
+            .filter(name => !name.includes('+'));
+    }, [allTags, projectNames]);
 
   const allFilterItems = useMemo(
     () => [...tags, ...projects.map((p) => p.name).filter(Boolean)],
