@@ -35,7 +35,7 @@ function getEventsForDay(events, year, month, day) {
   });
 }
 
-export default function CalendarMonthView({ year, month, events }) {
+export default function CalendarMonthView({ year, month, events, loading = false }) {
   const navigate = useNavigate();
   const today = new Date();
   const matrix = getMonthMatrix(year, month);
@@ -61,7 +61,7 @@ export default function CalendarMonthView({ year, month, events }) {
   };
 
   return (
-    <div className="flex-1 bg-slate-900/95 rounded-2xl shadow-[0_30px_60px_rgba(15,23,42,0.45)] border border-slate-700 p-4 overflow-hidden flex flex-col">
+    <div className="flex-1 h-full min-h-0 bg-slate-900/95 rounded-2xl shadow-[0_30px_60px_rgba(15,23,42,0.45)] border border-slate-700 p-4 overflow-hidden flex flex-col">
       <div className="grid grid-cols-7 gap-px bg-slate-700/30 mb-px">
         {WEEKDAYS.map((day) => (
           <div key={day} className="bg-slate-900/95 text-center font-semibold text-slate-300 py-3 text-sm">
@@ -70,16 +70,36 @@ export default function CalendarMonthView({ year, month, events }) {
         ))}
       </div>
       
-      <div className="flex-1 grid grid-rows-6 gap-px bg-slate-700/30 overflow-hidden">
+      {loading ? (
+        <div className="flex-1 min-h-0 grid grid-rows-6 gap-px bg-slate-700/30 overflow-hidden">
+          {Array.from({ length: 6 }).map((_, weekIdx) => (
+            <div key={weekIdx} className="grid grid-cols-7 gap-px min-h-0">
+              {Array.from({ length: 7 }).map((_, dayIdx) => (
+                <div
+                  key={`${weekIdx}-${dayIdx}`}
+                  className="bg-slate-900/95 p-2 flex flex-col overflow-hidden min-h-0"
+                >
+                  <div className="w-6 h-4 bg-slate-700 rounded animate-pulse mb-2" />
+                  <div className="flex flex-col gap-1">
+                    <div className="h-6 bg-slate-700/60 rounded animate-pulse" />
+                    <div className="h-6 bg-slate-700/50 rounded animate-pulse" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      ) : (
+      <div className="flex-1 min-h-0 grid grid-rows-6 gap-px bg-slate-700/30 overflow-hidden">
         {matrix.map((week, weekIdx) => (
-          <div key={weekIdx} className="grid grid-cols-7 gap-px">
+          <div key={weekIdx} className="grid grid-cols-7 gap-px min-h-0">
             {week.map((day, dayIdx) => {
               const dayEvents = day ? getEventsForDay(events, year, month, day) : [];
               const isTodayDay = isToday(day);
               return (
                 <div
                   key={`${weekIdx}-${dayIdx}`}
-                  className={`bg-slate-900/95 p-2 flex flex-col overflow-hidden transition-colors ${
+                  className={`bg-slate-900/95 p-2 flex flex-col overflow-hidden min-h-0 transition-colors ${
                     isTodayDay
                       ? "bg-indigo-900/20"
                       : ""
@@ -95,7 +115,7 @@ export default function CalendarMonthView({ year, month, events }) {
                   }`}>
                     {day || ""}
                   </div>
-                  <div className="flex flex-col gap-0.5 overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+                  <div className="flex flex-col gap-0.5 overflow-y-auto flex-1 min-h-0 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
                     {dayEvents.map((ev) => {
                       const dayStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
                       const isStart = dayStr === ev.date;
@@ -142,6 +162,7 @@ export default function CalendarMonthView({ year, month, events }) {
           </div>
         ))}
       </div>
+    )}
     </div>
   );
 }

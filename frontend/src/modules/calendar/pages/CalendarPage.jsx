@@ -1,33 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  ChevronLeft,
-  ChevronRight,
-  X,
-  Calendar,
-  CalendarClock,
-  Download,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Calendar, CalendarClock } from "lucide-react";
 import CalendarMonthView from "../components/CalendarMonthView.jsx";
 import CalendarWeekView from "../components/CalendarWeekView.jsx";
-import CalendarMonthSkeleton from "../components/CalendarMonthSkeleton.jsx";
-import CalendarWeekSkeleton from "../components/CalendarWeekSkeleton.jsx";
-import useAuth from "../../../auth/useAuth.js";
-import { getUserEvents, getAllEvents } from "../../../api/events.js";
+import { useProjects } from "../../shared/components/ProjectsContext.jsx";
 
 const MONTHS = [
-  "Styczeń",
-  "Luty",
-  "Marzec",
-  "Kwiecień",
-  "Maj",
-  "Czerwiec",
-  "Lipiec",
-  "Sierpień",
-  "Wrzesień",
-  "Październik",
-  "Listopad",
-  "Grudzień",
+  "Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec",
+  "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień",
 ];
 
 function getWeekDays(year, month, day) {
@@ -35,7 +15,7 @@ function getWeekDays(year, month, day) {
   const dayOfWeek = current.getDay() === 0 ? 6 : current.getDay() - 1;
   const monday = new Date(current);
   monday.setDate(current.getDate() - dayOfWeek);
-
+  
   const week = [];
   for (let i = 0; i < 7; i++) {
     const d = new Date(monday);
@@ -47,28 +27,71 @@ function getWeekDays(year, month, day) {
 
 export default function CalendarPage() {
   const navigate = useNavigate();
+  const { eventsByProject, eventsLoading, loadEventsForDateRange, projects, userMember } = useProjects();
   const today = new Date();
-  const [date, setDate] = useState({
-    year: today.getFullYear(),
-    month: today.getMonth(),
-    day: today.getDate(),
-  });
+  const [date, setDate] = useState({ year: today.getFullYear(), month: today.getMonth(), day: today.getDate() });
   const [view, setView] = useState("month");
-  const { user, organization } = useAuth();
-  const [eventsLoading, setEventsLoading] = useState(false);
-  const [eventsError, setEventsError] = useState(null);
-  const [events, setEvents] = useState([]);
+  const lastFetchRef = React.useRef({ startDate: null, endDate: null, months: [] });
+  const loadEventsRef = React.useRef(loadEventsForDateRange);
+  loadEventsRef.current = loadEventsForDateRange;
 
   useEffect(() => {
-    if (!organization?.id || !user?.username) return;
-    let ignore = false;
-    setEventsLoading(true);
-    setEventsError(null);
+    if (!loadEventsForDateRange || !userMember || projects.length === 0) return;
+    const { year, month, day } = date;
 
+    if (view === "month") {
+      // Month view: fetch entire month
+      const lastDay = new Date(year, month + 1, 0);
+      const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+      const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`;
+      
+      const monthKey = `${year}-${month}`;
+      if (!lastFetchRef.current.months.includes(monthKey)) {
+        loadEventsForDateRange(startDate, endDate);
+        lastFetchRef.current.months.push(monthKey);
+      }
+    } else {
+      // Week view: fetch months that the week touches
+      const weekDays = getWeekDays(year, month, day);
+      const firstDay = weekDays[0];
+      const lastDay = weekDays[6];
+      
+      const firstMonth = firstDay.getMonth();
+      const lastMonth = lastDay.getMonth();
+      const firstYear = firstDay.getFullYear();
+      const lastYear = lastDay.getFullYear();
+      
+      // Fetch first month
+      const firstMonthStart = `${firstYear}-${String(firstMonth + 1).padStart(2, '0')}-01`;
+      const firstMonthLastDay = new Date(firstYear, firstMonth + 1, 0);
+      const firstMonthEnd = `${firstYear}-${String(firstMonth + 1).padStart(2, '0')}-${String(firstMonthLastDay.getDate()).padStart(2, '0')}`;
+      
+      // Check if we already fetched this month
+      const monthKey1 = `${firstYear}-${firstMonth}`;
+      if (!lastFetchRef.current.months.includes(monthKey1)) {
+        loadEventsForDateRange(firstMonthStart, firstMonthEnd);
+        lastFetchRef.current.months.push(monthKey1);
+      }
+      
+      // If week spans two months, fetch the second month too
+      if (firstMonth !== lastMonth || firstYear !== lastYear) {
+        const secondMonthStart = `${lastYear}-${String(lastMonth + 1).padStart(2, '0')}-01`;
+        const secondMonthLastDay = new Date(lastYear, lastMonth + 1, 0);
+        const secondMonthEnd = `${lastYear}-${String(lastMonth + 1).padStart(2, '0')}-${String(secondMonthLastDay.getDate()).padStart(2, '0')}`;
+        
+        const monthKey2 = `${lastYear}-${lastMonth}`;
+        if (!lastFetchRef.current.months.includes(monthKey2)) {
+          loadEventsForDateRange(secondMonthStart, secondMonthEnd);
+          lastFetchRef.current.months.push(monthKey2);
+        }
+      }
+    }
+  }, [date, view, loadEventsForDateRange, userMember, projects.length]);
+
+  const events = useMemo(() => {
     const parseEventRow = (ev) => {
       const rawStart = ev.start_time ? String(ev.start_time) : "";
       const rawEnd = ev.end_time ? String(ev.end_time) : "";
-      // Akceptuj formaty: "YYYY-MM-DD HH:MM:SS", "YYYY-MM-DD HH:MM:SS+00:00", ISO
       const splitStart = rawStart.includes("T")
         ? rawStart.replace("T", " ").split(" ")
         : rawStart.split(" ");
@@ -76,7 +99,6 @@ export default function CalendarPage() {
         ? rawEnd.replace("T", " ").split(" ")
         : rawEnd.split(" ");
       const datePart = splitStart[0] || "";
-      const endDatePart = splitEnd[0] || datePart; // Data zakończenia z end_time
       const startTimePart = (splitStart[1] || "")
         .replace("+00:00", "")
         .slice(0, 5);
@@ -97,53 +119,14 @@ export default function CalendarPage() {
         start_time: startTimePart || "",
         end_time: endTimePart || "",
         date: datePart,
-        endDate: endDatePart, // Dodajemy endDate
         tags: plainTags,
         tagCombinations,
       };
     };
 
-    const fetch = async () => {
-      try {
-        let data;
-        if (organization.role === "admin") {
-          data = await getAllEvents(organization.id, user.username);
-        } else {
-          data = await getUserEvents(organization.id, user.username);
-          // Fallback diagnostyczny: jeśli nic nie przyszło spróbuj pobrać pełną listę (może brak permissions)
-          if (Array.isArray(data) && data.length === 0) {
-            try {
-              const adminData = await getAllEvents(
-                organization.id,
-                user.username
-              );
-              // Nie nadpisuj gdy brak uprawnień – tylko jeśli coś przyszło
-              if (adminData?.length) data = adminData;
-            } catch (_) {
-              /* ignoruj */
-            }
-          }
-        }
-        if (ignore) return;
-        const mapped = (data || []).map(parseEventRow);
-        setEvents(mapped);
-      } catch (err) {
-        if (ignore) return;
-        setEventsError(
-          err?.response?.data?.error ??
-            err?.response?.data?.detail ??
-            "Nie udało się pobrać wydarzeń."
-        );
-      } finally {
-        if (!ignore) setEventsLoading(false);
-      }
-    };
-
-    fetch();
-    return () => {
-      ignore = true;
-    };
-  }, [organization?.id, organization?.role, user?.username]);
+    const allProjectEvents = Object.values(eventsByProject || {}).flat();
+    return allProjectEvents.map(parseEventRow);
+  }, [eventsByProject]);
 
   const handlePrev = () => {
     if (view === "month") {
@@ -155,11 +138,7 @@ export default function CalendarPage() {
       setDate(({ year, month, day }) => {
         const current = new Date(year, month, day);
         current.setDate(current.getDate() - 7);
-        return {
-          year: current.getFullYear(),
-          month: current.getMonth(),
-          day: current.getDate(),
-        };
+        return { year: current.getFullYear(), month: current.getMonth(), day: current.getDate() };
       });
     }
   };
@@ -174,115 +153,13 @@ export default function CalendarPage() {
       setDate(({ year, month, day }) => {
         const current = new Date(year, month, day);
         current.setDate(current.getDate() + 7);
-        return {
-          year: current.getFullYear(),
-          month: current.getMonth(),
-          day: current.getDate(),
-        };
+        return { year: current.getFullYear(), month: current.getMonth(), day: current.getDate() };
       });
     }
   };
 
-  const goToToday = () => {
-    const now = new Date();
-    setDate({
-      year: now.getFullYear(),
-      month: now.getMonth(),
-      day: now.getDate(),
-    });
-    setView("week");
-  };
-
   const { year, month, day } = date;
   const weekDays = getWeekDays(year, month, day);
-
-  const exportToICS = () => {
-    let icsContent = [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//ZPI Calendar//EN",
-      "CALSCALE:GREGORIAN",
-      "METHOD:PUBLISH",
-    ];
-
-    events.forEach((ev) => {
-      const startDateTime = `${ev.date.replace(
-        /-/g,
-        ""
-      )}T${ev.start_time.replace(/:/g, "")}00`;
-      const endDateTime = `${(ev.endDate || ev.date).replace(
-        /-/g,
-        ""
-      )}T${ev.end_time.replace(/:/g, "")}00`;
-      const now =
-        new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-
-      icsContent.push("BEGIN:VEVENT");
-      icsContent.push(`UID:${ev.id}@zpi-calendar`);
-      icsContent.push(`DTSTAMP:${now}`);
-      icsContent.push(`DTSTART:${startDateTime}`);
-      icsContent.push(`DTEND:${endDateTime}`);
-      icsContent.push(`SUMMARY:${ev.title}`);
-      if (ev.description) {
-        icsContent.push(`DESCRIPTION:${ev.description.replace(/\n/g, "\\n")}`);
-      }
-      if (ev.tags && ev.tags.length > 0) {
-        icsContent.push(`CATEGORIES:${ev.tags.join(",")}`);
-      }
-      icsContent.push("END:VEVENT");
-    });
-
-    icsContent.push("END:VCALENDAR");
-
-    const blob = new Blob([icsContent.join("\r\n")], {
-      type: "text/calendar;charset=utf-8",
-    });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `kalendarz_${organization?.name || "zpi"}_${year}-${
-      month + 1
-    }.ics`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-  };
-
-  const exportToCSV = () => {
-    const csvRows = [
-      [
-        "Tytuł",
-        "Data rozpoczęcia",
-        "Godzina rozpoczęcia",
-        "Data zakończenia",
-        "Godzina zakończenia",
-        "Opis",
-        "Tagi",
-      ].join(","),
-    ];
-
-    events.forEach((ev) => {
-      const row = [
-        `"${ev.title.replace(/"/g, '""')}"`,
-        ev.date,
-        ev.start_time,
-        ev.endDate || ev.date,
-        ev.end_time,
-        `"${(ev.description || "").replace(/"/g, '""')}"`,
-        `"${(ev.tags || []).join(", ")}"`,
-      ].join(",");
-      csvRows.push(row);
-    });
-
-    const blob = new Blob(["\ufeff" + csvRows.join("\r\n")], {
-      type: "text/csv;charset=utf-8",
-    });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `kalendarz_${organization?.name || "zpi"}_${year}-${
-      month + 1
-    }.csv`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-  };
 
   const getWeekTitle = () => {
     const firstDay = weekDays[0];
@@ -290,22 +167,18 @@ export default function CalendarPage() {
     if (firstDay.getMonth() === lastDay.getMonth()) {
       return `${MONTHS[firstDay.getMonth()]} ${firstDay.getFullYear()}`;
     }
-    return `${MONTHS[firstDay.getMonth()]} - ${
-      MONTHS[lastDay.getMonth()]
-    } ${lastDay.getFullYear()}`;
+    return `${MONTHS[firstDay.getMonth()]} - ${MONTHS[lastDay.getMonth()]} ${lastDay.getFullYear()}`;
   };
 
   return (
-    <div className="h-full overflow-auto bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-4">
-      <div className="max-w-[98vw] mx-auto min-h-full flex flex-col">
-        <div className="flex items-center justify-between mb-4 px-2">
+    <div className="h-full min-h-0 overflow-hidden bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-4 flex flex-col">
+      <div className="flex-1 min-h-0 w-full flex flex-col">
+        <div className="flex items-center justify-between mb-4 px-2 flex-shrink-0">
           <div className="flex items-center gap-3">
             <button
               onClick={handlePrev}
               className="p-2 rounded-lg hover:bg-slate-700/40 text-slate-300 transition"
-              aria-label={
-                view === "month" ? "Poprzedni miesiąc" : "Poprzedni tydzień"
-              }
+              aria-label={view === "month" ? "Poprzedni miesiąc" : "Poprzedni tydzień"}
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
@@ -315,39 +188,12 @@ export default function CalendarPage() {
             <button
               onClick={handleNext}
               className="p-2 rounded-lg hover:bg-slate-700/40 text-slate-300 transition"
-              aria-label={
-                view === "month" ? "Następny miesiąc" : "Następny tydzień"
-              }
+              aria-label={view === "month" ? "Następny miesiąc" : "Następny tydzień"}
             >
               <ChevronRight className="w-5 h-5" />
             </button>
-            <button
-              onClick={goToToday}
-              className="ml-2 px-3 py-1.5 rounded-lg bg-indigo-600/20 border border-indigo-500/40 text-indigo-300 hover:bg-indigo-600/30 hover:text-indigo-200 transition text-sm font-medium"
-              title="Przejdź do bieżącego tygodnia"
-            >
-              Dzisiaj
-            </button>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={exportToICS}
-                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition flex items-center gap-2 text-sm"
-                title="Eksportuj do formatu ICS (kalendarz)"
-              >
-                <Download className="w-4 h-4" />
-                <span>ICS</span>
-              </button>
-              <button
-                onClick={exportToCSV}
-                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition flex items-center gap-2 text-sm"
-                title="Eksportuj do formatu CSV"
-              >
-                <Download className="w-4 h-4" />
-                <span>CSV</span>
-              </button>
-            </div>
             <div className="flex items-center gap-1 bg-slate-800 rounded-lg p-1">
               <button
                 onClick={() => setView("month")}
@@ -385,22 +231,11 @@ export default function CalendarPage() {
           </div>
         </div>
 
-        {eventsError && (
-          <div className="text-xs text-red-400 px-2 mb-2">{eventsError}</div>
+        {view === "month" ? (
+          <CalendarMonthView year={year} month={month} events={events} loading={eventsLoading} />
+        ) : (
+          <CalendarWeekView weekDays={weekDays} events={events} />
         )}
-        <div className="flex-1 min-h-0">
-          {eventsLoading ? (
-            view === "month" ? (
-              <CalendarMonthSkeleton />
-            ) : (
-              <CalendarWeekSkeleton />
-            )
-          ) : view === "month" ? (
-            <CalendarMonthView year={year} month={month} events={events} />
-          ) : (
-            <CalendarWeekView weekDays={weekDays} events={events} />
-          )}
-        </div>
       </div>
     </div>
   );

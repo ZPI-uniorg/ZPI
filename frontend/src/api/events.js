@@ -59,14 +59,18 @@ export async function deleteEvent(organizationId, eventId, actorUsername) {
   })
 }
 
-export async function getAllEvents(organizationId, actorUsername) {
-  const response = await apiClient.get(`events/all/${organizationId}/`, {
-    params: { username: actorUsername },
-  })
-  return response.data
+export async function getAllEvents(organizationId, actorUsername, startDate = null, endDate = null) {
+  const params = { username: actorUsername };
+  if (startDate) params.start_date = startDate;
+  if (endDate) params.end_date = endDate;
+  const response = await apiClient.get(`events/all/${organizationId}/`, { params });
+  return response.data;
 }
 
-export async function getUserEvents(organizationId, actorUsername) {
-  const response = await apiClient.get(`events/my/${organizationId}/${actorUsername}/`)
-  return response.data
+export async function getUserEvents(organizationId, actorUsername, startDate = null, endDate = null) {
+  const params = {};
+  if (startDate) params.start_date = startDate;
+  if (endDate) params.end_date = endDate;
+  const response = await apiClient.get(`events/my/${organizationId}/${actorUsername}/`, { params });
+  return response.data;
 }

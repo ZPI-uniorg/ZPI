@@ -1,15 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import useAuth from "../../../auth/useAuth.js";
-// import { KANBAN_BOARDS } from "../../../api/fakeData.js";
 import ChatPanel from "../components/ChatPanel.jsx";
 import MiniCalendar from "../components/MiniCalendar.jsx";
 import KanbanPreview from "../components/KanbanPreview.jsx";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useProjects } from "../../shared/components/ProjectsContext.jsx";
-import apiClient from "../../../api/client.js";
-import { getUserEvents, getAllEvents } from "../../../api/events.js";
 import { getBoardWithContent } from "../../../api/kanban.js";
-import { Plus } from "lucide-react";
 
 export default function OrganizationDashboardPage() {
   const { organization: activeOrganization, user } = useAuth();
@@ -22,72 +18,13 @@ export default function OrganizationDashboardPage() {
     projects,
     projectsLoading,
     projectsError,
-    eventsByProject,
-    allEvents,
-    eventsLoading,
-    eventsError,
     chats,
     chatsLoading,
-    selectedTags,
-    setSelectedTags,
-    logic,
-    setLogic,
   } = useProjects();
 
   const projectList = projects;
   const [kanbanIndex, setKanbanIndex] = useState(0);
   const currentProject = projectList[kanbanIndex] || null;
-
-  const [events, setEvents] = useState([]);
-  // Fetch chats from backend for active organization
-  // Chats are provided by ProjectsContext; optionally filter by selected projects later
-  // Fetch events from backend
-  // Filtrowanie zdarzeń kalendarzowych po filtrach
-  useEffect(() => {
-    if (!activeOrganization?.id || !user?.username) return;
-    let ignore = false;
-
-    const parseEventRow = (ev) => {
-      const rawStart = ev.start_time ? String(ev.start_time) : "";
-      const rawEnd = ev.end_time ? String(ev.end_time) : "";
-      const splitStart = rawStart.includes("T")
-        ? rawStart.replace("T", " ").split(" ")
-        : rawStart.split(" ");
-      const splitEnd = rawEnd.includes("T")
-        ? rawEnd.replace("T", " ").split(" ")
-        : rawEnd.split(" ");
-      const datePart = splitStart[0] || "";
-      const startTimePart = (splitStart[1] || "")
-        .replace("+00:00", "")
-        .slice(0, 5);
-      const endTimePart = (splitEnd[1] || "").replace("+00:00", "").slice(0, 5);
-
-      const perms = ev.permissions || ev.tags || [];
-      const tagCombinations = perms
-        .filter((p) => p.includes("+"))
-        .map((p) => p.split("+").filter(Boolean));
-      const plainTags = perms.filter((p) => !p.includes("+"));
-
-      return {
-        id: ev.event_id,
-        event_id: ev.event_id,
-        title: ev.name,
-        name: ev.name,
-        description: ev.description || "",
-        start_time: startTimePart || "",
-        end_time: endTimePart || "",
-        date: datePart,
-        tags: plainTags,
-        tagCombinations,
-      };
-    };
-
-    // Zbierz wszystkie eventy ze wszystkich projektów
-    const allProjectEvents = Object.values(eventsByProject).flat();
-    const mapped = allProjectEvents.map(parseEventRow);
-    setEvents(mapped);
-    console.log('Zdarzenia kalendarzowe (po filtrach z kontekstu):', mapped);
-  }, [eventsByProject]);
 
   // Fetch current project's board on demand
   const [kanbanBoard, setKanbanBoard] = useState(null);
@@ -185,10 +122,7 @@ export default function OrganizationDashboardPage() {
         />
         <div className="flex flex-col basis-[45%] grow gap-6 h-full min-h-0 overflow-hidden">
           <div className="flex-1 min-h-0 bg-[rgba(15,23,42,0.92)] rounded-[24px] p-4 shadow-[0_25px_50px_rgba(15,23,42,0.45)] flex items-start justify-center text-slate-300 border border-[rgba(148,163,184,0.35)] overflow-hidden">
-            <MiniCalendar
-              events={events}
-              loading={eventsLoading}
-            />
+            <MiniCalendar />
           </div>
           <div className="flex-1 min-h-0 bg-[rgba(15,23,42,0.92)] rounded-[24px] p-4 shadow-[0_25px_50px_rgba(15,23,42,0.45)] flex flex-col text-slate-300 border border-[rgba(148,163,184,0.35)] overflow-hidden">
             <KanbanPreview

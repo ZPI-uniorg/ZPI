@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Maximize2 } from "lucide-react";
+import { useProjects } from "../../shared/components/ProjectsContext.jsx";
 
 const WEEKDAYS = ["Pn", "Wt", "Śr", "Cz", "Pt", "Sb", "Nd"];
 const MONTHS = [
@@ -48,16 +49,65 @@ function getEventsForDay(events, year, month, day) {
   return events.filter((ev) => ev.date === dayStr);
 }
 
-export default function MiniCalendar({
-  events = [],
-  loading = false,
-}) {
+export default function MiniCalendar() {
   const navigate = useNavigate();
+  const { eventsByProject, eventsLoading, loadEventsForDateRange, projects, userMember } = useProjects();
   const today = new Date();
   const [date, setDate] = useState({
     year: today.getFullYear(),
     month: today.getMonth(),
   });
+  const lastFetchRef = React.useRef({ startDate: null, endDate: null });
+  const loadEventsRef = React.useRef(loadEventsForDateRange);
+  loadEventsRef.current = loadEventsForDateRange;
+
+  useEffect(() => {
+    const { year, month } = date;
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+    const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`;
+
+    // Fetch if date range changed or if it's the first load (both are null)
+    if (lastFetchRef.current.startDate !== startDate || lastFetchRef.current.endDate !== endDate) {
+      lastFetchRef.current = { startDate, endDate };
+      if (loadEventsRef.current) {
+        loadEventsRef.current(startDate, endDate);
+      }
+    }
+  }, [date, projects.length, userMember, loadEventsForDateRange]);
+
+  // Ensure initial fetch when context becomes ready
+  useEffect(() => {
+    if (!loadEventsForDateRange || !userMember || projects.length === 0) return;
+    const { year, month } = date;
+    const lastDay = new Date(year, month + 1, 0);
+    const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+    const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`;
+    if (lastFetchRef.current.startDate === startDate && lastFetchRef.current.endDate === endDate) return;
+    lastFetchRef.current = { startDate, endDate };
+    loadEventsForDateRange(startDate, endDate);
+  }, [loadEventsForDateRange, userMember, projects.length]);
+
+  const events = React.useMemo(() => {
+    const allProjectEvents = Object.values(eventsByProject || {}).flat();
+    return allProjectEvents.map(ev => {
+      const rawStart = ev.start_time ? String(ev.start_time) : "";
+      const splitStart = rawStart.includes("T")
+        ? rawStart.replace("T", " ").split(" ")
+        : rawStart.split(" ");
+      const datePart = splitStart[0] || "";
+      const startTimePart = (splitStart[1] || "").replace("+00:00", "").slice(0, 5);
+      
+      return {
+        id: ev.event_id,
+        event_id: ev.event_id,
+        title: ev.name,
+        date: datePart,
+        start_time: startTimePart,
+      };
+    });
+  }, [eventsByProject]);
   const handlePrev = () => {
     setDate(({ year, month }) => {
       if (month === 0) return { year: year - 1, month: 11 };
@@ -135,7 +185,7 @@ export default function MiniCalendar({
             </div>
           ))}
         </div>
-        {loading ? (
+        {eventsLoading ? (
           <div className="grid grid-cols-7 grid-rows-6 gap-0.5 flex-1">
             {Array.from({ length: 42 }).map((_, idx) => (
               <div

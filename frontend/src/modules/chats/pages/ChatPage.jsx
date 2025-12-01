@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
@@ -6,7 +6,7 @@ import ChannelSidebar from "../../chats/ChannelSidebar.jsx";
 import MessageList from "../../chats/MessageList.jsx";
 import { useChat } from "../../chats/useChat.js";
 import useAuth from "../../../auth/useAuth.js";
-import apiClient from "../../../api/client.js";
+import { useProjects } from "../../shared/components/ProjectsContext.jsx";
 
 export default function ChatPage() {
   const { user } = useAuth() || {};
@@ -27,40 +27,15 @@ export default function ChatPage() {
     hasMore,
     loadingMore,
   } = useChat(initialChannel, currentUser, activeOrganization?.id);
-  const [orgChannels, setOrgChannels] = useState(null);
-  const [chatsLoading, setChatsLoading] = useState(false);
-
-  // Fetch channels (chat names) from backend for organization to override local channels
-  useEffect(() => {
-    if (!activeOrganization?.id) return;
-    let cancelled = false;
-    setChatsLoading(true);
-    apiClient
-      .get(`chats/my/${activeOrganization?.id}`)
-      .then((res) => {
-        if (cancelled) return;
-        const serverChats = (res.data?.chats || []).map((c) => ({
-          chat_id: c.chat_id,
-          title: c.name,
-          tags: [],
-          tagCombinations: [],
-        }));
-        setOrgChannels(serverChats);
-      })
-      .catch((e) => {
-        console.error(
-          "Chat list fetch failed",
-          e.response?.status,
-          e.response?.data || e.message
-        );
-      })
-      .finally(() => {
-        if (!cancelled) setChatsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [activeOrganization?.id]);
+  // Use filtered chats from global context; no local fetching here
+  const { chats: contextChats, chatsLoading } = useProjects();
+  const sidebarChannels = useMemo(
+    () => (contextChats || []).map((c) => ({
+      chat_id: c.chat_id,
+      name: c.title || c.name || String(c.chat_id),
+    })),
+    [contextChats]
+  );
   const [draft, setDraft] = useState("");
 
   const handleSubmit = (e) => {
@@ -72,7 +47,7 @@ export default function ChatPage() {
   };
 
   const disabled = status === "connecting";
-  console.log(orgChannels);
+  // Using context-filtered channels for the sidebar
   return (
     <div className="h-full overflow-hidden bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-4 md:p-6">
       <div className="max-w-[1400px] mx-auto h-full flex flex-col gap-4">
@@ -91,7 +66,7 @@ export default function ChatPage() {
         </header>
         <div className="flex-1 bg-slate-900/95 rounded-2xl shadow-[0_30px_60px_rgba(15,23,42,0.45)] border border-slate-700 p-4 overflow-hidden flex">
           <ChannelSidebar
-            channels={orgChannels || channels}
+            channels={sidebarChannels}
             active={channel}
             onSelect={switchChannel}
             users={onlineUsers}

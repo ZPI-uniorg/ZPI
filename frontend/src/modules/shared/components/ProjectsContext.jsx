@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import useAuth from '../../../auth/useAuth.js';
 import { getAllProjects, getUserProjects } from '../../../api/projects.js';
 import { getAllEvents, getUserEvents } from '../../../api/events.js';
@@ -127,7 +127,7 @@ export function ProjectsProvider({ children, projectJustCreated, projectJustUpda
     }
   }, [organization.id, user.username, mergeProjects]);
 
-  const loadEvents = useCallback(async (userMember, projects) => {
+  const loadEvents = useCallback(async (userMember, projects, startDate = null, endDate = null) => {
     if (!userMember || !projects || projects.length === 0) {
       return;
     }
@@ -136,7 +136,7 @@ export function ProjectsProvider({ children, projectJustCreated, projectJustUpda
     try {
       const isAdmin = userMember.role === 'admin';
       const fetchFn = isAdmin ? getAllEvents : getUserEvents;
-      const data = await fetchFn(organization.id, user.username);
+      const data = await fetchFn(organization.id, user.username, startDate, endDate);
       const events = Array.isArray(data) ? data : [];
       
       console.log('Events loaded:', events.map(e => ({ 
@@ -200,11 +200,7 @@ export function ProjectsProvider({ children, projectJustCreated, projectJustUpda
     }
   }, [state.userMember, loadProjects, loadChats]);
 
-  useEffect(() => {
-    if (state.projects.length > 0 && state.userMember) {
-      loadEvents(state.userMember, state.projects);
-    }
-  }, [state.projects, state.userMember, loadEvents]);
+  // Events are loaded on-demand by calendar components via loadEventsForDateRange
 
   useEffect(() => {
     if (!projectJustCreated && !projectJustUpdated) return;
@@ -215,6 +211,18 @@ export function ProjectsProvider({ children, projectJustCreated, projectJustUpda
       projects: mergeProjects(s.projects, extras),
     }));
   }, [projectJustCreated, projectJustUpdated, mergeProjects]);
+
+  // Baseline events fetch for the current month once user and projects are ready
+  useEffect(() => {
+    if (!state.userMember || state.projects.length === 0) return;
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth();
+    const lastDay = new Date(year, month + 1, 0);
+    const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+    const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`;
+    loadEvents(state.userMember, state.projects, startDate, endDate);
+  }, [state.userMember, state.projects, loadEvents]);
 
   const filterByProjects = useCallback((items, selectedProjectIds) => {
     if (!Array.isArray(items)) return [];
@@ -269,6 +277,18 @@ export function ProjectsProvider({ children, projectJustCreated, projectJustUpda
     return result;
   }, [state.eventsByProject, state.selectedTags, state.logic]);
 
+  // Create stable callback that uses current state via closure
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
+  const loadEventsForDateRange = useCallback((startDate, endDate) => {
+    const currentState = stateRef.current;
+    if (currentState.userMember && currentState.projects.length > 0) {
+      return loadEvents(currentState.userMember, currentState.projects, startDate, endDate);
+    }
+    return Promise.resolve();
+  }, [loadEvents]);
+
   const value = useMemo(() => ({
     userMember: state.userMember,
     userMemberLoading: state.userMemberLoading,
@@ -286,6 +306,7 @@ export function ProjectsProvider({ children, projectJustCreated, projectJustUpda
     eventsByProject: filteredEventsByProject,
     eventsLoading: state.eventsLoading,
     eventsError: state.eventsError,
+    loadEventsForDateRange,
 
     chats: filteredChats,
     chatsLoading: state.chatsLoading,
@@ -300,7 +321,7 @@ export function ProjectsProvider({ children, projectJustCreated, projectJustUpda
     setLogic: logic => setState(s => ({ ...s, logic })),
 
     filterByProjects,
-  }), [state, projectTags, loadProjects, filterByProjects, filteredProjects, filteredChats, filteredEventsByProject]);
+  }), [state, projectTags, loadProjects, loadEvents, loadEventsForDateRange, filterByProjects, filteredProjects, filteredChats, filteredEventsByProject]);
 
   return (
     <ProjectsContext.Provider value={value}>
