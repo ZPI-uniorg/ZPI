@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import useAuth from '../../../auth/useAuth.js';
-import { Settings, Filter, Plus } from 'lucide-react';
+import { Settings, Filter, Plus, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ProjectsProvider } from '../components/ProjectsContext.jsx';
 import FiltersPanel from './FiltersPanel.jsx';
@@ -102,9 +102,10 @@ function AppLayout() {
             <button
               type="button"
               onClick={() => navigate('/profile')}
-              className="rounded-lg border border-transparent px-3 py-2 text-sm text-slate-300 transition hover:border-slate-600 hover:text-white"
+              className="flex items-center gap-2 rounded-lg border border-transparent px-3 py-2 text-sm text-slate-300 transition hover:border-slate-600 hover:text-white"
             >
-              {fullName}
+              <User className="w-4 h-4" />
+              <span>{fullName}</span>
             </button>
             <button
               type="button"
@@ -136,7 +137,7 @@ function AppLayout() {
       <footer className="border-t border-slate-800 bg-slate-950/90 py-4">
         <div className="mx-auto flex max-w-6xl items-center justify-center px-6">
           <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
-            @2025 UniOrg made with hate to C. P. P
+            @2025 UniOrg Z.P.I projekt
           </p>
         </div>
       </footer>
