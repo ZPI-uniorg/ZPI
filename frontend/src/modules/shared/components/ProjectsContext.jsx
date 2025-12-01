@@ -225,21 +225,23 @@ export function ProjectsProvider({ children, projectJustCreated, projectJustUpda
 
   // Filtrowanie projektów - zawsze OR (pokaż wszystkie zaznaczone)
   const filteredProjects = useMemo(() => {
-    if (!state.selectedTags.length) return state.projects;
+    const sel = Array.isArray(state.selectedTags) ? state.selectedTags : [];
+    if (!sel.length) return state.projects;
     return state.projects.filter(p => {
       const tags = p.tags || p.permissions || [];
-      return state.selectedTags.some(tag => tags.includes(tag));
+      return sel.some(tag => tags.includes(tag));
     });
   }, [state.projects, state.selectedTags]);
 
   // Filtrowanie chatów
   const filteredChats = useMemo(() => {
-    if (!state.selectedTags.length) return state.chats;
+    const sel = Array.isArray(state.selectedTags) ? state.selectedTags : [];
+    if (!sel.length) return state.chats;
     return state.chats.filter(c => {
       if (state.logic === 'AND') {
-        return state.selectedTags.every(tag => c.tags?.includes(tag));
+        return sel.every(tag => c.tags?.includes(tag));
       } else {
-        return state.selectedTags.some(tag => c.tags?.includes(tag));
+        return sel.some(tag => c.tags?.includes(tag));
       }
     });
   }, [state.chats, state.selectedTags, state.logic]);
@@ -247,16 +249,20 @@ export function ProjectsProvider({ children, projectJustCreated, projectJustUpda
   // Filtrowanie eventów
   const filteredEventsByProject = useMemo(() => {
     const result = {};
-    Object.entries(state.eventsByProject).forEach(([pid, events]) => {
+    const sel = Array.isArray(state.selectedTags) ? state.selectedTags : [];
+    const entries = state.eventsByProject && typeof state.eventsByProject === 'object'
+      ? Object.entries(state.eventsByProject)
+      : [];
+    entries.forEach(([pid, events]) => {
       if (!Array.isArray(events)) return;
-      result[pid] = !state.selectedTags.length
+      result[pid] = !sel.length
         ? events
         : events.filter(ev => {
             const tags = ev.permissions || ev.tags || [];
             if (state.logic === 'AND') {
-              return state.selectedTags.every(tag => tags.includes(tag));
+              return sel.every(tag => tags.includes(tag));
             } else {
-              return state.selectedTags.some(tag => tags.includes(tag));
+              return sel.some(tag => tags.includes(tag));
             }
           });
     });
@@ -286,7 +292,10 @@ export function ProjectsProvider({ children, projectJustCreated, projectJustUpda
     chatsError: state.chatsError,
 
     selectedTags: state.selectedTags,
-    setSelectedTags: tags => setState(s => ({ ...s, selectedTags: tags })),
+    setSelectedTags: tags => {
+      const next = Array.isArray(tags) ? tags : (tags == null ? [] : [String(tags)]);
+      setState(s => ({ ...s, selectedTags: next }));
+    },
     logic: state.logic,
     setLogic: logic => setState(s => ({ ...s, logic })),
 

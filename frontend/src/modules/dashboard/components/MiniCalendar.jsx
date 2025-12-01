@@ -153,14 +153,8 @@ export default function MiniCalendar({
         ) : (
           <div className="grid grid-cols-7 grid-rows-6 gap-0.5 flex-1">
             {matrix.flat().map((day, idx) => {
-              const events = day
-                ? getEventsForDay(
-                    filteredEvents,
-                    year,
-                    month,
-                    day,
-                    selectedTags
-                  )
+              const dayEvents = day
+                ? getEventsForDay(events, year, month, day)
                 : [];
               const isTodayDay = isToday(day);
               return (
@@ -183,7 +177,7 @@ export default function MiniCalendar({
                     {day || ""}
                   </span>
                   <div className="absolute top-[14px] left-0.5 right-0.5 bottom-0.5 flex flex-col gap-0.5 overflow-hidden">
-                    {events.slice(0, 2).map((ev) => (
+                    {dayEvents.slice(0, 2).map((ev) => (
                       <div
                         key={ev.id}
                         className="w-full truncate text-[9px] bg-violet-600/80 text-white px-0.5 rounded leading-tight h-[12px] flex-shrink-0 hover:bg-violet-500 transition"
@@ -193,9 +187,9 @@ export default function MiniCalendar({
                         {ev.title}
                       </div>
                     ))}
-                    {events.length > 2 && (
+                    {dayEvents.length > 2 && (
                       <div className="text-[8px] text-slate-400 px-0.5 h-[10px] flex-shrink-0">
-                        +{events.length - 2}
+                        +{dayEvents.length - 2}
                       </div>
                     )}
                   </div>
