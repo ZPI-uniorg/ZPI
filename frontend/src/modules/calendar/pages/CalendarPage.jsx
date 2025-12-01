@@ -183,6 +183,16 @@ export default function CalendarPage() {
     }
   };
 
+  const goToToday = () => {
+    const now = new Date();
+    setDate({
+      year: now.getFullYear(),
+      month: now.getMonth(),
+      day: now.getDate(),
+    });
+    setView("week");
+  };
+
   const { year, month, day } = date;
   const weekDays = getWeekDays(year, month, day);
 
@@ -310,6 +320,13 @@ export default function CalendarPage() {
               }
             >
               <ChevronRight className="w-5 h-5" />
+            </button>
+            <button
+              onClick={goToToday}
+              className="ml-2 px-3 py-1.5 rounded-lg bg-indigo-600/20 border border-indigo-500/40 text-indigo-300 hover:bg-indigo-600/30 hover:text-indigo-200 transition text-sm font-medium"
+              title="Przejdź do bieżącego tygodnia"
+            >
+              Dzisiaj
             </button>
           </div>
           <div className="flex items-center gap-3">

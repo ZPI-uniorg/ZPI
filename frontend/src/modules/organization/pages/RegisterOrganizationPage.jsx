@@ -143,25 +143,55 @@ function RegisterOrganizationPage() {
           <h2 className="m-0 text-[18px] text-slate-200">Dane organizacji</h2>
           <label className="flex flex-col gap-2">
             <span className="font-semibold text-slate-200">Nazwa</span>
-            <input
-              name="name"
-              value={organization.name}
-              onChange={handleOrganizationChange}
-              placeholder="Koło Naukowe AI"
-              required
-              className="border border-slate-600 rounded-[12px] p-3 text-[16px] bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
-            />
+            <div className="relative">
+              <input
+                name="name"
+                value={organization.name}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val.length <= 100) {
+                    handleOrganizationChange(e);
+                  }
+                }}
+                placeholder="Koło Naukowe AI"
+                maxLength={100}
+                required
+                className="w-full border border-slate-600 rounded-[12px] p-3 pr-16 text-[16px] bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+              />
+              <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                organization.name.length >= 100 ? 'text-red-400' : 
+                organization.name.length >= 80 ? 'text-yellow-400' : 
+                'text-slate-400'
+              }`}>
+                {organization.name.length}/100
+              </div>
+            </div>
           </label>
           <label className="flex flex-col gap-2">
-            <span className="font-semibold text-slate-200">
-              Opis (opcjonalny)
-            </span>
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-slate-200">
+                Opis (opcjonalny)
+              </span>
+              <span className={`text-xs font-medium ${
+                organization.description.length >= 500 ? 'text-red-400' : 
+                organization.description.length >= 400 ? 'text-yellow-400' : 
+                'text-slate-400'
+              }`}>
+                {organization.description.length}/500
+              </span>
+            </div>
             <textarea
               name="description"
               value={organization.description}
-              onChange={handleOrganizationChange}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val.length <= 500) {
+                  handleOrganizationChange(e);
+                }
+              }}
               rows={3}
               placeholder="Czym zajmuje się organizacja?"
+              maxLength={500}
               className="border border-slate-600 rounded-[12px] p-3 text-[16px] bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
             />
           </label>
@@ -174,68 +204,158 @@ function RegisterOrganizationPage() {
           <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
             <label className="flex flex-col gap-2">
               <span className="font-semibold text-slate-200">Imię</span>
-              <input
-                name="first_name"
-                value={admin.first_name}
-                onChange={handleAdminChange}
-                className="border border-slate-600 rounded-[12px] p-3 text-[16px] bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
-              />
+              <div className="relative">
+                <input
+                  name="first_name"
+                  value={admin.first_name}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val.length <= 50) {
+                      handleAdminChange(e);
+                    }
+                  }}
+                  maxLength={50}
+                  className="w-full border border-slate-600 rounded-[12px] p-3 pr-14 text-[16px] bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+                />
+                <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                  admin.first_name.length >= 50 ? 'text-red-400' : 
+                  admin.first_name.length >= 40 ? 'text-yellow-400' : 
+                  'text-slate-400'
+                }`}>
+                  {admin.first_name.length}/50
+                </div>
+              </div>
             </label>
             <label className="flex flex-col gap-2">
               <span className="font-semibold text-slate-200">Nazwisko</span>
-              <input
-                name="last_name"
-                value={admin.last_name}
-                onChange={handleAdminChange}
-                className="border border-slate-600 rounded-[12px] p-3 text-[16px] bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
-              />
+              <div className="relative">
+                <input
+                  name="last_name"
+                  value={admin.last_name}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val.length <= 50) {
+                      handleAdminChange(e);
+                    }
+                  }}
+                  maxLength={50}
+                  className="w-full border border-slate-600 rounded-[12px] p-3 pr-14 text-[16px] bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+                />
+                <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                  admin.last_name.length >= 50 ? 'text-red-400' : 
+                  admin.last_name.length >= 40 ? 'text-yellow-400' : 
+                  'text-slate-400'
+                }`}>
+                  {admin.last_name.length}/50
+                </div>
+              </div>
             </label>
           </div>
           <label className="flex flex-col gap-2">
             <span className="font-semibold text-slate-200">Email</span>
-            <input
-              name="email"
-              type="email"
-              value={admin.email}
-              onChange={handleAdminChange}
-              required
-              className="border border-slate-600 rounded-[12px] p-3 text-[16px] bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
-            />
+            <div className="relative">
+              <input
+                name="email"
+                type="email"
+                value={admin.email}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val.length <= 100) {
+                    handleAdminChange(e);
+                  }
+                }}
+                maxLength={100}
+                required
+                className="w-full border border-slate-600 rounded-[12px] p-3 pr-16 text-[16px] bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+              />
+              <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                admin.email.length >= 100 ? 'text-red-400' : 
+                admin.email.length >= 80 ? 'text-yellow-400' : 
+                'text-slate-400'
+              }`}>
+                {admin.email.length}/100
+              </div>
+            </div>
           </label>
           <label className="flex flex-col gap-2">
             <span className="font-semibold text-slate-200">Login</span>
-            <input
-              name="username"
-              value={admin.username}
-              onChange={handleAdminChange}
-              required
-              className="border border-slate-600 rounded-[12px] p-3 text-[16px] bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
-            />
+            <div className="relative">
+              <input
+                name="username"
+                value={admin.username}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val.length <= 50) {
+                    handleAdminChange(e);
+                  }
+                }}
+                maxLength={50}
+                required
+                className="w-full border border-slate-600 rounded-[12px] p-3 pr-16 text-[16px] bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+              />
+              <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                admin.username.length >= 50 ? 'text-red-400' : 
+                admin.username.length >= 40 ? 'text-yellow-400' : 
+                'text-slate-400'
+              }`}>
+                {admin.username.length}/50
+              </div>
+            </div>
           </label>
           <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
             <label className="flex flex-col gap-2">
               <span className="font-semibold text-slate-200">Hasło</span>
-              <input
-                name="password"
-                type="password"
-                value={admin.password}
-                onChange={handleAdminChange}
-                required
-                className="border border-slate-600 rounded-[12px] p-3 text-[16px] bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
-              />
+              <div className="relative">
+                <input
+                  name="password"
+                  type="password"
+                  value={admin.password}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val.length <= 128) {
+                      handleAdminChange(e);
+                    }
+                  }}
+                  maxLength={128}
+                  required
+                  className="w-full border border-slate-600 rounded-[12px] p-3 pr-16 text-[16px] bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+                />
+                <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                  admin.password.length >= 128 ? 'text-red-400' : 
+                  admin.password.length >= 100 ? 'text-yellow-400' : 
+                  'text-slate-400'
+                }`}>
+                  {admin.password.length}/128
+                </div>
+              </div>
             </label>
             <label className="flex flex-col gap-2">
               <span className="font-semibold text-slate-200">
                 Powtórz hasło
               </span>
-              <input
-                name="confirmPassword"
-                type="password"
-                value={admin.confirmPassword}
-                onChange={handleAdminChange}
-                required
-                className="border border-slate-600 rounded-[12px] p-3 text-[16px] bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
-              />
+              <div className="relative">
+                <input
+                  name="confirmPassword"
+                  type="password"
+                  value={admin.confirmPassword}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val.length <= 128) {
+                      handleAdminChange(e);
+                    }
+                  }}
+                  maxLength={128}
+                  required
+                  className="w-full border border-slate-600 rounded-[12px] p-3 pr-16 text-[16px] bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+                />
+                <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                  admin.confirmPassword.length >= 128 ? 'text-red-400' : 
+                  admin.confirmPassword.length >= 100 ? 'text-yellow-400' : 
+                  'text-slate-400'
+                }`}>
+                  {admin.confirmPassword.length}/128
+                </div>
+              </div>
             </label>
           </div>
           <button

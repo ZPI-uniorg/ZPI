@@ -607,14 +607,29 @@ export default function KanbanPage() {
               >
                 <div className="px-4 py-3 border-b border-slate-700 text-sm font-semibold text-slate-200 flex items-center justify-between gap-2">
                   {editingColumnId === col.column_id ? (
-                    <input
-                      className="flex-1 bg-slate-900/40 border border-slate-600 rounded px-2 py-1 text-slate-100 outline-none focus:border-indigo-500"
-                      value={editingColumnName}
-                      onChange={(e) => setEditingColumnName(e.target.value)}
-                      onKeyDown={handleRenameKeyDown}
-                      onBlur={handleRenameSave}
-                      autoFocus
-                    />
+                    <div className="flex-1 relative">
+                      <input
+                        className="w-full bg-slate-900/40 border border-slate-600 rounded px-2 py-1 pr-12 text-slate-100 outline-none focus:border-indigo-500"
+                        value={editingColumnName}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val.length <= 50) {
+                            setEditingColumnName(val);
+                          }
+                        }}
+                        onKeyDown={handleRenameKeyDown}
+                        onBlur={handleRenameSave}
+                        maxLength={50}
+                        autoFocus
+                      />
+                      <div className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                        editingColumnName.length >= 50 ? 'text-red-400' : 
+                        editingColumnName.length >= 40 ? 'text-yellow-400' : 
+                        'text-slate-400'
+                      }`}>
+                        {editingColumnName.length}/50
+                      </div>
+                    </div>
                   ) : (
                     <span className="truncate">{col.title}</span>
                   )}
