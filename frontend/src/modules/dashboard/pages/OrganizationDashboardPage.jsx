@@ -8,7 +8,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useProjects } from "../../shared/components/ProjectsContext.jsx";
 import apiClient from "../../../api/client.js";
 import { getUserEvents, getAllEvents } from "../../../api/events.js";
-import { getBoardWithContent } from '../../../api/kanban.js';
+import { getBoardWithContent } from "../../../api/kanban.js";
+import { Plus } from "lucide-react";
 
 export default function OrganizationDashboardPage() {
   const { organization: activeOrganization, user } = useAuth();
@@ -106,7 +107,12 @@ export default function OrganizationDashboardPage() {
         if (!ignore) setKanbanBoard(data);
       })
       .catch((err) => {
-        if (!ignore) setKanbanError(err?.response?.data?.error || err?.response?.data?.detail || 'Nie udało się pobrać tablicy Kanban');
+        if (!ignore)
+          setKanbanError(
+            err?.response?.data?.error ||
+              err?.response?.data?.detail ||
+              "Nie udało się pobrać tablicy Kanban"
+          );
         setKanbanBoard(null);
       })
       .finally(() => {
@@ -181,6 +187,7 @@ export default function OrganizationDashboardPage() {
           <div className="flex-1 min-h-0 bg-[rgba(15,23,42,0.92)] rounded-[24px] p-4 shadow-[0_25px_50px_rgba(15,23,42,0.45)] flex items-start justify-center text-slate-300 border border-[rgba(148,163,184,0.35)] overflow-hidden">
             <MiniCalendar
               events={events}
+              loading={eventsLoading}
             />
           </div>
           <div className="flex-1 min-h-0 bg-[rgba(15,23,42,0.92)] rounded-[24px] p-4 shadow-[0_25px_50px_rgba(15,23,42,0.45)] flex flex-col text-slate-300 border border-[rgba(148,163,184,0.35)] overflow-hidden">

@@ -73,41 +73,6 @@ export default function MiniCalendar({
   const { year, month } = date;
   const matrix = getMonthMatrix(year, month);
 
-  // Show skeleton loader while loading
-  if (loading) {
-    return (
-      <div className="flex flex-col w-full h-full">
-        {/* Header skeleton */}
-        <div className="flex items-center justify-between mb-4 px-2">
-          <div className="h-6 w-6 bg-slate-700 rounded animate-pulse"></div>
-          <div className="h-6 w-32 bg-slate-700 rounded animate-pulse"></div>
-          <div className="h-6 w-6 bg-slate-700 rounded animate-pulse"></div>
-        </div>
-
-        {/* Weekday headers skeleton */}
-        <div className="grid grid-cols-7 gap-1 mb-2">
-          {WEEKDAYS.map((day, idx) => (
-            <div
-              key={idx}
-              className="h-6 bg-slate-700 rounded animate-pulse"
-            ></div>
-          ))}
-        </div>
-
-        {/* Calendar grid skeleton */}
-        <div className="grid grid-cols-7 gap-1 flex-1">
-          {Array.from({ length: 42 }).map((_, idx) => (
-            <div
-              key={idx}
-              className="bg-slate-700 rounded animate-pulse"
-              style={{ minHeight: "40px" }}
-            ></div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   const isToday = (day) => {
     if (!day) return false;
     const todayDate = new Date();
@@ -170,52 +135,75 @@ export default function MiniCalendar({
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-7 grid-rows-6 gap-0.5 flex-1">
-          {matrix.flat().map((day, idx) => {
-            const dayEvents = day
-              ? getEventsForDay(events, year, month, day, [])
-              : [];
-            const isTodayDay = isToday(day);
-            return (
+        {loading ? (
+          <div className="grid grid-cols-7 grid-rows-6 gap-0.5 flex-1">
+            {Array.from({ length: 42 }).map((_, idx) => (
               <div
                 key={idx}
-                className={`rounded-lg px-0.5 py-0.5 flex flex-col items-start transition-colors overflow-hidden relative ${
-                  isTodayDay
-                    ? "bg-indigo-600/30 border border-indigo-500/50 text-slate-100 hover:bg-indigo-600/40 cursor-pointer"
-                    : day
-                    ? "bg-slate-800/40 text-slate-100 hover:bg-slate-700/50 cursor-pointer"
-                    : "bg-slate-800/40 text-slate-500/40"
-                }`}
-                onClick={() => handleDayClick(day)}
+                className="rounded-lg bg-slate-800/40 p-0.5 flex flex-col overflow-hidden"
               >
-                <span
-                  className={`text-[10px] font-bold leading-tight ${
-                    isTodayDay ? "text-indigo-300" : ""
-                  }`}
-                >
-                  {day || ""}
-                </span>
-                <div className="absolute top-[14px] left-0.5 right-0.5 bottom-0.5 flex flex-col gap-0.5 overflow-hidden">
-                  {dayEvents.slice(0, 2).map((ev) => (
-                    <div
-                      key={ev.id}
-                      className="w-full truncate text-[9px] bg-violet-600/80 text-white px-0.5 rounded leading-tight h-[12px] flex-shrink-0 hover:bg-violet-500 transition"
-                      title={ev.title}
-                      onClick={(e) => handleEventClick(e, ev)}
-                    >
-                      {ev.title}
-                    </div>
-                  ))}
-                  {dayEvents.length > 2 && (
-                    <div className="text-[8px] text-slate-400 px-0.5 h-[10px] flex-shrink-0">
-                      +{dayEvents.length - 2}
-                    </div>
-                  )}
+                <div className="h-3 w-4 rounded bg-slate-700 animate-pulse mb-1" />
+                <div className="space-y-0.5 mt-1">
+                  <div className="h-2 rounded bg-slate-700/80 animate-pulse" />
+                  <div className="h-2 rounded bg-slate-700/70 animate-pulse" />
                 </div>
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-7 grid-rows-6 gap-0.5 flex-1">
+            {matrix.flat().map((day, idx) => {
+              const events = day
+                ? getEventsForDay(
+                    filteredEvents,
+                    year,
+                    month,
+                    day,
+                    selectedTags
+                  )
+                : [];
+              const isTodayDay = isToday(day);
+              return (
+                <div
+                  key={idx}
+                  className={`rounded-lg px-0.5 py-0.5 flex flex-col items-start transition-colors overflow-hidden relative ${
+                    isTodayDay
+                      ? "bg-indigo-600/30 border border-indigo-500/50 text-slate-100 hover:bg-indigo-600/40 cursor-pointer"
+                      : day
+                      ? "bg-slate-800/40 text-slate-100 hover:bg-slate-700/50 cursor-pointer"
+                      : "bg-slate-800/40 text-slate-500/40"
+                  }`}
+                  onClick={() => handleDayClick(day)}
+                >
+                  <span
+                    className={`text-[10px] font-bold leading-tight ${
+                      isTodayDay ? "text-indigo-300" : ""
+                    }`}
+                  >
+                    {day || ""}
+                  </span>
+                  <div className="absolute top-[14px] left-0.5 right-0.5 bottom-0.5 flex flex-col gap-0.5 overflow-hidden">
+                    {events.slice(0, 2).map((ev) => (
+                      <div
+                        key={ev.id}
+                        className="w-full truncate text-[9px] bg-violet-600/80 text-white px-0.5 rounded leading-tight h-[12px] flex-shrink-0 hover:bg-violet-500 transition"
+                        title={ev.title}
+                        onClick={(e) => handleEventClick(e, ev)}
+                      >
+                        {ev.title}
+                      </div>
+                    ))}
+                    {events.length > 2 && (
+                      <div className="text-[8px] text-slate-400 px-0.5 h-[10px] flex-shrink-0">
+                        +{events.length - 2}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -73,8 +73,8 @@ function OrganizationsPage() {
   });
   const [memberEditSubmitting, setMemberEditSubmitting] = useState(false);
   const [memberEditError, setMemberEditError] = useState(null);
-  const [editingTagsUser, setEditingTagsUser] = useState(null);        // <-- edycja tagów login
-  const [editTags, setEditTags] = useState([]);                        // <-- robocza lista tagów
+  const [editingTagsUser, setEditingTagsUser] = useState(null); // <-- edycja tagów login
+  const [editTags, setEditTags] = useState([]); // <-- robocza lista tagów
   const [deletingUsername, setDeletingUsername] = useState(null); // <-- NEW
 
   const selectedOrganization = useMemo(
@@ -134,41 +134,47 @@ function OrganizationsPage() {
     });
   }, [activeOrganization]);
 
-  const loadMembers = useCallback(async (organizationId) => {
-    if (!organizationId) {
-      setMembers([]);
-      return;
-    }
-    if (!user?.username) {
-      setMembers([]);
-      return;
-    }
-    setMembersLoading(true);
-    setMemberError(null);
-    try {
-      const data = await getOrganizationMembers(organizationId, user.username);
-      const normalized = data.map((member) => ({
-        id: member.user_id,
-        user: member.user_id,
-        username: member.username,
-        first_name: member.first_name ?? "",
-        last_name: member.last_name ?? "",
-        email: member.email ?? "",
-        role: member.role,
-        permissions: member.permissions ?? [],
-        tags: member.permissions ?? [], // <-- Używaj permissions jako tagów z backendu
-      }));
-      setMembers(normalized);
-    } catch (error) {
-      setMemberError(
-        error.response?.data?.error ??
-          error.response?.data?.detail ??
-          "Nie udało się pobrać członków organizacji."
-      );
-    } finally {
-      setMembersLoading(false);
-    }
-  }, [user?.username]);
+  const loadMembers = useCallback(
+    async (organizationId) => {
+      if (!organizationId) {
+        setMembers([]);
+        return;
+      }
+      if (!user?.username) {
+        setMembers([]);
+        return;
+      }
+      setMembersLoading(true);
+      setMemberError(null);
+      try {
+        const data = await getOrganizationMembers(
+          organizationId,
+          user.username
+        );
+        const normalized = data.map((member) => ({
+          id: member.user_id,
+          user: member.user_id,
+          username: member.username,
+          first_name: member.first_name ?? "",
+          last_name: member.last_name ?? "",
+          email: member.email ?? "",
+          role: member.role,
+          permissions: member.permissions ?? [],
+          tags: member.permissions ?? [], // <-- Używaj permissions jako tagów z backendu
+        }));
+        setMembers(normalized);
+      } catch (error) {
+        setMemberError(
+          error.response?.data?.error ??
+            error.response?.data?.detail ??
+            "Nie udało się pobrać członków organizacji."
+        );
+      } finally {
+        setMembersLoading(false);
+      }
+    },
+    [user?.username]
+  );
 
   useEffect(() => {
     loadOrganizations();
@@ -353,16 +359,19 @@ function OrganizationsPage() {
 
   // Sugerowane tagi: nazwy projektów + istniejące tagi członków
   const projectTagSuggestions = useMemo(
-    () => projects.map(p => p.name).filter(Boolean),
+    () => projects.map((p) => p.name).filter(Boolean),
     [projects]
   );
   const memberDerivedTags = useMemo(() => {
     const s = new Set();
-    members.forEach(m => (m.tags || []).forEach(t => t && s.add(t)));
+    members.forEach((m) => (m.tags || []).forEach((t) => t && s.add(t)));
     return Array.from(s);
   }, [members]);
   const allTagSuggestions = useMemo(
-    () => Array.from(new Set([...projectTagSuggestions, ...memberDerivedTags])).sort(),
+    () =>
+      Array.from(
+        new Set([...projectTagSuggestions, ...memberDerivedTags])
+      ).sort(),
     [projectTagSuggestions, memberDerivedTags]
   );
 
@@ -373,7 +382,9 @@ function OrganizationsPage() {
   };
 
   const toggleExistingTag = (tag) => {
-    setEditTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+    setEditTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
   };
 
   const saveTags = () => {
@@ -383,19 +394,26 @@ function OrganizationsPage() {
       return;
     }
     // wyślij do backendu
-    updateMemberPermissions(selectedOrgId, editingTagsUser, user.username, editTags)
+    updateMemberPermissions(
+      selectedOrgId,
+      editingTagsUser,
+      user.username,
+      editTags
+    )
       .then(() => {
-        setMembers(prev =>
-          prev.map(m =>
-            m.username === editingTagsUser ? { ...m, tags: [...editTags], permissions: [...editTags] } : m
+        setMembers((prev) =>
+          prev.map((m) =>
+            m.username === editingTagsUser
+              ? { ...m, tags: [...editTags], permissions: [...editTags] }
+              : m
           )
         );
       })
-      .catch(err => {
+      .catch((err) => {
         setMemberError(
           err?.response?.data?.error ??
-          err?.response?.data?.detail ??
-          "Nie udało się zapisać tagów użytkownika."
+            err?.response?.data?.detail ??
+            "Nie udało się zapisać tagów użytkownika."
         );
       })
       .finally(() => {
@@ -438,10 +456,33 @@ function OrganizationsPage() {
 
   if (organizationsLoading && !selectedOrganization) {
     return (
-      <div className="max-w-7xl mx-auto py-10 px-4">
-        <div className="bg-slate-800 rounded-xl p-6 shadow">
-          <p className="text-slate-200">Ładujemy dane organizacji…</p>
-        </div>
+      <div className="h-full overflow-auto max-w-[1500px] mx-auto px-6 py-10 flex flex-col gap-10">
+        <section className="bg-slate-800 rounded-xl p-6 shadow flex flex-col lg:flex-row items-start justify-between gap-6">
+          <div className="flex-1">
+            <div className="h-4 w-24 bg-slate-700 rounded animate-pulse mb-2" />
+            <div className="h-8 w-64 bg-slate-700 rounded animate-pulse mb-3" />
+            <div className="h-4 w-full max-w-md bg-slate-700 rounded animate-pulse" />
+          </div>
+          <div className="flex flex-col items-end gap-2 shrink-0">
+            <div className="h-6 w-24 bg-slate-700 rounded animate-pulse" />
+            <div className="h-5 w-32 bg-slate-700 rounded animate-pulse" />
+            <div className="h-5 w-40 bg-slate-700 rounded animate-pulse" />
+          </div>
+        </section>
+        <section className="bg-slate-800 rounded-xl shadow p-6">
+          <header className="flex items-center justify-between mb-4">
+            <div className="h-6 w-32 bg-slate-700 rounded animate-pulse" />
+            <div className="h-5 w-20 bg-slate-700 rounded animate-pulse" />
+          </header>
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-16 bg-slate-700 rounded animate-pulse"
+              />
+            ))}
+          </div>
+        </section>
       </div>
     );
   }
@@ -561,7 +602,51 @@ function OrganizationsPage() {
         </header>
 
         {membersLoading ? (
-          <p className="text-slate-300">Ładowanie członków…</p>
+          <div className="overflow-x-auto max-h-[520px] overflow-y-auto rounded border border-slate-700/50">
+            <table className="w-full min-w-[1100px] text-left">
+              <thead>
+                <tr className="text-slate-300">
+                  <th className="py-2 px-4">Użytkownik</th>
+                  <th className="py-2 px-4">Kontakt</th>
+                  <th className="py-2 px-4">Rola</th>
+                  <th className="py-2 px-4 w-[340px]">Tagi</th>
+                  <th className="py-2 px-4">Akcje</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <tr
+                    key={i}
+                    className="border-t border-slate-700 align-top h-[80px]"
+                  >
+                    <td className="py-2 px-4">
+                      <div className="h-4 w-24 bg-slate-700 rounded animate-pulse mb-2" />
+                      <div className="h-3 w-32 bg-slate-700 rounded animate-pulse" />
+                    </td>
+                    <td className="py-2 px-4">
+                      <div className="h-3 w-40 bg-slate-700 rounded animate-pulse" />
+                    </td>
+                    <td className="py-2 px-4">
+                      <div className="h-8 w-28 bg-slate-700 rounded animate-pulse" />
+                    </td>
+                    <td className="py-2 px-4 w-[340px]">
+                      <div className="flex flex-wrap gap-1">
+                        <div className="h-6 w-16 bg-slate-700 rounded-full animate-pulse" />
+                        <div className="h-6 w-20 bg-slate-700 rounded-full animate-pulse" />
+                        <div className="h-6 w-12 bg-slate-700 rounded-full animate-pulse" />
+                      </div>
+                    </td>
+                    <td className="py-2 px-4">
+                      <div className="flex gap-3">
+                        <div className="h-4 w-16 bg-slate-700 rounded animate-pulse" />
+                        <div className="h-4 w-16 bg-slate-700 rounded animate-pulse" />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : members.length === 0 ? (
           <p className="text-slate-300">Brak członków w tej organizacji.</p>
         ) : (
@@ -572,30 +657,45 @@ function OrganizationsPage() {
                   <th className="py-2 px-4">Użytkownik</th>
                   <th className="py-2 px-4">Kontakt</th>
                   <th className="py-2 px-4">Rola</th>
-                  <th className="py-2 px-4 w-[340px]">Tagi</th> {/* stała szerokość */}
+                  <th className="py-2 px-4 w-[340px]">Tagi</th>{" "}
+                  {/* stała szerokość */}
                   <th className="py-2 px-4">Akcje</th>
                 </tr>
               </thead>
               <tbody>
-                {members.map(member => (
-                  <tr key={member.id} className="border-t border-slate-700 align-top h-[80px]">
+                {members.map((member) => (
+                  <tr
+                    key={member.id}
+                    className="border-t border-slate-700 align-top h-[80px]"
+                  >
                     <td className="py-2 px-4">
-                      <strong className="text-slate-100">{member.username}</strong><br />
-                      <small className="text-slate-300">{member.first_name} {member.last_name}</small>
+                      <strong className="text-slate-100">
+                        {member.username}
+                      </strong>
+                      <br />
+                      <small className="text-slate-300">
+                        {member.first_name} {member.last_name}
+                      </small>
                     </td>
                     <td className="py-2 px-4">
-                      <small className="text-slate-300">{member.email || "—"}</small>
+                      <small className="text-slate-300">
+                        {member.email || "—"}
+                      </small>
                     </td>
                     <td className="py-2 px-4">
                       {isAdmin ? (
                         <select
                           value={member.role}
-                          onChange={(e) => handleRoleChange(member.username, e.target.value)}
+                          onChange={(e) =>
+                            handleRoleChange(member.username, e.target.value)
+                          }
                           disabled={member.user === user?.id}
                           className="rounded px-2 py-1 border border-slate-600 bg-slate-900 text-slate-100"
                         >
                           {Object.entries(ROLE_LABELS).map(([value, label]) => (
-                            <option key={value} value={value}>{label}</option>
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
                           ))}
                         </select>
                       ) : (
@@ -607,31 +707,39 @@ function OrganizationsPage() {
                     <td className="py-2 px-4 w-[340px] align-top">
                       {editingTagsUser === member.username ? (
                         <div className="flex flex-wrap gap-2 overflow-y-auto max-h-[64px] pr-1">
-                          {allTagSuggestions.length > 0 ? allTagSuggestions.map(tag => {
-                            const active = editTags.includes(tag);
-                            return (
-                              <button
-                                key={tag}
-                                type="button"
-                                onClick={() => toggleExistingTag(tag)}
-                                className={`px-3 py-1 rounded-full text-xs font-medium border transition ${
-                                  active
-                                    ? "bg-violet-600/90 border-violet-500 text-white shadow-sm hover:bg-violet-500"
-                                    : "bg-slate-700/70 border-slate-600 text-slate-300 hover:bg-slate-600/70 hover:text-white"
-                                }`}
-                                title={active ? "Usuń z wybranych" : "Dodaj do wybranych"}
-                              >
-                                {tag}
-                              </button>
-                            );
-                          }) : (
-                            <span className="text-slate-500 text-xs italic">Brak dostępnych tagów</span>
+                          {allTagSuggestions.length > 0 ? (
+                            allTagSuggestions.map((tag) => {
+                              const active = editTags.includes(tag);
+                              return (
+                                <button
+                                  key={tag}
+                                  type="button"
+                                  onClick={() => toggleExistingTag(tag)}
+                                  className={`px-3 py-1 rounded-full text-xs font-medium border transition ${
+                                    active
+                                      ? "bg-violet-600/90 border-violet-500 text-white shadow-sm hover:bg-violet-500"
+                                      : "bg-slate-700/70 border-slate-600 text-slate-300 hover:bg-slate-600/70 hover:text-white"
+                                  }`}
+                                  title={
+                                    active
+                                      ? "Usuń z wybranych"
+                                      : "Dodaj do wybranych"
+                                  }
+                                >
+                                  {tag}
+                                </button>
+                              );
+                            })
+                          ) : (
+                            <span className="text-slate-500 text-xs italic">
+                              Brak dostępnych tagów
+                            </span>
                           )}
                         </div>
                       ) : (
                         <div className="flex flex-wrap gap-1 max-h-[90px] overflow-y-auto max-w-[340px]">
-                          {(member.tags && member.tags.length > 0) ? (
-                            member.tags.map(tag => (
+                          {member.tags && member.tags.length > 0 ? (
+                            member.tags.map((tag) => (
                               <span
                                 key={tag}
                                 className="px-3 py-1 rounded-full text-xs bg-violet-700 text-white"
@@ -640,7 +748,9 @@ function OrganizationsPage() {
                               </span>
                             ))
                           ) : (
-                            <span className="text-slate-500 italic text-xs">brak</span>
+                            <span className="text-slate-500 italic text-xs">
+                              brak
+                            </span>
                           )}
                         </div>
                       )}
@@ -666,12 +776,18 @@ function OrganizationsPage() {
                               </button>
                             </>
                           ) : deletingUsername === member.username ? (
-                            <div className="flex items-center gap-2 text-[14px] font-medium"> {/* CHANGED */}
-                              <span className="text-red-400">Czy na pewno?</span>
+                            <div className="flex items-center gap-2 text-[14px] font-medium">
+                              {" "}
+                              {/* CHANGED */}
+                              <span className="text-red-400">
+                                Czy na pewno?
+                              </span>
                               <button
                                 type="button"
                                 className="text-red-400 hover:underline font-normal"
-                                onClick={() => confirmRemoveMember(member.username)}
+                                onClick={() =>
+                                  confirmRemoveMember(member.username)
+                                }
                               >
                                 Tak
                               </button>
@@ -703,7 +819,9 @@ function OrganizationsPage() {
                                 <button
                                   type="button"
                                   className="text-red-400 hover:underline"
-                                  onClick={() => askRemoveMember(member.username)}
+                                  onClick={() =>
+                                    askRemoveMember(member.username)
+                                  }
                                 >
                                   Usuń członka
                                 </button>
@@ -735,7 +853,10 @@ function OrganizationsPage() {
                 {memberEditError}
               </p>
             )}
-            <form onSubmit={handleUpdateMember} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form
+              onSubmit={handleUpdateMember}
+              className="grid grid-cols-1 md:grid-cols-2 gap-4"
+            >
               <label className="flex flex-col gap-2">
                 <span className="text-slate-200 font-medium">Imię</span>
                 <input
@@ -798,58 +919,137 @@ function OrganizationsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <label className="flex flex-col gap-2">
                 <span className="text-slate-200 font-medium">Imię</span>
-                <input
-                  name="first_name"
-                  value={memberForm.first_name}
-                  onChange={handleMemberFormChange}
-                  className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
-                />
+                <div className="relative">
+                  <input
+                    name="first_name"
+                    value={memberForm.first_name}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val.length <= 50) {
+                        handleMemberFormChange(e);
+                      }
+                    }}
+                    maxLength={50}
+                    className="w-full rounded px-3 py-2 pr-16 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+                  />
+                  <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                    memberForm.first_name.length >= 50 ? 'text-red-400' : 
+                    memberForm.first_name.length >= 40 ? 'text-yellow-400' : 
+                    'text-slate-400'
+                  }`}>
+                    {memberForm.first_name.length}/50
+                  </div>
+                </div>
               </label>
               <label className="flex flex-col gap-2">
                 <span className="text-slate-200 font-medium">Nazwisko</span>
-                <input
-                  name="last_name"
-                  value={memberForm.last_name}
-                  onChange={handleMemberFormChange}
-                  className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
-                />
+                <div className="relative">
+                  <input
+                    name="last_name"
+                    value={memberForm.last_name}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val.length <= 50) {
+                        handleMemberFormChange(e);
+                      }
+                    }}
+                    maxLength={50}
+                    className="w-full rounded px-3 py-2 pr-16 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+                  />
+                  <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                    memberForm.last_name.length >= 50 ? 'text-red-400' : 
+                    memberForm.last_name.length >= 40 ? 'text-yellow-400' : 
+                    'text-slate-400'
+                  }`}>
+                    {memberForm.last_name.length}/50
+                  </div>
+                </div>
               </label>
             </div>
 
             <label className="flex flex-col gap-2">
-              <span className="text-slate-200 font-medium">Email nowego członka</span>
-              <input
-                name="email"
-                type="email"
-                value={memberForm.email}
-                onChange={handleMemberFormChange}
-                className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
-              />
+              <span className="text-slate-200 font-medium">
+                Email nowego członka
+              </span>
+              <div className="relative">
+                <input
+                  name="email"
+                  type="email"
+                  value={memberForm.email}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val.length <= 100) {
+                      handleMemberFormChange(e);
+                    }
+                  }}
+                  maxLength={100}
+                  className="w-full rounded px-3 py-2 pr-16 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+                />
+                <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                  memberForm.email.length >= 100 ? 'text-red-400' : 
+                  memberForm.email.length >= 80 ? 'text-yellow-400' : 
+                  'text-slate-400'
+                }`}>
+                  {memberForm.email.length}/100
+                </div>
+              </div>
             </label>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <label className="flex flex-col gap-2">
-                <span className="text-slate-200 font-medium">Login nowego członka</span>
-                <input
-                  name="username"
-                  value={memberForm.username}
-                  onChange={handleMemberFormChange}
-                  placeholder="np. member-abc123"
-                  required
-                  className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
-                />
+                <span className="text-slate-200 font-medium">
+                  Login nowego członka
+                </span>
+                <div className="relative">
+                  <input
+                    name="username"
+                    value={memberForm.username}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val.length <= 50) {
+                        handleMemberFormChange(e);
+                      }
+                    }}
+                    placeholder="np. member-abc123"
+                    maxLength={50}
+                    required
+                    className="w-full rounded px-3 py-2 pr-16 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+                  />
+                  <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                    memberForm.username.length >= 50 ? 'text-red-400' : 
+                    memberForm.username.length >= 40 ? 'text-yellow-400' : 
+                    'text-slate-400'
+                  }`}>
+                    {memberForm.username.length}/50
+                  </div>
+                </div>
               </label>
               <label className="flex flex-col gap-2">
                 <span className="text-slate-200 font-medium">Hasło</span>
-                <input
-                  name="password"
-                  type="text"
-                  value={memberForm.password}
-                  onChange={handleMemberFormChange}
-                  placeholder="Wygeneruj bezpieczne hasło"
-                  required
-                  className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
-                />
+                <div className="relative">
+                  <input
+                    name="password"
+                    type="text"
+                    value={memberForm.password}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val.length <= 128) {
+                        handleMemberFormChange(e);
+                      }
+                    }}
+                    placeholder="Wygeneruj bezpieczne hasło"
+                    maxLength={128}
+                    required
+                    className="w-full rounded px-3 py-2 pr-16 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+                  />
+                  <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                    memberForm.password.length >= 128 ? 'text-red-400' : 
+                    memberForm.password.length >= 100 ? 'text-yellow-400' : 
+                    'text-slate-400'
+                  }`}>
+                    {memberForm.password.length}/128
+                  </div>
+                </div>
               </label>
             </div>
 

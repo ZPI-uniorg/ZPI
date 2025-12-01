@@ -1,14 +1,33 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, X, Calendar, CalendarClock, Download } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Calendar,
+  CalendarClock,
+  Download,
+} from "lucide-react";
 import CalendarMonthView from "../components/CalendarMonthView.jsx";
 import CalendarWeekView from "../components/CalendarWeekView.jsx";
+import CalendarMonthSkeleton from "../components/CalendarMonthSkeleton.jsx";
+import CalendarWeekSkeleton from "../components/CalendarWeekSkeleton.jsx";
 import useAuth from "../../../auth/useAuth.js";
 import { getUserEvents, getAllEvents } from "../../../api/events.js";
 
 const MONTHS = [
-  "Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec",
-  "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień",
+  "Styczeń",
+  "Luty",
+  "Marzec",
+  "Kwiecień",
+  "Maj",
+  "Czerwiec",
+  "Lipiec",
+  "Sierpień",
+  "Wrzesień",
+  "Październik",
+  "Listopad",
+  "Grudzień",
 ];
 
 function getWeekDays(year, month, day) {
@@ -16,7 +35,7 @@ function getWeekDays(year, month, day) {
   const dayOfWeek = current.getDay() === 0 ? 6 : current.getDay() - 1;
   const monday = new Date(current);
   monday.setDate(current.getDate() - dayOfWeek);
-  
+
   const week = [];
   for (let i = 0; i < 7; i++) {
     const d = new Date(monday);
@@ -29,7 +48,11 @@ function getWeekDays(year, month, day) {
 export default function CalendarPage() {
   const navigate = useNavigate();
   const today = new Date();
-  const [date, setDate] = useState({ year: today.getFullYear(), month: today.getMonth(), day: today.getDate() });
+  const [date, setDate] = useState({
+    year: today.getFullYear(),
+    month: today.getMonth(),
+    day: today.getDate(),
+  });
   const [view, setView] = useState("month");
   const { user, organization } = useAuth();
   const [eventsLoading, setEventsLoading] = useState(false);
@@ -54,14 +77,16 @@ export default function CalendarPage() {
         : rawEnd.split(" ");
       const datePart = splitStart[0] || "";
       const endDatePart = splitEnd[0] || datePart; // Data zakończenia z end_time
-      const startTimePart = (splitStart[1] || "").replace("+00:00", "").slice(0,5);
-      const endTimePart = (splitEnd[1] || "").replace("+00:00", "").slice(0,5);
+      const startTimePart = (splitStart[1] || "")
+        .replace("+00:00", "")
+        .slice(0, 5);
+      const endTimePart = (splitEnd[1] || "").replace("+00:00", "").slice(0, 5);
 
       const perms = ev.permissions || ev.tags || [];
       const tagCombinations = perms
-        .filter(p => p.includes('+'))
-        .map(p => p.split('+').filter(Boolean));
-      const plainTags = perms.filter(p => !p.includes('+'));
+        .filter((p) => p.includes("+"))
+        .map((p) => p.split("+").filter(Boolean));
+      const plainTags = perms.filter((p) => !p.includes("+"));
 
       return {
         id: ev.event_id,
@@ -81,17 +106,22 @@ export default function CalendarPage() {
     const fetch = async () => {
       try {
         let data;
-        if (organization.role === 'admin') {
+        if (organization.role === "admin") {
           data = await getAllEvents(organization.id, user.username);
         } else {
           data = await getUserEvents(organization.id, user.username);
           // Fallback diagnostyczny: jeśli nic nie przyszło spróbuj pobrać pełną listę (może brak permissions)
           if (Array.isArray(data) && data.length === 0) {
             try {
-              const adminData = await getAllEvents(organization.id, user.username);
+              const adminData = await getAllEvents(
+                organization.id,
+                user.username
+              );
               // Nie nadpisuj gdy brak uprawnień – tylko jeśli coś przyszło
               if (adminData?.length) data = adminData;
-            } catch (_) { /* ignoruj */ }
+            } catch (_) {
+              /* ignoruj */
+            }
           }
         }
         if (ignore) return;
@@ -101,8 +131,8 @@ export default function CalendarPage() {
         if (ignore) return;
         setEventsError(
           err?.response?.data?.error ??
-          err?.response?.data?.detail ??
-          "Nie udało się pobrać wydarzeń."
+            err?.response?.data?.detail ??
+            "Nie udało się pobrać wydarzeń."
         );
       } finally {
         if (!ignore) setEventsLoading(false);
@@ -110,7 +140,9 @@ export default function CalendarPage() {
     };
 
     fetch();
-    return () => { ignore = true; };
+    return () => {
+      ignore = true;
+    };
   }, [organization?.id, organization?.role, user?.username]);
 
   const handlePrev = () => {
@@ -123,7 +155,11 @@ export default function CalendarPage() {
       setDate(({ year, month, day }) => {
         const current = new Date(year, month, day);
         current.setDate(current.getDate() - 7);
-        return { year: current.getFullYear(), month: current.getMonth(), day: current.getDate() };
+        return {
+          year: current.getFullYear(),
+          month: current.getMonth(),
+          day: current.getDate(),
+        };
       });
     }
   };
@@ -138,9 +174,23 @@ export default function CalendarPage() {
       setDate(({ year, month, day }) => {
         const current = new Date(year, month, day);
         current.setDate(current.getDate() + 7);
-        return { year: current.getFullYear(), month: current.getMonth(), day: current.getDate() };
+        return {
+          year: current.getFullYear(),
+          month: current.getMonth(),
+          day: current.getDate(),
+        };
       });
     }
+  };
+
+  const goToToday = () => {
+    const now = new Date();
+    setDate({
+      year: now.getFullYear(),
+      month: now.getMonth(),
+      day: now.getDate(),
+    });
+    setView("week");
   };
 
   const { year, month, day } = date;
@@ -148,65 +198,88 @@ export default function CalendarPage() {
 
   const exportToICS = () => {
     let icsContent = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'PRODID:-//ZPI Calendar//EN',
-      'CALSCALE:GREGORIAN',
-      'METHOD:PUBLISH',
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//ZPI Calendar//EN",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
     ];
 
-    events.forEach(ev => {
-      const startDateTime = `${ev.date.replace(/-/g, '')}T${ev.start_time.replace(/:/g, '')}00`;
-      const endDateTime = `${(ev.endDate || ev.date).replace(/-/g, '')}T${ev.end_time.replace(/:/g, '')}00`;
-      const now = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-      
-      icsContent.push('BEGIN:VEVENT');
+    events.forEach((ev) => {
+      const startDateTime = `${ev.date.replace(
+        /-/g,
+        ""
+      )}T${ev.start_time.replace(/:/g, "")}00`;
+      const endDateTime = `${(ev.endDate || ev.date).replace(
+        /-/g,
+        ""
+      )}T${ev.end_time.replace(/:/g, "")}00`;
+      const now =
+        new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+
+      icsContent.push("BEGIN:VEVENT");
       icsContent.push(`UID:${ev.id}@zpi-calendar`);
       icsContent.push(`DTSTAMP:${now}`);
       icsContent.push(`DTSTART:${startDateTime}`);
       icsContent.push(`DTEND:${endDateTime}`);
       icsContent.push(`SUMMARY:${ev.title}`);
       if (ev.description) {
-        icsContent.push(`DESCRIPTION:${ev.description.replace(/\n/g, '\\n')}`);
+        icsContent.push(`DESCRIPTION:${ev.description.replace(/\n/g, "\\n")}`);
       }
       if (ev.tags && ev.tags.length > 0) {
-        icsContent.push(`CATEGORIES:${ev.tags.join(',')}`);
+        icsContent.push(`CATEGORIES:${ev.tags.join(",")}`);
       }
-      icsContent.push('END:VEVENT');
+      icsContent.push("END:VEVENT");
     });
 
-    icsContent.push('END:VCALENDAR');
+    icsContent.push("END:VCALENDAR");
 
-    const blob = new Blob([icsContent.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
-    const link = document.createElement('a');
+    const blob = new Blob([icsContent.join("\r\n")], {
+      type: "text/calendar;charset=utf-8",
+    });
+    const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `kalendarz_${organization?.name || 'zpi'}_${year}-${month + 1}.ics`;
+    link.download = `kalendarz_${organization?.name || "zpi"}_${year}-${
+      month + 1
+    }.ics`;
     link.click();
     URL.revokeObjectURL(link.href);
   };
 
   const exportToCSV = () => {
     const csvRows = [
-      ['Tytuł', 'Data rozpoczęcia', 'Godzina rozpoczęcia', 'Data zakończenia', 'Godzina zakończenia', 'Opis', 'Tagi'].join(',')
+      [
+        "Tytuł",
+        "Data rozpoczęcia",
+        "Godzina rozpoczęcia",
+        "Data zakończenia",
+        "Godzina zakończenia",
+        "Opis",
+        "Tagi",
+      ].join(","),
     ];
 
-    events.forEach(ev => {
+    events.forEach((ev) => {
       const row = [
         `"${ev.title.replace(/"/g, '""')}"`,
         ev.date,
         ev.start_time,
         ev.endDate || ev.date,
         ev.end_time,
-        `"${(ev.description || '').replace(/"/g, '""')}"`,
-        `"${(ev.tags || []).join(', ')}"`
-      ].join(',');
+        `"${(ev.description || "").replace(/"/g, '""')}"`,
+        `"${(ev.tags || []).join(", ")}"`,
+      ].join(",");
       csvRows.push(row);
     });
 
-    const blob = new Blob(['\ufeff' + csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8' });
-    const link = document.createElement('a');
+    const blob = new Blob(["\ufeff" + csvRows.join("\r\n")], {
+      type: "text/csv;charset=utf-8",
+    });
+    const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `kalendarz_${organization?.name || 'zpi'}_${year}-${month + 1}.csv`;
+    link.download = `kalendarz_${organization?.name || "zpi"}_${year}-${
+      month + 1
+    }.csv`;
     link.click();
     URL.revokeObjectURL(link.href);
   };
@@ -217,7 +290,9 @@ export default function CalendarPage() {
     if (firstDay.getMonth() === lastDay.getMonth()) {
       return `${MONTHS[firstDay.getMonth()]} ${firstDay.getFullYear()}`;
     }
-    return `${MONTHS[firstDay.getMonth()]} - ${MONTHS[lastDay.getMonth()]} ${lastDay.getFullYear()}`;
+    return `${MONTHS[firstDay.getMonth()]} - ${
+      MONTHS[lastDay.getMonth()]
+    } ${lastDay.getFullYear()}`;
   };
 
   return (
@@ -228,7 +303,9 @@ export default function CalendarPage() {
             <button
               onClick={handlePrev}
               className="p-2 rounded-lg hover:bg-slate-700/40 text-slate-300 transition"
-              aria-label={view === "month" ? "Poprzedni miesiąc" : "Poprzedni tydzień"}
+              aria-label={
+                view === "month" ? "Poprzedni miesiąc" : "Poprzedni tydzień"
+              }
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
@@ -238,9 +315,18 @@ export default function CalendarPage() {
             <button
               onClick={handleNext}
               className="p-2 rounded-lg hover:bg-slate-700/40 text-slate-300 transition"
-              aria-label={view === "month" ? "Następny miesiąc" : "Następny tydzień"}
+              aria-label={
+                view === "month" ? "Następny miesiąc" : "Następny tydzień"
+              }
             >
               <ChevronRight className="w-5 h-5" />
+            </button>
+            <button
+              onClick={goToToday}
+              className="ml-2 px-3 py-1.5 rounded-lg bg-indigo-600/20 border border-indigo-500/40 text-indigo-300 hover:bg-indigo-600/30 hover:text-indigo-200 transition text-sm font-medium"
+              title="Przejdź do bieżącego tygodnia"
+            >
+              Dzisiaj
             </button>
           </div>
           <div className="flex items-center gap-3">
@@ -304,9 +390,11 @@ export default function CalendarPage() {
         )}
         <div className="flex-1 min-h-0">
           {eventsLoading ? (
-            <div className="flex h-full items-center justify-center text-slate-400 text-sm">
-              Ładowanie wydarzeń…
-            </div>
+            view === "month" ? (
+              <CalendarMonthSkeleton />
+            ) : (
+              <CalendarWeekSkeleton />
+            )
           ) : view === "month" ? (
             <CalendarMonthView year={year} month={month} events={events} />
           ) : (

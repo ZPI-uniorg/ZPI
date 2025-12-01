@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import useAuth from "../../../auth/useAuth.js";
 import { createProject, updateProject } from "../../../api/projects.js";
-import { getOrganizationMembers } from "../../../api/organizations.js";
+import {
+  getOrganizationMembers,
+  updateMemberPermissions,
+} from "../../../api/organizations.js";
 import Autocomplete from "../../shared/components/Autocomplete.jsx";
 
 export default function ProjectEditPage() {
@@ -45,16 +48,20 @@ export default function ProjectEditPage() {
         }));
         setAvailableMembers(normalized);
         if (editingProject?.id && members.length === 0) {
-          const prefill = normalized.filter(m => (m.permissions || []).includes(editingProject.name));
+          const prefill = normalized.filter((m) =>
+            (m.permissions || []).includes(editingProject.name)
+          );
           setMembers(prefill);
         }
         // USTAW KOORDYNATORA
         if (editingProject?.coordinator_username && !coordinator) {
-          const coord = normalized.find(m => m.username === editingProject.coordinator_username);
+          const coord = normalized.find(
+            (m) => m.username === editingProject.coordinator_username
+          );
           if (coord) {
             setCoordinator(coord);
-            setMembers(prev =>
-              prev.some(p => p.id === coord.id) ? prev : [...prev, coord]
+            setMembers((prev) =>
+              prev.some((p) => p.id === coord.id) ? prev : [...prev, coord]
             );
           }
         }
@@ -74,15 +81,21 @@ export default function ProjectEditPage() {
     return () => {
       ignore = true;
     };
-  }, [organization?.id, user?.username, editingProject?.id, editingProject?.name]); // CHANGED deps
+  }, [
+    organization?.id,
+    user?.username,
+    editingProject?.id,
+    editingProject?.name,
+  ]); // CHANGED deps
 
   const projectTagName = editingProject?.name || null;
 
-  const filteredCoordinators = availableMembers.filter((m) =>
-    (m.role === 'coordinator' || m.role === 'admin') &&
-    (m.first_name + " " + m.last_name + " " + m.username + " " + m.email)
-      .toLowerCase()
-      .includes(searchCoord.toLowerCase())
+  const filteredCoordinators = availableMembers.filter(
+    (m) =>
+      (m.role === "coordinator" || m.role === "admin") &&
+      (m.first_name + " " + m.last_name + " " + m.username + " " + m.email)
+        .toLowerCase()
+        .includes(searchCoord.toLowerCase())
   );
 
   const filteredMembers = availableMembers
@@ -92,25 +105,31 @@ export default function ProjectEditPage() {
         .toLowerCase()
         .includes(memberInput.toLowerCase())
     )
-    .filter(m => {
+    .filter((m) => {
       if (!editingProject?.id || !projectTagName) return true;
       return (m.permissions || []).includes(projectTagName);
     });
 
-  const memberOptions = (filteredMembers.length > 0 ? filteredMembers : availableMembers
-    .filter((m) => !members.some((mm) => mm.id === m.id)))
-    .map(m => ({
-      ...m,
-      label: `${m.first_name} ${m.last_name} (${m.username})`,
-    }));
+  const memberOptions = (
+    filteredMembers.length > 0
+      ? filteredMembers
+      : availableMembers.filter((m) => !members.some((mm) => mm.id === m.id))
+  ).map((m) => ({
+    ...m,
+    label: `${m.first_name} ${m.last_name} (${m.username})`,
+  }));
 
   const handleCoordinatorSelect = (m) => {
     setCoordinator(m);
     setSearchCoord("");
-    setMembers((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
+    setMembers((prev) =>
+      prev.some((x) => x.id === m.id) ? prev : [...prev, m]
+    );
   };
   const handleMemberSelect = (m) => {
-    setMembers((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
+    setMembers((prev) =>
+      prev.some((x) => x.id === m.id) ? prev : [...prev, m]
+    );
     setMemberInput("");
   };
   const handleRemoveMember = (id) => {
@@ -134,27 +153,57 @@ export default function ProjectEditPage() {
       ).padStart(2, "0")}`;
 
     try {
+      let projectId = editingProject?.id || null;
       if (editingProject?.id) {
         await updateProject(organization.id, editingProject.id, user.username, {
-          username: user.username,                 // DODANE
+          username: user.username,
           name: name.trim(),
           description: "",
           start_dte: toISODate(today),
           end_dte: toISODate(plus30),
-          coordinator_username: coordinator?.username || null, // DODANE (jawnie)
+          coordinator_username: coordinator?.username || null,
         });
-        navigate("/dashboard", { state: { projectJustUpdated: { id: editingProject.id, name: name.trim() } } });
+        projectId = editingProject.id;
       } else {
         const created = await createProject(organization.id, user.username, {
-          username: user.username,                 // DODANE
+          username: user.username,
           name: name.trim(),
           description: "",
           start_dte: toISODate(today),
           end_dte: toISODate(plus30),
-          coordinator_username: coordinator?.username || null, // DODANE
+          coordinator_username: coordinator?.username || null,
         });
-        const createdProject = created?.id ? created : { id: created?.project_id || Date.now(), name: name.trim() };
-        navigate("/dashboard", { state: { projectJustCreated: createdProject } });
+        const createdProject = created?.id
+          ? created
+          : { id: created?.project_id || Date.now(), name: name.trim() };
+        projectId = createdProject.id;
+      }
+
+      // Persist selected members: ensure they have the project's tag
+      const projectTagName = name.trim();
+      const unique = (arr) => Array.from(new Set(arr));
+      await Promise.all(
+        members.map((m) => {
+          const currentTags = Array.isArray(m.permissions) ? m.permissions : [];
+          const nextTags = unique([...currentTags, projectTagName]);
+          return updateMemberPermissions(
+            organization.id,
+            m.username,
+            user.username,
+            nextTags
+          );
+        })
+      );
+
+      // Navigate after successful persistence
+      if (editingProject?.id) {
+        navigate("/dashboard", {
+          state: { projectJustUpdated: { id: projectId, name: name.trim() } },
+        });
+      } else {
+        navigate("/dashboard", {
+          state: { projectJustCreated: { id: projectId, name: name.trim() } },
+        });
       }
     } catch (err) {
       setError(
@@ -201,21 +250,42 @@ export default function ProjectEditPage() {
         <div className="flex flex-col lg:flex-row gap-10">
           <div className="flex-1 flex flex-col gap-6 min-w-[320px]">
             <div>
-              <label className="block mb-1 font-medium text-slate-200">Nazwa projektu</label>
-              <input
-                className="border border-slate-600 w-full rounded-lg px-3 py-2 bg-slate-800 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Nazwa projektu"
-                required
-              />
+              <label className="block mb-1 font-medium text-slate-200">
+                Nazwa projektu
+              </label>
+              <div className="relative">
+                <input
+                  className="border border-slate-600 w-full rounded-lg px-3 py-2 pr-16 bg-slate-800 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
+                  value={name}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val.length <= 50) {
+                      setName(val);
+                    }
+                  }}
+                  placeholder="Nazwa projektu"
+                  maxLength={50}
+                  required
+                />
+                <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                  name.length >= 50 ? 'text-red-400' : 
+                  name.length >= 40 ? 'text-yellow-400' : 
+                  'text-slate-400'
+                }`}>
+                  {name.length}/50
+                </div>
+              </div>
             </div>
             <div>
               <label className="block mb-1 font-medium text-slate-200">
                 Koordynator (członek organizacji)
               </label>
               <Autocomplete
-                value={coordinator ? `${coordinator.first_name} ${coordinator.last_name}` : searchCoord}
+                value={
+                  coordinator
+                    ? `${coordinator.first_name} ${coordinator.last_name}`
+                    : searchCoord
+                }
                 onChange={(v) => {
                   setSearchCoord(v);
                   setCoordinator(null);
@@ -224,13 +294,17 @@ export default function ProjectEditPage() {
                 onSelect={handleCoordinatorSelect}
                 placeholder="Wyszukaj koordynatora"
                 inputClassName="border border-slate-600 w-full rounded-lg px-3 py-2 bg-slate-800 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
-                getOptionLabel={(m) => `${m.first_name} ${m.last_name} (${m.username})`}
+                getOptionLabel={(m) =>
+                  `${m.first_name} ${m.last_name} (${m.username})`
+                }
               />
             </div>
           </div>
 
           <div className="flex-[2] flex flex-col min-w-[400px]">
-            <label className="block mb-1 font-medium text-slate-200">Lista członków</label>
+            <label className="block mb-1 font-medium text-slate-200">
+              Lista członków
+            </label>
             <div className="border border-slate-700 rounded-xl p-4 min-h-[320px] flex flex-col gap-2 bg-slate-800 h-[420px]">
               <div className="flex gap-2 mb-2 relative">
                 <Autocomplete
@@ -248,7 +322,10 @@ export default function ProjectEditPage() {
                   <span className="text-slate-400">Ładowanie członków…</span>
                 ) : members.length > 0 ? (
                   members.map((m) => (
-                    <div key={m.id} className="flex items-center gap-2 border-b border-slate-700 py-1">
+                    <div
+                      key={m.id}
+                      className="flex items-center gap-2 border-b border-slate-700 py-1"
+                    >
                       <span className="text-slate-100">
                         {m.first_name} {m.last_name} ({m.username})
                         {coordinator && coordinator.id === m.id && (
@@ -273,7 +350,9 @@ export default function ProjectEditPage() {
                     </div>
                   ))
                 ) : (
-                  <span className="text-slate-400 italic">Brak członków w projekcie</span>
+                  <span className="text-slate-400 italic">
+                    Brak członków w projekcie
+                  </span>
                 )}
               </div>
             </div>
@@ -284,7 +363,9 @@ export default function ProjectEditPage() {
           <button
             type="submit"
             className="bg-gradient-to-r from-indigo-500 to-violet-500 text-white px-10 py-3 rounded-xl text-lg font-semibold shadow hover:brightness-110 transition w-full md:w-auto disabled:opacity-50"
-            disabled={!name.trim() || !coordinator || members.length === 0 || submitting}
+            disabled={
+              !name.trim() || !coordinator || members.length === 0 || submitting
+            }
           >
             {isEditing ? "Zapisz zmiany" : "Stwórz projekt"}
           </button>
