@@ -10,7 +10,7 @@ export default function ChatPanel({
   loading = false,
 }) {
   const navigate = useNavigate();
-  console.log(chats);
+  console.log("totototo", chats);
   return (
     <section className="basis-[30%] grow h-full bg-[rgba(15,23,42,0.92)] rounded-[24px] p-5 shadow-[0_25px_50px_rgba(15,23,42,0.45)] text-slate-300 border border-[rgba(148,163,184,0.35)] flex flex-col min-h-0 overflow-hidden">
       <div className="flex items-center justify-between mb-3">

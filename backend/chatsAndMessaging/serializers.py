@@ -22,7 +22,12 @@ class MessageSerializer(serializers.ModelSerializer):
 
 
 class ChatSerializer(serializers.ModelSerializer):
+    tags = serializers.SerializerMethodField()
+
     class Meta:
         model = Chat
-        fields = ["chat_id", "name", "organization_id"]
+        fields = ["chat_id", "name", "organization_id", "tags"]
         read_only_fields = ["chat_id"]
+
+    def get_tags(self, obj):
+        return [perm.name for perm in obj.permissions.all()]

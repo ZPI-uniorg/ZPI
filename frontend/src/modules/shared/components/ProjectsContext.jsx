@@ -1,104 +1,300 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import useAuth from '../../../auth/useAuth.js';
 import { getAllProjects, getUserProjects } from '../../../api/projects.js';
+import { getAllEvents, getUserEvents } from '../../../api/events.js';
+import { getOrganizationMembers } from '../../../api/organizations.js';
+import apiClient from '../../../api/client.js';
 
 const ProjectsContext = createContext(null);
 export const useProjects = () => useContext(ProjectsContext);
 
 export function ProjectsProvider({ children, projectJustCreated, projectJustUpdated }) {
   const { organization, user } = useAuth();
-  const [projects, setProjects] = useState([]);
-  const [localProjects, setLocalProjects] = useState([]);
-  const [projectsLoading, setProjectsLoading] = useState(false);
-  const [projectsError, setProjectsError] = useState(null);
 
-  const mergeProjectData = (baseList, extras) => {
-    const merged = Array.isArray(baseList) ? [...baseList] : [];
+  const [state, setState] = useState({
+    userMember: null,
+    userMemberLoading: false,
+    userMemberError: null,
+
+    projects: [],
+    localProjects: [],
+    projectsLoading: false,
+    projectsError: null,
+    
+    allEvents: [],
+    eventsByProject: {},
+    eventsLoading: false,
+    eventsError: null,
+    
+    chats: [],
+    chatsLoading: false,
+    chatsError: null,
+
+    selectedTags: [],
+    logic: 'AND',
+  });
+
+  const projectTags = useMemo(() => {
+    const tags = {};
+    state.projects.forEach((p) => {
+      tags[p.id] = p.tags || p.permissions || [];
+    });
+    return tags;
+  }, [state.projects]);
+
+  const mergeProjects = useCallback((baseList, extras) => {
+    const merged = [...(baseList || [])];
     extras.filter(Boolean).forEach(extra => {
-      if (!extra || typeof extra !== 'object') return;
-      const idNum = Number(extra.id);
-      if (Number.isFinite(idNum) && idNum > 0) {
-        const idx = merged.findIndex(p => Number(p.id) === idNum);
-        if (idx >= 0) {
-          merged[idx] = { ...merged[idx], ...extra };
-          return;
-        }
+      const idx = merged.findIndex(p => 
+        Number(p.id) === Number(extra.id) || (extra.name && p.name === extra.name)
+      );
+      if (idx >= 0) {
+        merged[idx] = { ...merged[idx], ...extra };
+      } else {
+        merged.push(extra);
       }
-      if (extra.name && merged.some(p => p.name === extra.name)) return;
-      merged.push(extra);
     });
     return merged;
-  };
+  }, []);
 
-  const loadProjects = async () => {
-    if (!organization?.id || !user?.username) {
-      setProjects([]);
-      setProjectsLoading(false);
-      setProjectsError(null);
+  const loadUserMember = useCallback(async () => {
+    setState(s => ({ ...s, userMemberLoading: true, userMemberError: null }));
+    try {
+      const data = await getOrganizationMembers(organization.id, user.username);
+      const members = Array.isArray(data) ? data : [];
+      const member = members.find(m => m.username === user.username);
+      if (member) {
+        setState(s => ({ 
+          ...s, 
+          userMember: member, 
+          userMemberLoading: false 
+        }));
+      } else {
+        console.error('User member not found in organization');
+        setState(s => ({ 
+          ...s, 
+          userMemberError: 'Nie znaleziono użytkownika w organizacji.',
+          userMemberLoading: false 
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to load user member:', err);
+      setState(s => ({ 
+        ...s, 
+        userMemberError: 'Nie udało się pobrać danych użytkownika.',
+        userMemberLoading: false 
+      }));
+    }
+  }, [organization.id, user.username]);
+
+  const loadProjects = useCallback(async (userMember) => {
+    if (!userMember) {
+      console.warn('loadProjects: no userMember provided');
       return;
     }
-    setProjectsLoading(true);
-    setProjectsError(null);
+
+    setState(s => ({ ...s, projectsLoading: true, projectsError: null }));
     try {
-      let data = [];
-      // Próba ALL (admin) nawet jeśli brak organization.role – backend sam zweryfikuje rolę
-      try {
-        data = await getAllProjects(organization.id, user.username);
-      } catch (innerErr) {
-        const status = innerErr?.response?.status;
-        const msg = innerErr?.response?.data?.error || innerErr?.response?.data?.detail || '';
-        if (status === 403 || status === 401 || /permission/i.test(msg)) {
-          // fallback do projektów użytkownika
-          data = await getUserProjects(organization.id, user.username);
-        } else {
-          throw innerErr;
-        }
-      }
+      const isAdmin = userMember.role === 'admin';
+      const fetchFn = isAdmin ? getAllProjects : getUserProjects;
+      const data = await fetchFn(organization.id, user.username);
       const fetched = Array.isArray(data) ? data : [];
-      setProjects(mergeProjectData(fetched, localProjects));
-      setLocalProjects(cur =>
-        cur.filter(local =>
-          !fetched.some(fp =>
-            fp.name === local.name || Number(fp.id) === Number(local.id)
-          )
-        )
-      );
+      
+      // Mapuj projekty - dodaj pole tags z nazwą projektu
+      const projectsWithTags = fetched.map(p => ({
+        ...p,
+        tags: p.name ? [p.name] : []
+      }));
+      
+      console.log('Projects loaded:', projectsWithTags.map(p => ({ id: p.id, name: p.name, tags: p.tags })));
+      
+      setState(s => ({
+        ...s,
+        projects: mergeProjects(projectsWithTags, s.localProjects),
+        localProjects: s.localProjects.filter(local =>
+          !fetched.some(fp => fp.name === local.name || Number(fp.id) === Number(local.id))
+        ),
+        projectsLoading: false,
+      }));
     } catch (err) {
-      setProjectsError(
-        err.response?.data?.error ??
-        err.response?.data?.detail ??
-        'Nie udało się pobrać projektów.'
-      );
-      setProjects(mergeProjectData([], localProjects));
-    } finally {
-      setProjectsLoading(false);
+      console.error('Failed to load projects:', err);
+      setState(s => ({
+        ...s,
+        projectsError: err.response?.data?.error || err.response?.data?.detail || 'Nie udało się pobrać projektów.',
+        projects: mergeProjects([], s.localProjects),
+        projectsLoading: false,
+      }));
     }
-  };
+  }, [organization.id, user.username, mergeProjects]);
+
+  const loadEvents = useCallback(async (userMember, projects) => {
+    if (!userMember || !projects || projects.length === 0) {
+      return;
+    }
+
+    setState(s => ({ ...s, eventsLoading: true, eventsError: null }));
+    try {
+      const isAdmin = userMember.role === 'admin';
+      const fetchFn = isAdmin ? getAllEvents : getUserEvents;
+      const data = await fetchFn(organization.id, user.username);
+      const events = Array.isArray(data) ? data : [];
+      
+      console.log('Events loaded:', events.map(e => ({ 
+        id: e.event_id, 
+        name: e.name, 
+        tags: e.permissions || e.tags 
+      })));
+      
+      const grouped = {};
+      events.forEach((ev) => {
+        const perms = ev.permissions || ev.tags || [];
+        projects.forEach((p) => {
+          const tags = p.tags || p.permissions || [];
+          if (tags.some(t => perms.includes(t)) || (p.name && perms.includes(p.name))) {
+            grouped[p.id] = grouped[p.id] || [];
+            grouped[p.id].push(ev);
+          }
+        });
+      });
+
+      setState(s => ({ ...s, allEvents: events, eventsByProject: grouped, eventsLoading: false }));
+    } catch (err) {
+      console.error('Failed to load events:', err);
+      setState(s => ({ ...s, eventsError: 'Nie udało się pobrać wydarzeń.', eventsLoading: false }));
+    }
+  }, [organization.id, user.username]);
+
+  const loadChats = useCallback(async (userMember) => {
+    if (!userMember) return;
+
+    setState(s => ({ ...s, chatsLoading: true, chatsError: null }));
+    try {
+      const isAdmin = userMember.role === 'admin';
+      const endpoint = isAdmin 
+        ? `chats/all/${organization.id}/` 
+        : `chats/my/${organization.id}/`;
+      const res = await apiClient.get(endpoint);
+      const chats = (res.data?.chats || []).map(c => ({
+        chat_id: c.chat_id,
+        title: c.name,
+        tags: c.tags || [],
+      }));
+      
+      console.log('Chats loaded:', chats.map(c => ({ id: c.chat_id, title: c.title, tags: c.tags })));
+      
+      setState(s => ({ ...s, chats, chatsLoading: false }));
+    } catch (err) {
+      console.error('Failed to load chats:', err);
+      setState(s => ({ ...s, chatsError: 'Nie udało się pobrać czatów.', chatsLoading: false }));
+    }
+  }, [organization.id]);
 
   useEffect(() => {
-    loadProjects();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [organization?.id, organization?.role, user?.username]);
+    loadUserMember();
+  }, [loadUserMember]);
+
+  useEffect(() => {
+    if (state.userMember) {
+      loadProjects(state.userMember);
+      loadChats(state.userMember);
+    }
+  }, [state.userMember, loadProjects, loadChats]);
+
+  useEffect(() => {
+    if (state.projects.length > 0 && state.userMember) {
+      loadEvents(state.userMember, state.projects);
+    }
+  }, [state.projects, state.userMember, loadEvents]);
 
   useEffect(() => {
     if (!projectJustCreated && !projectJustUpdated) return;
     const extras = [projectJustCreated, projectJustUpdated];
-    setLocalProjects(current => mergeProjectData(current, extras));
-    setProjects(current => mergeProjectData(current, extras));
-  }, [projectJustCreated, projectJustUpdated]);
+    setState(s => ({
+      ...s,
+      localProjects: mergeProjects(s.localProjects, extras),
+      projects: mergeProjects(s.projects, extras),
+    }));
+  }, [projectJustCreated, projectJustUpdated, mergeProjects]);
 
-  useEffect(() => {
-    setLocalProjects([]);
-    setProjects([]);
-  }, [organization?.id]);
+  const filterByProjects = useCallback((items, selectedProjectIds) => {
+    if (!Array.isArray(items)) return [];
+    if (!selectedProjectIds?.length) return items;
+    const idSet = new Set(selectedProjectIds.map(Number));
+    return items.filter(it => idSet.has(Number(it.project_id || it.project?.id)));
+  }, []);
+
+  // Filtrowanie projektów - zawsze OR (pokaż wszystkie zaznaczone)
+  const filteredProjects = useMemo(() => {
+    if (!state.selectedTags.length) return state.projects;
+    return state.projects.filter(p => {
+      const tags = p.tags || p.permissions || [];
+      return state.selectedTags.some(tag => tags.includes(tag));
+    });
+  }, [state.projects, state.selectedTags]);
+
+  // Filtrowanie chatów
+  const filteredChats = useMemo(() => {
+    if (!state.selectedTags.length) return state.chats;
+    return state.chats.filter(c => {
+      if (state.logic === 'AND') {
+        return state.selectedTags.every(tag => c.tags?.includes(tag));
+      } else {
+        return state.selectedTags.some(tag => c.tags?.includes(tag));
+      }
+    });
+  }, [state.chats, state.selectedTags, state.logic]);
+
+  // Filtrowanie eventów
+  const filteredEventsByProject = useMemo(() => {
+    const result = {};
+    Object.entries(state.eventsByProject).forEach(([pid, events]) => {
+      if (!Array.isArray(events)) return;
+      result[pid] = !state.selectedTags.length
+        ? events
+        : events.filter(ev => {
+            const tags = ev.permissions || ev.tags || [];
+            if (state.logic === 'AND') {
+              return state.selectedTags.every(tag => tags.includes(tag));
+            } else {
+              return state.selectedTags.some(tag => tags.includes(tag));
+            }
+          });
+    });
+    return result;
+  }, [state.eventsByProject, state.selectedTags, state.logic]);
+
+  const value = useMemo(() => ({
+    userMember: state.userMember,
+    userMemberLoading: state.userMemberLoading,
+    userMemberError: state.userMemberError,
+    userRole: state.userMember?.role || null,
+    userTags: state.userMember?.permissions || state.userMember?.tags || [],
+
+    projects: filteredProjects,
+    projectsLoading: state.projectsLoading,
+    projectsError: state.projectsError,
+    refreshProjects: () => state.userMember && loadProjects(state.userMember),
+    projectTags,
+
+    allEvents: state.allEvents,
+    eventsByProject: filteredEventsByProject,
+    eventsLoading: state.eventsLoading,
+    eventsError: state.eventsError,
+
+    chats: filteredChats,
+    chatsLoading: state.chatsLoading,
+    chatsError: state.chatsError,
+
+    selectedTags: state.selectedTags,
+    setSelectedTags: tags => setState(s => ({ ...s, selectedTags: tags })),
+    logic: state.logic,
+    setLogic: logic => setState(s => ({ ...s, logic })),
+
+    filterByProjects,
+  }), [state, projectTags, loadProjects, filterByProjects, filteredProjects, filteredChats, filteredEventsByProject]);
 
   return (
-    <ProjectsContext.Provider value={{
-      projects,
-      projectsLoading,
-      projectsError,
-      refreshProjects: loadProjects
-    }}>
+    <ProjectsContext.Provider value={value}>
       {children}
     </ProjectsContext.Provider>
   );

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import useAuth from "../../../auth/useAuth.js";
-import { KANBAN_BOARDS } from "../../../api/fakeData.js";
+// import { KANBAN_BOARDS } from "../../../api/fakeData.js";
 import ChatPanel from "../components/ChatPanel.jsx";
 import MiniCalendar from "../components/MiniCalendar.jsx";
 import KanbanPreview from "../components/KanbanPreview.jsx";
@@ -17,56 +17,34 @@ export default function OrganizationDashboardPage() {
   const projectJustCreated = location.state?.projectJustCreated;
   const projectJustUpdated = location.state?.projectJustUpdated;
 
-  const { projects, projectsLoading, projectsError } = useProjects();
+  const {
+    projects,
+    projectsLoading,
+    projectsError,
+    eventsByProject,
+    allEvents,
+    eventsLoading,
+    eventsError,
+    chats,
+    chatsLoading,
+    selectedTags,
+    setSelectedTags,
+    logic,
+    setLogic,
+  } = useProjects();
 
   const projectList = projects;
   const [kanbanIndex, setKanbanIndex] = useState(0);
   const currentProject = projectList[kanbanIndex] || null;
 
-  const [chats, setChats] = useState([]);
-  const [chatsLoading, setChatsLoading] = useState(false);
   const [events, setEvents] = useState([]);
-  const [eventsLoading, setEventsLoading] = useState(false);
-  const [kanbanBoard, setKanbanBoard] = useState(null);
-  const [kanbanLoading, setKanbanLoading] = useState(false);
-  const [kanbanError, setKanbanError] = useState(null);
   // Fetch chats from backend for active organization
-  useEffect(() => {
-    const orgId = activeOrganization?.id;
-    if (!orgId) return;
-    let cancelled = false;
-    setChatsLoading(true);
-    apiClient
-      .get(`chats/my/${orgId}`)
-      .then((res) => {
-        if (cancelled) return;
-        const serverChats = (res.data?.chats || []).map((c) => ({
-          chat_it: c.chat_it,
-          title: c.name,
-          tags: [],
-          tagCombinations: [],
-        }));
-        setChats(serverChats);
-      })
-      .catch((e) => {
-        console.error(
-          "Chat list fetch failed",
-          e.response?.status,
-          e.response?.data || e.message
-        );
-      })
-      .finally(() => {
-        if (!cancelled) setChatsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [activeOrganization?.id]);
+  // Chats are provided by ProjectsContext; optionally filter by selected projects later
   // Fetch events from backend
+  // Filtrowanie zdarzeń kalendarzowych po filtrach
   useEffect(() => {
     if (!activeOrganization?.id || !user?.username) return;
     let ignore = false;
-    setEventsLoading(true);
 
     const parseEventRow = (ev) => {
       const rawStart = ev.start_time ? String(ev.start_time) : "";
@@ -103,41 +81,17 @@ export default function OrganizationDashboardPage() {
       };
     };
 
-    const fetch = async () => {
-      try {
-        let data;
-        if (activeOrganization.role === "admin") {
-          data = await getAllEvents(activeOrganization.id, user.username);
-        } else {
-          data = await getUserEvents(activeOrganization.id, user.username);
-          if (Array.isArray(data) && data.length === 0) {
-            try {
-              const adminData = await getAllEvents(
-                activeOrganization.id,
-                user.username
-              );
-              if (adminData?.length) data = adminData;
-            } catch (_) {
-              /* ignore */
-            }
-          }
-        }
-        if (ignore) return;
-        const mapped = (data || []).map(parseEventRow);
-        setEvents(mapped);
-      } catch (err) {
-        if (ignore) return;
-        console.error("Failed to load events:", err);
-      } finally {
-        if (!ignore) setEventsLoading(false);
-      }
-    };
+    // Zbierz wszystkie eventy ze wszystkich projektów
+    const allProjectEvents = Object.values(eventsByProject).flat();
+    const mapped = allProjectEvents.map(parseEventRow);
+    setEvents(mapped);
+    console.log('Zdarzenia kalendarzowe (po filtrach z kontekstu):', mapped);
+  }, [eventsByProject]);
 
-    fetch();
-    return () => {
-      ignore = true;
-    };
-  }, [activeOrganization?.id, activeOrganization?.role, user?.username]);
+  // Fetch current project's board on demand
+  const [kanbanBoard, setKanbanBoard] = useState(null);
+  const [kanbanLoading, setKanbanLoading] = useState(false);
+  const [kanbanError, setKanbanError] = useState(null);
 
   useEffect(() => {
     if (!currentProject || !activeOrganization?.id || !user?.username) {
@@ -164,10 +118,7 @@ export default function OrganizationDashboardPage() {
   }, [currentProject?.id, activeOrganization?.id, user?.username]);
 
   const [query, setQuery] = useState("");
-  const [selectedTags, setSelectedTags] = useState([]);
-  const [logic, setLogic] = useState("AND");
-  // (removed duplicate declarations)
-  const currentBoard = currentProject ? KANBAN_BOARDS[currentProject.id] : null;
+  const currentBoard = kanbanBoard;
 
   useEffect(() => {
     if (!projectJustCreated) return;
@@ -199,16 +150,9 @@ export default function OrganizationDashboardPage() {
     let result = chats;
     const q = query.trim().toLowerCase();
     if (q) result = result.filter((c) => c.title.toLowerCase().includes(q));
-    if (selectedTags.length > 0) {
-      result = result.filter((c) =>
-        logic === "AND"
-          ? selectedTags.every((t) => c.tags?.includes(t)) &&
-            (c.tags || []).every((t) => selectedTags.includes(t))
-          : selectedTags.some((t) => c.tags?.includes(t))
-      );
-    }
     return result;
-  }, [chats, query, selectedTags, logic]);
+  }, [chats, query]);
+  console.log('Chaty (po filtrach z kontekstu):', filteredChats);
 
   const prevKanban = () => {
     setKanbanIndex((i) =>
@@ -236,15 +180,13 @@ export default function OrganizationDashboardPage() {
         <div className="flex flex-col basis-[45%] grow gap-6 h-full min-h-0 overflow-hidden">
           <div className="flex-1 min-h-0 bg-[rgba(15,23,42,0.92)] rounded-[24px] p-4 shadow-[0_25px_50px_rgba(15,23,42,0.45)] flex items-start justify-center text-slate-300 border border-[rgba(148,163,184,0.35)] overflow-hidden">
             <MiniCalendar
-              selectedTags={selectedTags}
-              logic={logic}
               events={events}
             />
           </div>
           <div className="flex-1 min-h-0 bg-[rgba(15,23,42,0.92)] rounded-[24px] p-4 shadow-[0_25px_50px_rgba(15,23,42,0.45)] flex flex-col text-slate-300 border border-[rgba(148,163,184,0.35)] overflow-hidden">
             <KanbanPreview
               project={currentProject}
-              board={kanbanBoard}
+              board={currentBoard}
               onPrev={prevKanban}
               onNext={nextKanban}
               loading={kanbanLoading || projectsLoading}

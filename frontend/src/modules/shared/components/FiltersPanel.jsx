@@ -57,9 +57,14 @@ export default function FiltersPanel({
     }, [allTags, projectNames]);
 
   const allFilterItems = useMemo(
-    () => [...tags, ...projects.map((p) => p.name).filter(Boolean)],
+    () => [...tags, ...projects.map((p) => p.name).filter(Boolean)].sort(),
     [tags, projects]
   );
+
+  useEffect(() => {
+    console.log('Lista filtrów (allFilterItems):', allFilterItems);
+    console.log('Wybrane filtry (selectedTags):', selectedTags, '| Tryb logiczny:', logic);
+  }, [allFilterItems, selectedTags, logic]);
 
   useEffect(() => {
     if (!filtersOpen) return;

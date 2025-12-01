@@ -1,10 +1,31 @@
 import React, { useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Maximize2 } from 'lucide-react';
+import { useProjects } from '../../shared/components/ProjectsContext.jsx';
 
 export default function KanbanPreview({ project, board, onPrev, onNext, loading, error }) {
   const navigate = useNavigate();
   const scrollRef = useRef(null);
+  const { selectedTags } = useProjects();
+
+  useEffect(() => {
+    if (board) {
+      const tasks = board.columns.flatMap(col => col.tasks || []);
+      console.log('Kanban board for project', project?.name, ':', {
+        board_id: board.board_id,
+        columns: board.columns.map(c => ({ 
+          column_id: c.column_id, 
+          title: c.title, 
+          task_count: c.tasks?.length || 0 
+        })),
+        all_tasks: tasks.map(t => ({
+          task_id: t.task_id,
+          title: t.title,
+          assigned_to: t.assigned_to ? `${t.assigned_to.first_name} ${t.assigned_to.last_name}` : null
+        }))
+      });
+    }
+  }, [board, project]);
 
   useEffect(() => {
     const scrollContainer = scrollRef.current;
@@ -27,9 +48,12 @@ export default function KanbanPreview({ project, board, onPrev, onNext, loading,
   };
 
   if (!project) {
+    const message = selectedTags && selectedTags.length > 0 
+      ? 'Brak projektów pasujących do wybranych filtrów.'
+      : 'Brak projektów.';
     return (
       <div className="flex w-full h-full items-center justify-center text-slate-400 text-sm">
-        Brak projektów.
+        {message}
       </div>
     );
   }

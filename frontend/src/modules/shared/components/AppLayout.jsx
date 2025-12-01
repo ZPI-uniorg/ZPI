@@ -2,7 +2,7 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import useAuth from '../../../auth/useAuth.js';
 import { Settings, Filter } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { ProjectsProvider } from '../components/ProjectsContext.jsx';
+import { ProjectsProvider, useProjects } from '../components/ProjectsContext.jsx';
 import FiltersPanel from './FiltersPanel.jsx';
 
 const NAV_LINKS = [
@@ -12,17 +12,14 @@ const NAV_LINKS = [
   { to: '/chat', label: 'Chaty' },
 ]
 
-function AppLayout() {
+function AppLayoutContent() {
   const { user, organization, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const projectJustCreated = location.state?.projectJustCreated;
-  const projectJustUpdated = location.state?.projectJustUpdated;
   const fullName = `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.username;
+  const { selectedTags, setSelectedTags, logic, setLogic } = useProjects();
 
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [selectedTags, setSelectedTags] = useState([]);
-  const [logic, setLogic] = useState('AND');
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -43,8 +40,12 @@ function AppLayout() {
       navigate({ search: params.toString() ? `?${params.toString()}` : '' }, { replace: true });
     }
   };
-  const toggleTag = (t) =>
-    setSelectedTags(prev => (prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]));
+  const toggleTag = (t) => {
+    const newTags = selectedTags.includes(t) 
+      ? selectedTags.filter(x => x !== t) 
+      : [...selectedTags, t];
+    setSelectedTags(newTags);
+  };
 
   const getLinkClassName = ({ isActive }) => {
     const base =
@@ -108,21 +109,16 @@ function AppLayout() {
         </div>
       </header>
       <main className="flex-1 min-h-0 overflow-hidden">
-        <ProjectsProvider
-          projectJustCreated={projectJustCreated}
-          projectJustUpdated={projectJustUpdated}
-        >
-          <Outlet />
-          <FiltersPanel
-            filtersOpen={filtersOpen}
-            openFilters={openFilters}
-            closeFilters={closeFilters}
-            selectedTags={selectedTags}
-            logic={logic}
-            setLogic={setLogic}
-            toggleTag={toggleTag}
-          />
-        </ProjectsProvider>
+        <Outlet />
+        <FiltersPanel
+          filtersOpen={filtersOpen}
+          openFilters={openFilters}
+          closeFilters={closeFilters}
+          selectedTags={selectedTags}
+          logic={logic}
+          setLogic={setLogic}
+          toggleTag={toggleTag}
+        />
       </main>
       <footer className="border-t border-slate-800 bg-slate-950/90 py-4">
         <div className="mx-auto flex max-w-6xl items-center justify-center px-6">
@@ -133,6 +129,21 @@ function AppLayout() {
       </footer>
     </div>
   )
+}
+
+function AppLayout() {
+  const location = useLocation();
+  const projectJustCreated = location.state?.projectJustCreated;
+  const projectJustUpdated = location.state?.projectJustUpdated;
+
+  return (
+    <ProjectsProvider
+      projectJustCreated={projectJustCreated}
+      projectJustUpdated={projectJustUpdated}
+    >
+      <AppLayoutContent />
+    </ProjectsProvider>
+  );
 }
 
 export default AppLayout
