@@ -181,10 +181,10 @@ export default function TaskEditPage() {
   };
 
   return (
-    <div className="h-full flex items-center justify-center bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-8">
+    <div className="h-full flex items-center justify-center bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-8 overflow-y-auto">
       <form
         onSubmit={handleSubmit}
-        className="bg-slate-900/95 rounded-3xl shadow-[0_30px_60px_rgba(15,23,42,0.45)] p-12 w-full max-w-4xl flex flex-col gap-8 border border-slate-700 max-h-[90vh] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
+        className="bg-slate-900/95 rounded-3xl shadow-[0_30px_60px_rgba(15,23,42,0.45)] p-12 w-full max-w-4xl flex flex-col gap-8 border border-slate-700 my-8"
       >
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-slate-100">

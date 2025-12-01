@@ -239,7 +239,7 @@ export default function CalendarWeekView({ weekDays, events }) {
                 return (
                   <div
                     key={ev.id}
-                    className={`text-[9px] bg-violet-600/90 text-white px-2 py-1 ${roundedClass} cursor-pointer hover:bg-violet-500 transition truncate border-l-2 border-violet-400`}
+                    className={`text-[11px] bg-violet-600/90 text-white px-2 py-1 ${roundedClass} cursor-pointer hover:bg-violet-500 transition truncate border-l-2 border-violet-400`}
                     title={`${ev.title}${titleSuffix} - ${ev.start_time} - ${ev.end_time}`}
                     onClick={(e) => handleEventClick(e, ev)}
                   >
@@ -308,11 +308,11 @@ export default function CalendarWeekView({ weekDays, events }) {
                       return (
                         <div
                           key={ev.id}
-                          className="absolute text-[10px] bg-violet-600/95 text-white px-1 py-1 rounded cursor-pointer hover:bg-violet-500 hover:z-50 hover:shadow-2xl transition-all overflow-hidden border-l-2 border-violet-300 shadow-lg"
+                          className="absolute text-[11px] bg-violet-600/95 text-white px-1.5 py-1 rounded cursor-pointer hover:bg-violet-500 hover:z-50 hover:shadow-2xl transition-all overflow-hidden border-l-2 border-violet-300 shadow-lg"
                           style={{
                             top: position.top,
                             height: position.height,
-                            minHeight: "20px",
+                            minHeight: "24px",
                             left: leftOffset,
                             width: actualWidth,
                             zIndex: zIndex,
@@ -320,7 +320,7 @@ export default function CalendarWeekView({ weekDays, events }) {
                           title={`${ev.title} - ${ev.start_time} - ${ev.end_time}`}
                           onClick={(e) => handleEventClick(e, ev)}
                         >
-                          <div className="font-semibold truncate text-[9px]">
+                          <div className="font-medium truncate">
                             {ev.start_time} {ev.title}
                           </div>
                           {columnInfo.totalColumns === 1 && (
