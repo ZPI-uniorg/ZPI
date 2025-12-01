@@ -104,6 +104,7 @@ export default function ChatPage() {
                 loadMoreMessages={loadMoreMessages}
                 hasMore={hasMore}
                 loadingMore={loadingMore}
+                loading={status === "connecting"}
               />
               <form
                 onSubmit={handleSubmit}
