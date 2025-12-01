@@ -1,5 +1,69 @@
 import { useEffect, useRef, useCallback } from "react";
 
+// Helper to format date headers
+function formatDateHeader(dateStr) {
+  const date = new Date(dateStr);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  // Reset time parts for comparison
+  const resetTime = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const dateOnly = resetTime(date);
+  const todayOnly = resetTime(today);
+  const yesterdayOnly = resetTime(yesterday);
+
+  if (dateOnly.getTime() === todayOnly.getTime()) {
+    return "Dzisiaj";
+  } else if (dateOnly.getTime() === yesterdayOnly.getTime()) {
+    return "Wczoraj";
+  } else {
+    return date.toLocaleDateString("pl-PL", {
+      day: "numeric",
+      month: "long",
+      year: date.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
+    });
+  }
+}
+
+// Helper to group messages by date and time
+function groupMessages(messages) {
+  const groups = [];
+  let currentDate = null;
+  let currentTimeGroup = null;
+
+  messages.forEach((msg, idx) => {
+    // Extract date from message (assuming msg has a timestamp or time field)
+    const msgDate = msg.timestamp
+      ? new Date(msg.timestamp).toDateString()
+      : new Date().toDateString();
+    const msgTime = msg.time || "";
+
+    // Check if we need a new date header
+    if (msgDate !== currentDate) {
+      currentDate = msgDate;
+      groups.push({ type: "date", date: msgDate });
+      currentTimeGroup = null;
+    }
+
+    // Check if we should group by time (same time and consecutive message from same author)
+    const shouldShowTime =
+      !currentTimeGroup ||
+      currentTimeGroup.time !== msgTime ||
+      currentTimeGroup.author !== msg.author ||
+      currentTimeGroup.mine !== msg.mine;
+
+    if (shouldShowTime) {
+      currentTimeGroup = { time: msgTime, author: msg.author, mine: msg.mine };
+      groups.push({ type: "message", msg, showTime: true });
+    } else {
+      groups.push({ type: "message", msg, showTime: false });
+    }
+  });
+
+  return groups;
+}
+
 export default function MessageList({
   messages,
   loadMoreMessages,
@@ -88,35 +152,53 @@ export default function MessageList({
               Ładowanie starszych wiadomości...
             </div>
           )}
-          {messages.map((m) => (
-            <div
-              key={m.id}
-              className={
-                "flex flex-col gap-1 max-w-[70%] " +
-                (m.mine ? "self-end items-end" : "self-start items-start")
-              }
-            >
-              <div className="flex items-center gap-2">
-                {!m.mine && (
-                  <span className="text-[11px] text-slate-400 font-medium">
-                    {m.author}
-                  </span>
-                )}
-                <span className="text-[10px] text-slate-500">{m.time}</span>
-              </div>
+          {groupMessages(messages).map((item, idx) => {
+            if (item.type === "date") {
+              return (
+                <div
+                  key={`date-${idx}`}
+                  className="flex items-center justify-center py-4"
+                >
+                  <div className="px-3 py-1 bg-slate-800 rounded-full text-xs text-slate-400 font-medium border border-slate-700">
+                    {formatDateHeader(item.date)}
+                  </div>
+                </div>
+              );
+            }
+
+            const m = item.msg;
+            return (
               <div
+                key={m.id}
                 className={
-                  "group relative px-4 py-2 rounded-xl text-sm leading-relaxed whitespace-pre-wrap break-words " +
-                  (m.mine
-                    ? "bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-md"
-                    : "bg-slate-800 text-slate-100 border border-slate-700")
+                  "flex flex-col gap-1 max-w-[70%] " +
+                  (m.mine ? "self-end items-end" : "self-start items-start")
                 }
-                style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
               >
-                {m.text}
+                {item.showTime && (
+                  <div className="flex items-center gap-2">
+                    {!m.mine && (
+                      <span className="text-[11px] text-slate-400 font-medium">
+                        {m.author}
+                      </span>
+                    )}
+                    <span className="text-[10px] text-slate-500">{m.time}</span>
+                  </div>
+                )}
+                <div
+                  className={
+                    "group relative px-4 py-2 rounded-xl text-sm leading-relaxed whitespace-pre-wrap break-words " +
+                    (m.mine
+                      ? "bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-md"
+                      : "bg-slate-800 text-slate-100 border border-slate-700")
+                  }
+                  style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
+                >
+                  {m.text}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           <div ref={endRef} />
         </>
       )}
