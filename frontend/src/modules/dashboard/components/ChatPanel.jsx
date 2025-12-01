@@ -35,9 +35,20 @@ export default function ChatPanel({
       </div>
       <div className="flex-1 overflow-y-auto space-y-3 min-h-0 overscroll-contain">
         {loading ? (
-          <p className="text-slate-400 text-sm animate-pulse">
-            Ładowanie czatów...
-          </p>
+          <>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-3 p-3 rounded-xl border border-slate-600/30"
+              >
+                <div className="w-10 h-10 rounded-full bg-slate-700 animate-pulse" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-slate-700 rounded animate-pulse w-3/4" />
+                  <div className="h-3 bg-slate-700 rounded animate-pulse w-1/2" />
+                </div>
+              </div>
+            ))}
+          </>
         ) : chats.length === 0 ? (
           <p className="text-slate-400 text-sm">Brak wyników.</p>
         ) : (
