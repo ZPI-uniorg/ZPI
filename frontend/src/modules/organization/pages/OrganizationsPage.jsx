@@ -919,21 +919,51 @@ function OrganizationsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <label className="flex flex-col gap-2">
                 <span className="text-slate-200 font-medium">Imię</span>
-                <input
-                  name="first_name"
-                  value={memberForm.first_name}
-                  onChange={handleMemberFormChange}
-                  className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
-                />
+                <div className="relative">
+                  <input
+                    name="first_name"
+                    value={memberForm.first_name}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val.length <= 50) {
+                        handleMemberFormChange(e);
+                      }
+                    }}
+                    maxLength={50}
+                    className="w-full rounded px-3 py-2 pr-16 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+                  />
+                  <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                    memberForm.first_name.length >= 50 ? 'text-red-400' : 
+                    memberForm.first_name.length >= 40 ? 'text-yellow-400' : 
+                    'text-slate-400'
+                  }`}>
+                    {memberForm.first_name.length}/50
+                  </div>
+                </div>
               </label>
               <label className="flex flex-col gap-2">
                 <span className="text-slate-200 font-medium">Nazwisko</span>
-                <input
-                  name="last_name"
-                  value={memberForm.last_name}
-                  onChange={handleMemberFormChange}
-                  className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
-                />
+                <div className="relative">
+                  <input
+                    name="last_name"
+                    value={memberForm.last_name}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val.length <= 50) {
+                        handleMemberFormChange(e);
+                      }
+                    }}
+                    maxLength={50}
+                    className="w-full rounded px-3 py-2 pr-16 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+                  />
+                  <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                    memberForm.last_name.length >= 50 ? 'text-red-400' : 
+                    memberForm.last_name.length >= 40 ? 'text-yellow-400' : 
+                    'text-slate-400'
+                  }`}>
+                    {memberForm.last_name.length}/50
+                  </div>
+                </div>
               </label>
             </div>
 
@@ -941,13 +971,28 @@ function OrganizationsPage() {
               <span className="text-slate-200 font-medium">
                 Email nowego członka
               </span>
-              <input
-                name="email"
-                type="email"
-                value={memberForm.email}
-                onChange={handleMemberFormChange}
-                className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
-              />
+              <div className="relative">
+                <input
+                  name="email"
+                  type="email"
+                  value={memberForm.email}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val.length <= 100) {
+                      handleMemberFormChange(e);
+                    }
+                  }}
+                  maxLength={100}
+                  className="w-full rounded px-3 py-2 pr-16 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+                />
+                <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                  memberForm.email.length >= 100 ? 'text-red-400' : 
+                  memberForm.email.length >= 80 ? 'text-yellow-400' : 
+                  'text-slate-400'
+                }`}>
+                  {memberForm.email.length}/100
+                </div>
+              </div>
             </label>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -955,26 +1000,56 @@ function OrganizationsPage() {
                 <span className="text-slate-200 font-medium">
                   Login nowego członka
                 </span>
-                <input
-                  name="username"
-                  value={memberForm.username}
-                  onChange={handleMemberFormChange}
-                  placeholder="np. member-abc123"
-                  required
-                  className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
-                />
+                <div className="relative">
+                  <input
+                    name="username"
+                    value={memberForm.username}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val.length <= 50) {
+                        handleMemberFormChange(e);
+                      }
+                    }}
+                    placeholder="np. member-abc123"
+                    maxLength={50}
+                    required
+                    className="w-full rounded px-3 py-2 pr-16 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+                  />
+                  <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                    memberForm.username.length >= 50 ? 'text-red-400' : 
+                    memberForm.username.length >= 40 ? 'text-yellow-400' : 
+                    'text-slate-400'
+                  }`}>
+                    {memberForm.username.length}/50
+                  </div>
+                </div>
               </label>
               <label className="flex flex-col gap-2">
                 <span className="text-slate-200 font-medium">Hasło</span>
-                <input
-                  name="password"
-                  type="text"
-                  value={memberForm.password}
-                  onChange={handleMemberFormChange}
-                  placeholder="Wygeneruj bezpieczne hasło"
-                  required
-                  className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
-                />
+                <div className="relative">
+                  <input
+                    name="password"
+                    type="text"
+                    value={memberForm.password}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val.length <= 128) {
+                        handleMemberFormChange(e);
+                      }
+                    }}
+                    placeholder="Wygeneruj bezpieczne hasło"
+                    maxLength={128}
+                    required
+                    className="w-full rounded px-3 py-2 pr-16 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+                  />
+                  <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                    memberForm.password.length >= 128 ? 'text-red-400' : 
+                    memberForm.password.length >= 100 ? 'text-yellow-400' : 
+                    'text-slate-400'
+                  }`}>
+                    {memberForm.password.length}/128
+                  </div>
+                </div>
               </label>
             </div>
 

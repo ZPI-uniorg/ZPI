@@ -9,6 +9,7 @@ import { useProjects } from "../../shared/components/ProjectsContext.jsx";
 import apiClient from "../../../api/client.js";
 import { getUserEvents, getAllEvents } from "../../../api/events.js";
 import { getBoardWithContent } from "../../../api/kanban.js";
+import { Plus } from "lucide-react";
 
 export default function OrganizationDashboardPage() {
   const { organization: activeOrganization, user } = useAuth();

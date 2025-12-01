@@ -253,13 +253,28 @@ export default function ProjectEditPage() {
               <label className="block mb-1 font-medium text-slate-200">
                 Nazwa projektu
               </label>
-              <input
-                className="border border-slate-600 w-full rounded-lg px-3 py-2 bg-slate-800 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Nazwa projektu"
-                required
-              />
+              <div className="relative">
+                <input
+                  className="border border-slate-600 w-full rounded-lg px-3 py-2 pr-16 bg-slate-800 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
+                  value={name}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val.length <= 50) {
+                      setName(val);
+                    }
+                  }}
+                  placeholder="Nazwa projektu"
+                  maxLength={50}
+                  required
+                />
+                <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                  name.length >= 50 ? 'text-red-400' : 
+                  name.length >= 40 ? 'text-yellow-400' : 
+                  'text-slate-400'
+                }`}>
+                  {name.length}/50
+                </div>
+              </div>
             </div>
             <div>
               <label className="block mb-1 font-medium text-slate-200">
