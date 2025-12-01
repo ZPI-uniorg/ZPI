@@ -26,7 +26,9 @@ function getMonthMatrix(year, month) {
 }
 
 function getEventsForDay(events, year, month, day) {
-  const dayStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  const dayStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(
+    day
+  ).padStart(2, "0")}`;
   return events.filter((ev) => {
     const startDate = ev.date;
     const endDate = ev.endDate || ev.date;
@@ -51,7 +53,9 @@ export default function CalendarMonthView({ year, month, events }) {
 
   const handleDayClick = (day) => {
     if (!day) return;
-    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(
+      day
+    ).padStart(2, "0")}`;
     navigate("/calendar/event/new", { state: { date: dateStr } });
   };
 
@@ -64,44 +68,52 @@ export default function CalendarMonthView({ year, month, events }) {
     <div className="flex-1 bg-slate-900/95 rounded-2xl shadow-[0_30px_60px_rgba(15,23,42,0.45)] border border-slate-700 p-4 overflow-hidden flex flex-col">
       <div className="grid grid-cols-7 gap-px bg-slate-700/30 mb-px">
         {WEEKDAYS.map((day) => (
-          <div key={day} className="bg-slate-900/95 text-center font-semibold text-slate-300 py-3 text-sm">
+          <div
+            key={day}
+            className="bg-slate-900/95 text-center font-semibold text-slate-300 py-3 text-sm"
+          >
             {day}
           </div>
         ))}
       </div>
-      
+
       <div className="flex-1 grid grid-rows-6 gap-px bg-slate-700/30 overflow-hidden">
         {matrix.map((week, weekIdx) => (
           <div key={weekIdx} className="grid grid-cols-7 gap-px">
             {week.map((day, dayIdx) => {
-              const dayEvents = day ? getEventsForDay(events, year, month, day) : [];
+              const dayEvents = day
+                ? getEventsForDay(events, year, month, day)
+                : [];
               const isTodayDay = isToday(day);
               return (
                 <div
                   key={`${weekIdx}-${dayIdx}`}
                   className={`bg-slate-900/95 p-2 flex flex-col overflow-hidden transition-colors ${
-                    isTodayDay
-                      ? "bg-indigo-900/20"
-                      : ""
+                    isTodayDay ? "bg-indigo-900/20" : ""
                   } ${day ? "hover:bg-slate-800/70 cursor-pointer" : ""}`}
                   onClick={() => handleDayClick(day)}
                 >
-                  <div className={`text-xs font-semibold mb-1 ${
-                    isTodayDay 
-                      ? "bg-indigo-600 text-white w-6 h-6 rounded-full flex items-center justify-center" 
-                      : day 
-                      ? "text-slate-200" 
-                      : "text-slate-600"
-                  }`}>
+                  <div
+                    className={`text-xs font-semibold mb-1 ${
+                      isTodayDay
+                        ? "bg-indigo-600 text-white w-6 h-6 rounded-full flex items-center justify-center"
+                        : day
+                        ? "text-slate-200"
+                        : "text-slate-600"
+                    }`}
+                  >
                     {day || ""}
                   </div>
                   <div className="flex flex-col gap-0.5 overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
                     {dayEvents.map((ev) => {
-                      const dayStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                      const dayStr = `${year}-${String(month + 1).padStart(
+                        2,
+                        "0"
+                      )}-${String(day).padStart(2, "0")}`;
                       const isStart = dayStr === ev.date;
                       const isEnd = dayStr === (ev.endDate || ev.date);
                       const isMultiDay = ev.endDate && ev.endDate !== ev.date;
-                      
+
                       return (
                         <div
                           key={ev.id}
@@ -114,13 +126,27 @@ export default function CalendarMonthView({ year, month, events }) {
                                 : "bg-violet-600/90 rounded-sm"
                               : "bg-violet-600/90 rounded"
                           }`}
-                          title={`${ev.title}${isMultiDay ? ` (${isStart ? 'początek' : isEnd ? 'koniec' : 'trwa'})` : ''}`}
+                          title={`${ev.title}${
+                            isMultiDay
+                              ? ` (${
+                                  isStart
+                                    ? "początek"
+                                    : isEnd
+                                    ? "koniec"
+                                    : "trwa"
+                                })`
+                              : ""
+                          }`}
                           onClick={(e) => handleEventClick(e, ev)}
                         >
                           <div className="font-medium truncate flex items-center gap-1">
-                            {isMultiDay && !isStart && <span className="text-[8px]">←</span>}
+                            {isMultiDay && !isStart && (
+                              <span className="text-[8px]">←</span>
+                            )}
                             {ev.title}
-                            {isMultiDay && !isEnd && <span className="text-[8px]">→</span>}
+                            {isMultiDay && !isEnd && (
+                              <span className="text-[8px]">→</span>
+                            )}
                           </div>
                           <div className="flex flex-wrap gap-0.5 mt-0.5">
                             {ev.tags.map((tag) => (
@@ -129,6 +155,14 @@ export default function CalendarMonthView({ year, month, events }) {
                                 className="bg-fuchsia-700/80 px-1 rounded text-[9px]"
                               >
                                 {tag}
+                              </span>
+                            ))}
+                            {(ev.tagCombinations || []).map((combo, idx) => (
+                              <span
+                                key={`combo-${idx}`}
+                                className="bg-fuchsia-700/80 px-1 rounded text-[9px]"
+                              >
+                                {combo.join(" + ")}
                               </span>
                             ))}
                           </div>
