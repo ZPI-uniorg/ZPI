@@ -20,29 +20,48 @@ def login_view(request, organization_name):
         username = request.POST.get("username")
         password = request.POST.get("password")
         organization = Organization.objects.get(slug=organization_name)
-        membership = Membership.objects.get(user__username=username, organization=organization)
-        user = authenticate(request, identifier=username+"_"+organization.name, password=password)
+        membership = Membership.objects.get(
+            user__username=username, organization=organization
+        )
+        user = authenticate(
+            request, identifier=username + "_" + organization.name, password=password
+        )
 
         if membership is None:
-            return JsonResponse({"status": "error", "message": "User is not a member of the organization"}, status=403)
+            return JsonResponse(
+                {
+                    "status": "error",
+                    "message": "User is not a member of the organization",
+                },
+                status=403,
+            )
 
         if user is not None:
             login(request, user)
             session_key = request.session.session_key
             refresh = RefreshToken.for_user(user)
-            return JsonResponse({
-                "status": "success",
-                "sessionKey": session_key,
-                "access": str(refresh.access_token),
-                "refresh": str(refresh),
-                "organization": {
-                    "id": organization.id,
-                    "name": organization.name,
-                    "description": organization.description,
-                }
-            }, status=200)
+            return JsonResponse(
+                {
+                    "status": "success",
+                    "sessionKey": session_key,
+                    "access": str(refresh.access_token),
+                    "refresh": str(refresh),
+                    "username": user.username,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                    "email": user.email,
+                    "organization": {
+                        "id": organization.id,
+                        "name": organization.name,
+                        "description": organization.description,
+                    },
+                },
+                status=200,
+            )
         else:
-            return JsonResponse({"status": "error", "message": "Invalid credentials"}, status=401)
+            return JsonResponse(
+                {"status": "error", "message": "Invalid credentials"}, status=401
+            )
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
 
@@ -53,9 +72,17 @@ def logout_view(request, organization_name):
     try:
         if request.user.is_authenticated:
             logout(request)
-            return JsonResponse({"status": "success", "message": f"User {request.user.username} logged out"}, status=200)
+            return JsonResponse(
+                {
+                    "status": "success",
+                    "message": f"User {request.user.username} logged out",
+                },
+                status=200,
+            )
         else:
-            return JsonResponse({"status": "error", "message": "User is not authenticated"}, status=401)
+            return JsonResponse(
+                {"status": "error", "message": "User is not authenticated"}, status=401
+            )
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
 
@@ -69,13 +96,21 @@ def change_password_view(request):
             new_password = request.POST.get("new_password")
 
             if not request.user.check_password(old_password):
-                return JsonResponse({"status": "error", "message": "Old password is incorrect"}, status=400)
+                return JsonResponse(
+                    {"status": "error", "message": "Old password is incorrect"},
+                    status=400,
+                )
 
             request.user.set_password(new_password)
             request.user.save()
-            return JsonResponse({"status": "success", "message": "Password changed successfully"}, status=200)
+            return JsonResponse(
+                {"status": "success", "message": "Password changed successfully"},
+                status=200,
+            )
         else:
-            return JsonResponse({"status": "error", "message": "User is not authenticated"}, status=401)
+            return JsonResponse(
+                {"status": "error", "message": "User is not authenticated"}, status=401
+            )
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
 
@@ -85,8 +120,17 @@ def change_password_view(request):
 def login_status_view(request):
     try:
         if request.user.is_authenticated:
-            return JsonResponse({"status": "success", "message": "User is authenticated", "username": request.user.username}, status=200)
+            return JsonResponse(
+                {
+                    "status": "success",
+                    "message": "User is authenticated",
+                    "username": request.user.username,
+                },
+                status=200,
+            )
         else:
-            return JsonResponse({"status": "error", "message": "User is not authenticated"}, status=401)
+            return JsonResponse(
+                {"status": "error", "message": "User is not authenticated"}, status=401
+            )
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
