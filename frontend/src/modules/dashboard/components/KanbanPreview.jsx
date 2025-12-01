@@ -1,8 +1,15 @@
-import React, { useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Maximize2 } from 'lucide-react';
+import React, { useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Maximize2 } from "lucide-react";
 
-export default function KanbanPreview({ project, board, onPrev, onNext, loading, error }) {
+export default function KanbanPreview({
+  project,
+  board,
+  onPrev,
+  onNext,
+  loading,
+  error,
+}) {
   const navigate = useNavigate();
   const scrollRef = useRef(null);
 
@@ -17,13 +24,13 @@ export default function KanbanPreview({ project, board, onPrev, onNext, loading,
       }
     };
 
-    scrollContainer.addEventListener('wheel', handleWheel, { passive: false });
-    return () => scrollContainer.removeEventListener('wheel', handleWheel);
+    scrollContainer.addEventListener("wheel", handleWheel, { passive: false });
+    return () => scrollContainer.removeEventListener("wheel", handleWheel);
   }, []);
 
   const handleFullscreen = () => {
     if (!project) return;
-    navigate('/kanban', { state: { projectId: project.id } });
+    navigate("/kanban", { state: { projectId: project.id } });
   };
 
   if (!project) {
@@ -72,8 +79,25 @@ export default function KanbanPreview({ project, board, onPrev, onNext, loading,
 
       <div className="flex-1 min-h-0 overflow-hidden">
         {loading ? (
-          <div className="flex w-full h-full items-center justify-center text-slate-400 text-sm">
-            Ładowanie tablicy...
+          <div className="flex h-full gap-3 overflow-hidden">
+            {Array.from({ length: 3 }).map((_, col) => (
+              <div
+                key={col}
+                className="flex flex-col min-h-0 min-w-[200px] flex-1 rounded-lg bg-slate-800/40 border border-slate-700"
+              >
+                <div className="px-3 py-2 border-b border-slate-700 shrink-0">
+                  <div className="h-4 bg-slate-700 rounded animate-pulse w-20" />
+                </div>
+                <div className="flex-1 min-h-0 p-2 space-y-2">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="rounded-md bg-slate-700 px-2.5 py-2 h-[70px] animate-pulse"
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         ) : error ? (
           <div className="flex w-full h-full items-center justify-center">
@@ -96,7 +120,9 @@ export default function KanbanPreview({ project, board, onPrev, onNext, loading,
                 </div>
                 <div className="flex-1 min-h-0 p-2 space-y-2 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
                   {(col.tasks?.length ?? 0) === 0 && (
-                    <div className="text-[11px] text-slate-500 italic">Pusto</div>
+                    <div className="text-[11px] text-slate-500 italic">
+                      Pusto
+                    </div>
                   )}
                   {(col.tasks ?? []).map((item) => (
                     <div
@@ -104,32 +130,35 @@ export default function KanbanPreview({ project, board, onPrev, onNext, loading,
                       className="rounded-md bg-violet-600/80 hover:bg-violet-600 text-white px-2.5 py-2 text-xs cursor-pointer transition flex flex-col gap-1 min-h-[70px]"
                       title={item.title}
                       onClick={() =>
-                        navigate('/kanban/task/edit', {
+                        navigate("/kanban/task/edit", {
                           state: {
                             task: item,
                             projectId: project.id,
                             columnId: col.column_id,
-                            returnTo: 'dashboard',
+                            returnTo: "dashboard",
                           },
                         })
                       }
                     >
                       <div className="flex items-center justify-between gap-2 shrink-0">
-                        <span className="text-[10px] font-mono text-white/90 font-semibold">{item.task_id}</span>
+                        <span className="text-[10px] font-mono text-white/90 font-semibold">
+                          {item.task_id}
+                        </span>
                       </div>
                       <div
                         className="font-medium text-xs leading-tight flex-1 overflow-hidden"
                         style={{
-                          display: '-webkit-box',
+                          display: "-webkit-box",
                           WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
+                          WebkitBoxOrient: "vertical",
                         }}
                       >
                         {item.title}
                       </div>
                       {item.assigned_to && (
                         <div className="text-[10px] text-white/80 mt-auto truncate">
-                          {item.assigned_to.first_name} {item.assigned_to.last_name}
+                          {item.assigned_to.first_name}{" "}
+                          {item.assigned_to.last_name}
                         </div>
                       )}
                     </div>
@@ -140,7 +169,8 @@ export default function KanbanPreview({ project, board, onPrev, onNext, loading,
           </div>
         ) : (
           <div className="flex w-full h-full items-center justify-center text-slate-400 text-sm text-center px-4">
-            Brak danych kanban dla tego projektu. Dodaj zadania w module Kanban, aby zobaczyć podgląd.
+            Brak danych kanban dla tego projektu. Dodaj zadania w module Kanban,
+            aby zobaczyć podgląd.
           </div>
         )}
       </div>

@@ -692,6 +692,21 @@ export default function KanbanPage() {
                       >
                         {item.title}
                       </div>
+                      {item.due_date && (
+                        <div className="text-xs text-white/80 flex items-center gap-1">
+                          <span>📅</span>
+                          <span>
+                            {new Date(item.due_date).toLocaleDateString(
+                              "pl-PL",
+                              {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                              }
+                            )}
+                          </span>
+                        </div>
+                      )}
                       {item.assigned_to ? (
                         <div className="flex items-center gap-2 mt-auto">
                           <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-bold text-white">
