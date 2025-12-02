@@ -97,7 +97,7 @@ export default function ChatPanel({
       <div className="pt-4">
         <button
           onClick={addChat}
-          className="w-full py-3 rounded-[14px] text-sm font-semibold bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-lg shadow-violet-500/30 hover:brightness-110 transition"
+          className="w-full py-3 rounded-[14px] text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition"
         >
           nowy chat
         </button>

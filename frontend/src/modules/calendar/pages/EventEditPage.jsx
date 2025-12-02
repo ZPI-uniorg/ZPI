@@ -12,8 +12,8 @@ const generateTimeOptions = () => {
   const times = [];
   for (let h = 0; h < 24; h++) {
     for (let m = 0; m < 60; m += 15) {
-      const hour = String(h).padStart(2, '0');
-      const minute = String(m).padStart(2, '0');
+      const hour = String(h).padStart(2, "0");
+      const minute = String(m).padStart(2, "0");
       times.push(`${hour}:${minute}`);
     }
   }
@@ -47,7 +47,7 @@ function TimeSelect({ value, onChange, placeholder = "-- Wybierz --" }) {
   // Auto-scroll listy do wybranej godziny lub 06:00
   useEffect(() => {
     if (!open || !listRef.current) return;
-    const targetTime = (value && TIME_OPTIONS.includes(value)) ? value : "06:00";
+    const targetTime = value && TIME_OPTIONS.includes(value) ? value : "06:00";
     const el = listRef.current.querySelector(`[data-time="${targetTime}"]`);
     if (el) {
       listRef.current.scrollTop = el.offsetTop - 8;
@@ -78,7 +78,9 @@ function TimeSelect({ value, onChange, placeholder = "-- Wybierz --" }) {
           <button
             type="button"
             onClick={() => select("")}
-            className={`w-full px-3 py-2 text-sm text-slate-300 hover:bg-slate-700/60 text-left ${value === "" ? "bg-slate-700/40" : ""}`}
+            className={`w-full px-3 py-2 text-sm text-slate-300 hover:bg-slate-700/60 text-left ${
+              value === "" ? "bg-slate-700/40" : ""
+            }`}
           >
             -- Brak --
           </button>
@@ -88,7 +90,9 @@ function TimeSelect({ value, onChange, placeholder = "-- Wybierz --" }) {
               type="button"
               data-time={t} // <--- NEW
               onClick={() => select(t)}
-              className={`w-full px-3 py-2 text-sm text-slate-100 hover:bg-slate-700/60 text-left ${value === t ? "bg-indigo-600/40" : ""}`}
+              className={`w-full px-3 py-2 text-sm text-slate-100 hover:bg-slate-700/60 text-left ${
+                value === t ? "bg-indigo-600/40" : ""
+              }`}
             >
               {t}
             </button>
@@ -102,47 +106,74 @@ function TimeSelect({ value, onChange, placeholder = "-- Wybierz --" }) {
 export default function EventEditPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { event: editingEvent, date: presetDate, time: presetTime } = location.state || {};
+  const {
+    event: editingEvent,
+    date: presetDate,
+    time: presetTime,
+  } = location.state || {};
   const { user, organization } = useAuth();
   const { projects } = useProjects();
 
   const TITLE_MAX_LENGTH = 100;
   const DESCRIPTION_MAX_LENGTH = 500;
 
-  const [title, setTitle] = useState(editingEvent?.name || editingEvent?.title || ""); // CHANGED
-  const [description, setDescription] = useState(editingEvent?.description || "");
+  const [title, setTitle] = useState(
+    editingEvent?.name || editingEvent?.title || ""
+  ); // CHANGED
+  const [description, setDescription] = useState(
+    editingEvent?.description || ""
+  );
   const [date, setDate] = useState(editingEvent?.date || presetDate || "");
-  const [endDate, setEndDate] = useState(editingEvent?.endDate || editingEvent?.date || presetDate || "");
-  const [startTime, setStartTime] = useState(editingEvent?.start_time || presetTime || "");
+  const [endDate, setEndDate] = useState(
+    editingEvent?.endDate || editingEvent?.date || presetDate || ""
+  );
+  const [startTime, setStartTime] = useState(
+    editingEvent?.start_time || presetTime || ""
+  );
   const [endTime, setEndTime] = useState(editingEvent?.end_time || "");
+  const [isAllDay, setIsAllDay] = useState(
+    !editingEvent?.start_time && !editingEvent?.end_time
+  );
   const [isEditing, setIsEditing] = useState(!editingEvent);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
   const [combinations, setCombinations] = useState(() => {
-    if (editingEvent?.tagCombinations?.length) return editingEvent.tagCombinations;
-    if (editingEvent?.tags?.length) return editingEvent.tags.map(t => [t]);
+    if (editingEvent?.tagCombinations?.length)
+      return editingEvent.tagCombinations;
+    if (editingEvent?.tags?.length) return editingEvent.tags.map((t) => [t]);
     if (editingEvent?.permissions?.length) {
       // Backend zwraca permissions jako płaską listę, konwertujemy na kombinacje
       return editingEvent.permissions
         .filter(Boolean)
-        .map(p => p.includes('+') ? p.split('+').filter(Boolean) : [p]);
+        .map((p) => (p.includes("+") ? p.split("+").filter(Boolean) : [p]));
     }
     return [];
   });
 
-  const allSuggestions = Array.from(new Set([...projects.map((p) => p.name).filter(Boolean), ...TAGS]));
+  const allSuggestions = Array.from(
+    new Set([...projects.map((p) => p.name).filter(Boolean), ...TAGS])
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!title.trim() || !date || !endDate || !organization?.id || !user?.username) return;
-    
+    if (
+      !title.trim() ||
+      !date ||
+      !endDate ||
+      !organization?.id ||
+      !user?.username
+    )
+      return;
+
     // Walidacja: data zakończenia nie może być wcześniejsza niż rozpoczęcia
     if (endDate < date) {
-      setError("Data zakończenia nie może być wcześniejsza niż data rozpoczęcia.");
+      setError(
+        "Data zakończenia nie może być wcześniejsza niż data rozpoczęcia."
+      );
       return;
     }
-    
+
     const flatTags = Array.from(new Set((combinations || []).flat()));
     setSubmitting(true);
     setError(null);
@@ -157,34 +188,34 @@ export default function EventEditPage() {
             description: description.trim(),
             date,
             endDate,
-            start_time: startTime,
-            end_time: endTime,
-            combinations,            // <-- PRZEKAZUJ KOMBINACJE
+            start_time: isAllDay ? "" : startTime,
+            end_time: isAllDay ? "" : endTime,
+            combinations,            // <-- PRZEKAZUJ KOMBINACJE KOMBINACJE
           }
         );
-        (updated.permissions || []).forEach(tag => { if (!TAGS.includes(tag)) TAGS.push(tag) });
+        (updated.permissions || []).forEach((tag) => {
+          if (!TAGS.includes(tag)) TAGS.push(tag);
+        });
       } else {
-        const created = await createEvent(
-          organization.id,
-          user.username,
-          {
-            name: title.trim(),
-            description: description.trim(),
-            date,
-            endDate,
-            start_time: startTime,
-            end_time: endTime,
-            combinations,            // <-- PRZEKAZUJ KOMBINACJE
-          }
-        );
-        (created.permissions || []).forEach(tag => { if (!TAGS.includes(tag)) TAGS.push(tag) });
+        const created = await createEvent(organization.id, user.username, {
+          name: title.trim(),
+          description: description.trim(),
+          date,
+          endDate,
+          start_time: startTime,
+          end_time: endTime,
+          combinations, // <-- PRZEKAZUJ KOMBINACJE
+        });
+        (created.permissions || []).forEach((tag) => {
+          if (!TAGS.includes(tag)) TAGS.push(tag);
+        });
       }
       navigate("/calendar");
     } catch (err) {
       setError(
         err.response?.data?.error ??
-        err.response?.data?.detail ??
-        "Nie udało się zapisać wydarzenia."
+          err.response?.data?.detail ??
+          "Nie udało się zapisać wydarzenia."
       );
     } finally {
       setSubmitting(false);
@@ -198,13 +229,17 @@ export default function EventEditPage() {
     setSubmitting(true);
     setError(null);
     try {
-      await deleteEvent(organization.id, editingEvent.event_id || editingEvent.id, user.username);
+      await deleteEvent(
+        organization.id,
+        editingEvent.event_id || editingEvent.id,
+        user.username
+      );
       navigate("/calendar");
     } catch (err) {
       setError(
         err.response?.data?.error ??
-        err.response?.data?.detail ??
-        "Nie udało się usunąć wydarzenia."
+          err.response?.data?.detail ??
+          "Nie udało się usunąć wydarzenia."
       );
     } finally {
       setSubmitting(false);
@@ -212,14 +247,18 @@ export default function EventEditPage() {
   };
 
   return (
-    <div className="h-full flex items-center justify-center bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-8">
+    <div className="h-full overflow-y-auto flex justify-center bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-8">
       <form
         onSubmit={handleSubmit}
-        className="bg-slate-900/95 rounded-3xl shadow-[0_30px_60px_rgba(15,23,42,0.45)] p-12 w-full max-w-4xl flex flex-col gap-8 border border-slate-700 max-h-[90vh] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
+        className="bg-slate-900/95 rounded-3xl shadow-[0_30px_60px_rgba(15,23,42,0.45)] p-12 w-full max-w-4xl flex flex-col gap-8 border border-slate-700 my-auto"
       >
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-slate-100">
-            {editingEvent ? (isEditing ? "Edytuj wydarzenie" : "Szczegóły wydarzenia") : "Nowe wydarzenie"}
+            {editingEvent
+              ? isEditing
+                ? "Edytuj wydarzenie"
+                : "Szczegóły wydarzenia"
+              : "Nowe wydarzenie"}
           </h1>
           <div className="flex gap-2">
             {editingEvent && (
@@ -228,7 +267,11 @@ export default function EventEditPage() {
                 className="border border-slate-600 px-4 py-2 rounded-lg text-slate-200 hover:bg-slate-700/40 transition flex items-center gap-2"
                 onClick={() => setIsEditing(!isEditing)}
               >
-                {isEditing ? <Eye className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />}
+                {isEditing ? (
+                  <Eye className="w-4 h-4" />
+                ) : (
+                  <Edit2 className="w-4 h-4" />
+                )}
                 {isEditing ? "Podgląd" : "Edytuj"}
               </button>
             )}
@@ -251,9 +294,13 @@ export default function EventEditPage() {
         {!isEditing && editingEvent ? (
           <div className="flex flex-col gap-6">
             <div className="pb-4 border-b border-slate-700">
-              <h2 className="text-xl font-semibold text-slate-100 mb-2">{title}</h2>
+              <h2 className="text-xl font-semibold text-slate-100 mb-2">
+                {title}
+              </h2>
               {description ? (
-                <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">{description}</p>
+                <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">
+                  {description}
+                </p>
               ) : (
                 <p className="text-slate-500 italic">Brak opisu</p>
               )}
@@ -261,7 +308,9 @@ export default function EventEditPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <span className="text-sm text-slate-400 block mb-1">Termin</span>
+                <span className="text-sm text-slate-400 block mb-1">
+                  Termin
+                </span>
                 <span className="text-slate-200 font-medium">
                   {new Date(date).toLocaleDateString("pl-PL", {
                     day: "2-digit",
@@ -282,7 +331,9 @@ export default function EventEditPage() {
               </div>
 
               <div>
-                <span className="text-sm text-slate-400 block mb-1">Godziny</span>
+                <span className="text-sm text-slate-400 block mb-1">
+                  Godziny
+                </span>
                 {startTime || endTime ? (
                   <span className="text-slate-200 font-medium">
                     {startTime && `${startTime}`}
@@ -296,11 +347,16 @@ export default function EventEditPage() {
             </div>
 
             <div>
-              <span className="text-sm text-slate-400 block mb-2">Tagi (kombinacje)</span>
+              <span className="text-sm text-slate-400 block mb-2">
+                Tagi (kombinacje)
+              </span>
               {combinations?.length ? (
                 <div className="flex flex-wrap gap-2">
                   {combinations.map((combo, idx) => (
-                    <span key={idx} className="bg-violet-600/80 text-white px-3 py-1 rounded-full text-sm">
+                    <span
+                      key={idx}
+                      className="bg-violet-600/80 text-white px-3 py-1 rounded-full text-sm"
+                    >
                       {combo.join(" + ")}
                     </span>
                   ))}
@@ -314,25 +370,31 @@ export default function EventEditPage() {
           <div className="flex flex-col gap-6">
             <label className="flex flex-col gap-2">
               <div className="flex justify-between items-center">
-                <span className="text-slate-300 text-sm font-medium">Tytuł wydarzenia</span>
-                <span className={`text-xs ${
-                  title.length > TITLE_MAX_LENGTH 
-                    ? 'text-red-400 font-semibold' 
-                    : title.length > TITLE_MAX_LENGTH * 0.9
-                    ? 'text-yellow-400'
-                    : 'text-slate-500'
-                }`}>
+                <span className="text-slate-300 text-sm font-medium">
+                  Tytuł wydarzenia
+                </span>
+                <span
+                  className={`text-xs ${
+                    title.length > TITLE_MAX_LENGTH
+                      ? "text-red-400 font-semibold"
+                      : title.length > TITLE_MAX_LENGTH * 0.9
+                      ? "text-yellow-400"
+                      : "text-slate-500"
+                  }`}
+                >
                   {title.length}/{TITLE_MAX_LENGTH}
                 </span>
               </div>
               <input
                 className={`border rounded-lg px-3 py-2 bg-slate-800 text-slate-100 placeholder:text-slate-400 focus:outline-none ${
                   title.length > TITLE_MAX_LENGTH
-                    ? 'border-red-500 focus:border-red-500'
-                    : 'border-slate-600 focus:border-indigo-500'
+                    ? "border-red-500 focus:border-red-500"
+                    : "border-slate-600 focus:border-indigo-500"
                 }`}
                 value={title}
-                onChange={(e) => setTitle(e.target.value.slice(0, TITLE_MAX_LENGTH))}
+                onChange={(e) =>
+                  setTitle(e.target.value.slice(0, TITLE_MAX_LENGTH))
+                }
                 placeholder="Np. Spotkanie zespołu"
                 required
               />
@@ -341,32 +403,58 @@ export default function EventEditPage() {
             <label className="flex flex-col gap-2">
               <div className="flex justify-between items-center">
                 <span className="text-slate-300 text-sm font-medium">Opis</span>
-                <span className={`text-xs ${
-                  description.length > DESCRIPTION_MAX_LENGTH 
-                    ? 'text-red-400 font-semibold' 
-                    : description.length > DESCRIPTION_MAX_LENGTH * 0.9
-                    ? 'text-yellow-400'
-                    : 'text-slate-500'
-                }`}>
+                <span
+                  className={`text-xs ${
+                    description.length > DESCRIPTION_MAX_LENGTH
+                      ? "text-red-400 font-semibold"
+                      : description.length > DESCRIPTION_MAX_LENGTH * 0.9
+                      ? "text-yellow-400"
+                      : "text-slate-500"
+                  }`}
+                >
                   {description.length}/{DESCRIPTION_MAX_LENGTH}
                 </span>
               </div>
               <textarea
                 className={`border rounded-lg px-3 py-2 bg-slate-800 text-slate-100 placeholder:text-slate-400 focus:outline-none min-h-[120px] resize-y ${
                   description.length > DESCRIPTION_MAX_LENGTH
-                    ? 'border-red-500 focus:border-red-500'
-                    : 'border-slate-600 focus:border-indigo-500'
+                    ? "border-red-500 focus:border-red-500"
+                    : "border-slate-600 focus:border-indigo-500"
                 }`}
                 value={description}
-                onChange={(e) => setDescription(e.target.value.slice(0, DESCRIPTION_MAX_LENGTH))}
+                onChange={(e) =>
+                  setDescription(
+                    e.target.value.slice(0, DESCRIPTION_MAX_LENGTH)
+                  )
+                }
                 placeholder="Szczegółowy opis wydarzenia..."
               />
             </label>
 
             <div className="flex flex-col gap-4">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={isAllDay}
+                  onChange={(e) => {
+                    setIsAllDay(e.target.checked);
+                    if (e.target.checked) {
+                      setStartTime("");
+                      setEndTime("");
+                    }
+                  }}
+                  className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-900"
+                />
+                <span className="text-slate-300 text-sm font-medium">
+                  Wydarzenie całodniowe
+                </span>
+              </label>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <label className="flex flex-col gap-2">
-                  <span className="text-slate-300 text-sm font-medium">Data rozpoczęcia</span>
+                  <span className="text-slate-300 text-sm font-medium">
+                    Data rozpoczęcia
+                  </span>
                   <input
                     type="date"
                     className="border border-slate-600 rounded-lg px-3 py-2 bg-slate-800 text-slate-100 focus:outline-none focus:border-indigo-500"
@@ -377,7 +465,9 @@ export default function EventEditPage() {
                 </label>
 
                 <label className="flex flex-col gap-2">
-                  <span className="text-slate-300 text-sm font-medium">Data zakończenia</span>
+                  <span className="text-slate-300 text-sm font-medium">
+                    Data zakończenia
+                  </span>
                   <input
                     type="date"
                     className="border border-slate-600 rounded-lg px-3 py-2 bg-slate-800 text-slate-100 focus:outline-none focus:border-indigo-500"
@@ -388,25 +478,31 @@ export default function EventEditPage() {
                 </label>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <label className="flex flex-col gap-2">
-                  <span className="text-slate-300 text-sm font-medium">Godzina rozpoczęcia</span>
-                  <TimeSelect
-                    value={startTime}
-                    onChange={setStartTime}
-                    placeholder="-- Wybierz --"
-                  />
-                </label>
+              {!isAllDay && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <label className="flex flex-col gap-2">
+                    <span className="text-slate-300 text-sm font-medium">
+                      Godzina rozpoczęcia
+                    </span>
+                    <TimeSelect
+                      value={startTime}
+                      onChange={setStartTime}
+                      placeholder="-- Wybierz --"
+                    />
+                  </label>
 
-                <label className="flex flex-col gap-2">
-                  <span className="text-slate-300 text-sm font-medium">Godzina zakończenia</span>
-                  <TimeSelect
-                    value={endTime}
-                    onChange={setEndTime}
-                    placeholder="-- Wybierz --"
-                  />
-                </label>
-              </div>
+                  <label className="flex flex-col gap-2">
+                    <span className="text-slate-300 text-sm font-medium">
+                      Godzina zakończenia
+                    </span>
+                    <TimeSelect
+                      value={endTime}
+                      onChange={setEndTime}
+                      placeholder="-- Wybierz --"
+                    />
+                  </label>
+                </div>
+              )}
             </div>
 
             {/* REPLACED: simple tags -> combinations picker */}
@@ -424,9 +520,13 @@ export default function EventEditPage() {
             <button
               type="submit"
               disabled={!title.trim() || !date || submitting}
-              className="flex-1 sm:flex-none bg-gradient-to-r from-indigo-500 to-violet-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-8 py-3 rounded-xl text-sm font-semibold shadow hover:brightness-110 transition"
+              className="flex-1 sm:flex-none bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed text-white px-8 py-3 rounded-xl text-sm font-semibold shadow hover:bg-indigo-700 transition"
             >
-              {submitting ? "Zapisywanie..." : editingEvent ? "Zapisz zmiany" : "Utwórz wydarzenie"}
+              {submitting
+                ? "Zapisywanie..."
+                : editingEvent
+                ? "Zapisz zmiany"
+                : "Utwórz wydarzenie"}
             </button>
             {editingEvent && (
               <button

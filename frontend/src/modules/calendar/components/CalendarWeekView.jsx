@@ -34,8 +34,10 @@ function getEventsForHour(events, dateStr, hourStart) {
     const startDate = ev.date;
     const endDate = ev.endDate || ev.date;
 
-    // Pomiń wydarzenia wielodniowe - będą pokazane osobno
-    if (endDate !== startDate) return false;
+    // Pomiń wydarzenia wielodniowe lub całodniowe - będą pokazane osobno
+    const isMultiDay = endDate !== startDate;
+    const isAllDay = !ev.start_time && !ev.end_time;
+    if (isMultiDay || isAllDay) return false;
 
     // Sprawdź czy wydarzenie jest w tym dniu
     if (dateStr !== startDate) return false;
@@ -52,8 +54,11 @@ function getAllDayEvents(events, dateStr) {
     const startDate = ev.date;
     const endDate = ev.endDate || ev.date;
 
-    // Tylko wydarzenia wielodniowe
-    if (endDate === startDate) return false;
+    // Wydarzenia wielodniowe lub całodniowe (bez start_time)
+    const isMultiDay = endDate !== startDate;
+    const isAllDay = !ev.start_time && !ev.end_time;
+    
+    if (!isMultiDay && !isAllDay) return false;
 
     // Sprawdź czy wydarzenie obejmuje ten dzień
     return dateStr >= startDate && dateStr <= endDate;
@@ -239,12 +244,44 @@ export default function CalendarWeekView({ weekDays, events }) {
                 return (
                   <div
                     key={ev.id}
-                    className={`text-[9px] bg-violet-600/90 text-white px-2 py-1 ${roundedClass} cursor-pointer hover:bg-violet-500 transition truncate border-l-2 border-violet-400`}
+                    className={`text-[9px] px-2 py-1 ${roundedClass} cursor-pointer hover:shadow-md transition flex items-center gap-1 overflow-hidden bg-indigo-600 text-white border-l-4 border-indigo-800`}
                     title={`${ev.title}${titleSuffix} - ${ev.start_time} - ${ev.end_time}`}
                     onClick={(e) => handleEventClick(e, ev)}
                   >
-                    {arrow}
-                    {ev.title}
+                    <span className="truncate flex-shrink">
+                      {arrow}
+                      {ev.title}
+                    </span>
+                    {(() => {
+                      const allTags = [
+                        ...ev.tags,
+                        ...(ev.tagCombinations || []).map((combo) =>
+                          combo.join(" + ")
+                        ),
+                      ];
+                      const maxVisible = 1;
+                      const visible = allTags.slice(0, maxVisible);
+                      const hiddenCount = allTags.length - maxVisible;
+
+                      return (
+                        <>
+                          {visible.map((tag, idx) => (
+                            <span
+                              key={idx}
+                              className="bg-fuchsia-700/80 px-1 rounded text-[7px] truncate max-w-[50px] flex-shrink-0"
+                              title={tag}
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                          {hiddenCount > 0 && (
+                            <span className="bg-fuchsia-700/80 px-1 rounded text-[7px] flex-shrink-0">
+                              +{hiddenCount}
+                            </span>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 );
               })}
@@ -308,7 +345,7 @@ export default function CalendarWeekView({ weekDays, events }) {
                       return (
                         <div
                           key={ev.id}
-                          className="absolute text-[10px] bg-violet-600/95 text-white px-1 py-1 rounded cursor-pointer hover:bg-violet-500 hover:z-50 hover:shadow-2xl transition-all overflow-hidden border-l-2 border-violet-300 shadow-lg"
+                          className="absolute text-[10px] text-white px-1 py-1 rounded cursor-pointer hover:shadow-lg hover:z-50 transition-all overflow-hidden bg-indigo-600 border-l-4 border-indigo-800"
                           style={{
                             top: position.top,
                             height: position.height,
@@ -320,29 +357,51 @@ export default function CalendarWeekView({ weekDays, events }) {
                           title={`${ev.title} - ${ev.start_time} - ${ev.end_time}`}
                           onClick={(e) => handleEventClick(e, ev)}
                         >
-                          <div className="font-semibold truncate text-[9px]">
-                            {ev.start_time} {ev.title}
+                          <div className="font-semibold text-[9px] flex items-center gap-0.5 overflow-hidden">
+                            <span className="truncate flex-shrink">
+                              {ev.start_time} {ev.title}
+                            </span>
+                            {columnInfo.totalColumns === 1 &&
+                              (() => {
+                                const allTags = [
+                                  ...ev.tags.map((tag) => ({
+                                    type: "single",
+                                    value: tag,
+                                  })),
+                                  ...(ev.tagCombinations || []).map(
+                                    (combo) => ({ type: "combo", value: combo })
+                                  ),
+                                ];
+                                const maxVisible = 2;
+                                const visible = allTags.slice(0, maxVisible);
+                                const hiddenCount = allTags.length - maxVisible;
+
+                                return (
+                                  <>
+                                    {visible.map((tag, idx) => (
+                                      <span
+                                        key={idx}
+                                        className="bg-fuchsia-700/80 px-1 rounded text-[7px] truncate max-w-[50px] flex-shrink-0"
+                                        title={
+                                          tag.type === "combo"
+                                            ? tag.value.join(" + ")
+                                            : tag.value
+                                        }
+                                      >
+                                        {tag.type === "combo"
+                                          ? tag.value.join(" + ")
+                                          : tag.value}
+                                      </span>
+                                    ))}
+                                    {hiddenCount > 0 && (
+                                      <span className="bg-fuchsia-700/80 px-1 rounded text-[7px] flex-shrink-0">
+                                        +{hiddenCount}
+                                      </span>
+                                    )}
+                                  </>
+                                );
+                              })()}
                           </div>
-                          {columnInfo.totalColumns === 1 && (
-                            <div className="flex flex-wrap gap-0.5 mt-0.5">
-                              {ev.tags.map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="bg-fuchsia-700/80 px-1 rounded text-[7px]"
-                                >
-                                  {tag}
-                                </span>
-                              ))}
-                              {(ev.tagCombinations || []).map((combo, idx) => (
-                                <span
-                                  key={`combo-${idx}`}
-                                  className="bg-fuchsia-700/80 px-1 rounded text-[7px]"
-                                >
-                                  {combo.join(" + ")}
-                                </span>
-                              ))}
-                            </div>
-                          )}
                         </div>
                       );
                     })}

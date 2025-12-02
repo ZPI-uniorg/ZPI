@@ -1,7 +1,7 @@
-import React, { useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Maximize2 } from 'lucide-react';
-import { useProjects } from '../../shared/components/ProjectsContext.jsx';
+import React, { useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Maximize2 } from "lucide-react";
+import { useProjects } from "../../shared/components/ProjectsContext.jsx";
 
 export default function KanbanPreview({
   project,
@@ -9,6 +9,8 @@ export default function KanbanPreview({
   onPrev,
   onNext,
   loading,
+  projectsLoading,
+  projectsInitialized,
   error,
 }) {
   const navigate = useNavigate();
@@ -17,19 +19,21 @@ export default function KanbanPreview({
 
   useEffect(() => {
     if (board) {
-      const tasks = board.columns.flatMap(col => col.tasks || []);
-      console.log('Kanban board for project', project?.name, ':', {
+      const tasks = board.columns.flatMap((col) => col.tasks || []);
+      console.log("Kanban board for project", project?.name, ":", {
         board_id: board.board_id,
-        columns: board.columns.map(c => ({ 
-          column_id: c.column_id, 
-          title: c.title, 
-          task_count: c.tasks?.length || 0 
+        columns: board.columns.map((c) => ({
+          column_id: c.column_id,
+          title: c.title,
+          task_count: c.tasks?.length || 0,
         })),
-        all_tasks: tasks.map(t => ({
+        all_tasks: tasks.map((t) => ({
           task_id: t.task_id,
           title: t.title,
-          assigned_to: t.assigned_to ? `${t.assigned_to.first_name} ${t.assigned_to.last_name}` : null
-        }))
+          assigned_to: t.assigned_to
+            ? `${t.assigned_to.first_name} ${t.assigned_to.last_name}`
+            : null,
+        })),
       });
     }
   }, [board, project]);
@@ -54,10 +58,70 @@ export default function KanbanPreview({
     navigate("/kanban", { state: { projectId: project.id } });
   };
 
+  // Show skeleton immediately when loading, even before project is known
+  if (loading) {
+    return (
+      <div className="flex flex-col h-full w-full min-h-0">
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <div className="flex h-full gap-3 overflow-hidden">
+            {Array.from({ length: 3 }).map((_, col) => (
+              <div
+                key={col}
+                className="flex flex-col min-h-0 min-w-[200px] flex-1 rounded-lg bg-slate-800/40 border border-slate-700"
+              >
+                <div className="px-3 py-2 border-b border-slate-700 shrink-0">
+                  <div className="h-4 bg-slate-700 rounded animate-pulse w-20" />
+                </div>
+                <div className="flex-1 min-h-0 p-2 space-y-2">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="rounded-md bg-slate-700 px-2.5 py-2 h-[70px] animate-pulse"
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!project) {
-    const message = selectedTags && selectedTags.length > 0 
-      ? 'Brak projektów pasujących do wybranych filtrów.'
-      : 'Brak projektów.';
+    // If projects aren't initialized or still loading, prefer skeleton
+    if (!projectsInitialized || projectsLoading) {
+      return (
+        <div className="flex flex-col h-full w-full min-h-0">
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <div className="flex h-full gap-3 overflow-hidden">
+              {Array.from({ length: 3 }).map((_, col) => (
+                <div
+                  key={col}
+                  className="flex flex-col min-h-0 min-w-[200px] flex-1 rounded-lg bg-slate-800/40 border border-slate-700"
+                >
+                  <div className="px-3 py-2 border-b border-slate-700 shrink-0">
+                    <div className="h-4 bg-slate-700 rounded animate-pulse w-20" />
+                  </div>
+                  <div className="flex-1 min-h-0 p-2 space-y-2">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="rounded-md bg-slate-700 px-2.5 py-2 h-[70px] animate-pulse"
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+    const message =
+      selectedTags && selectedTags.length > 0
+        ? "Brak projektów pasujących do wybranych filtrów."
+        : "Brak projektów.";
     return (
       <div className="flex w-full h-full items-center justify-center text-slate-400 text-sm">
         {message}
@@ -66,7 +130,7 @@ export default function KanbanPreview({
   }
 
   return (
-    <div className="flex flex-col h-full w-full min-h-0">
+    <div className="flex flex-col h-full w-full min-h-0 min-w-[280px]">
       {/* Header */}
       <div className="flex items-center justify-between mb-2 shrink-0">
         <div className="flex items-center gap-2">
@@ -102,28 +166,7 @@ export default function KanbanPreview({
       </div>
 
       <div className="flex-1 min-h-0 overflow-hidden">
-        {loading ? (
-          <div className="flex h-full gap-3 overflow-hidden">
-            {Array.from({ length: 3 }).map((_, col) => (
-              <div
-                key={col}
-                className="flex flex-col min-h-0 min-w-[200px] flex-1 rounded-lg bg-slate-800/40 border border-slate-700"
-              >
-                <div className="px-3 py-2 border-b border-slate-700 shrink-0">
-                  <div className="h-4 bg-slate-700 rounded animate-pulse w-20" />
-                </div>
-                <div className="flex-1 min-h-0 p-2 space-y-2">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="rounded-md bg-slate-700 px-2.5 py-2 h-[70px] animate-pulse"
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : error ? (
+        {error ? (
           <div className="flex w-full h-full items-center justify-center">
             <p className="text-red-400 bg-red-500/10 border border-red-500/40 rounded-lg px-4 py-3 text-sm max-w-md text-center">
               {error}
@@ -151,7 +194,7 @@ export default function KanbanPreview({
                   {(col.tasks ?? []).map((item) => (
                     <div
                       key={item.task_id}
-                      className="rounded-md bg-violet-600/80 hover:bg-violet-600 text-white px-2.5 py-2 text-xs cursor-pointer transition flex flex-col gap-1 min-h-[70px]"
+                      className="rounded-md bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-2 text-xs cursor-pointer transition flex flex-col gap-1 min-h-[70px]"
                       title={item.title}
                       onClick={() =>
                         navigate("/kanban/task/edit", {
