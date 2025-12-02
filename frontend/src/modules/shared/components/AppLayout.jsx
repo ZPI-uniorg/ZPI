@@ -7,6 +7,7 @@ import FiltersPanel from './FiltersPanel.jsx';
 
 const NAV_LINKS = [
   { to: '/dashboard', label: 'Pulpit organizacji' },
+  { to: '/projects', label: 'Projekty' },
   { to: '/calendar', label: 'Kalendarz' },
   { to: '/kanban', label: 'Kanban' },
   { to: '/chat', label: 'Chaty' },
@@ -58,64 +59,68 @@ function AppLayoutContent() {
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-slate-950 text-slate-100">
       <header className="sticky top-0 z-40 bg-slate-950/85 backdrop-blur border-b border-slate-800">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-4">
-          <div className="flex items-center gap-3">
-            <span className="text-lg font-semibold text-white">UniOrg</span>
-            {organization?.name ? (
-              <span className="text-sm text-slate-400">
-                {organization.name}
-              </span>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => navigate('/organizations')}
-              className="p-2 rounded-lg hover:bg-slate-700/40 transition text-slate-300"
-              title="Ustawienia organizacji"
-            >
-              <Settings className="w-5 h-5" />
-            </button>
-            <button
-              type="button"
-              onClick={openFilters}
-              className="p-2 rounded-lg hover:bg-slate-700/40 transition text-slate-300"
-              title="Filtry"
-            >
-              <Filter className="w-5 h-5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/organization/project/new')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/20 border border-indigo-500/40 text-indigo-300 hover:bg-indigo-600/30 hover:text-indigo-200 transition-colors text-sm font-medium"
-              title="Utwórz nowy projekt"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Nowy projekt</span>
-            </button>
+        <div className="mx-auto max-w-full px-4 py-3">
+          {/* Top Row - Logo, Settings, User */}
+          <div className="flex items-center justify-between gap-4 mb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-semibold text-white">UniOrg</span>
+              {organization?.name ? (
+                <span className="text-sm text-slate-400">
+                  {organization.name}
+                </span>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => navigate('/organizations')}
+                className="p-2 rounded-lg hover:bg-slate-700/40 transition text-slate-300"
+                title="Ustawienia organizacji"
+              >
+                <Settings className="w-5 h-5" />
+              </button>
+              <button
+                type="button"
+                onClick={openFilters}
+                className="p-2 rounded-lg hover:bg-slate-700/40 transition text-slate-300"
+                title="Filtry"
+              >
+                <Filter className="w-5 h-5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/organization/project/new')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/20 border border-indigo-500/40 text-indigo-300 hover:bg-indigo-600/30 hover:text-indigo-200 transition-colors text-sm font-medium"
+                title="Utwórz nowy projekt"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Nowy projekt</span>
+              </button>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => navigate('/profile')}
+                className="flex items-center gap-2 rounded-lg border border-transparent px-3 py-2 text-sm text-slate-300 transition hover:border-slate-600 hover:text-white"
+              >
+                <User className="w-4 h-4" />
+                <span>{fullName}</span>
+              </button>
+              <button
+                type="button"
+                onClick={logout}
+                className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white"
+              >
+                Wyloguj
+              </button>
+            </div>
           </div>
-          <nav className="flex flex-wrap items-center gap-2">
+          {/* Bottom Row - Navigation */}
+          <nav className="flex items-center gap-2 border-t border-slate-800 pt-3">
             {NAV_LINKS.map((link) => (
               <NavLink key={link.to} to={link.to} className={getLinkClassName} end={link.to === '/'}>
                 {link.label}
               </NavLink>
             ))}
           </nav>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => navigate('/profile')}
-              className="flex items-center gap-2 rounded-lg border border-transparent px-3 py-2 text-sm text-slate-300 transition hover:border-slate-600 hover:text-white"
-            >
-              <User className="w-4 h-4" />
-              <span>{fullName}</span>
-            </button>
-            <button
-              type="button"
-              onClick={logout}
-              className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 transition hover:border-slate-500 hover:text-white"
-            >
-              Wyloguj
-            </button>
-          </div>
         </div>
       </header>
       <main className="flex-1 min-h-0 overflow-hidden">
