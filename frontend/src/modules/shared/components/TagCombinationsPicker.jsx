@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Autocomplete from "./Autocomplete.jsx";
 import { Plus, X } from "lucide-react";
 
@@ -11,10 +11,44 @@ export default function TagCombinationsPicker({
   const [editingIndex, setEditingIndex] = useState(null);
   const [query, setQuery] = useState("");
   const [mainQuery, setMainQuery] = useState("");
+  const [dropdownAbove, setDropdownAbove] = useState(false);
+  const containerRef = useRef(null);
+  const dropdownRef = useRef(null);
 
   const combinations = value || [];
   const allSuggestions = suggestions || [];
-  const currentCombination = editingIndex !== null ? combinations[editingIndex] : [];
+  const currentCombination =
+    editingIndex !== null ? combinations[editingIndex] : [];
+
+  // Check if dropdown should appear above (default: above, unless more space below)
+  useEffect(() => {
+    if (editingIndex === null || !containerRef.current) return;
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const dropdownHeight = 200; // Approximate height
+
+    // Default to above, only go below if significantly more space below
+    setDropdownAbove(
+      !(spaceBelow > dropdownHeight && spaceBelow > spaceAbove + 50)
+    );
+  }, [editingIndex]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (editingIndex === null) return;
+
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setEditingIndex(null);
+        setQuery("");
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [editingIndex]);
 
   const filtered = allSuggestions
     .filter((s) => s.toLowerCase().includes(query.toLowerCase()))
@@ -27,11 +61,11 @@ export default function TagCombinationsPicker({
 
   const handleMainSelect = (val) => {
     // Sprawdź czy kombinacja [val] już istnieje
-    const exists = combinations.some(combo => 
-      combo.length === 1 && combo[0] === val
+    const exists = combinations.some(
+      (combo) => combo.length === 1 && combo[0] === val
     );
     if (exists) return; // Nie dodawaj duplikatu
-    
+
     onChange([...(combinations || []), [val]]);
     setMainQuery("");
   };
@@ -39,21 +73,24 @@ export default function TagCombinationsPicker({
   const handleSelect = (val) => {
     if (editingIndex === null) return;
     const updatedCombo = [...combinations[editingIndex], val];
-    
+
     // Sprawdź czy taka kombinacja już istnieje (ignorując kolejność)
-    const sortedNew = [...updatedCombo].sort().join('+');
-    const exists = combinations.some((combo, idx) => {
+    const sortedNew = [...updatedCombo].sort().join("+");
+    const existingIndex = combinations.findIndex((combo, idx) => {
       if (idx === editingIndex) return false; // Pomijamy edytowaną kombinację
-      const sortedExisting = [...combo].sort().join('+');
+      const sortedExisting = [...combo].sort().join("+");
       return sortedExisting === sortedNew;
     });
-    
-    if (exists) {
-      // Jeśli kombinacja już istnieje, usuń edytowaną i zakończ edycję
-      handleRemoveCombo(editingIndex);
+
+    if (existingIndex !== -1) {
+      // Jeśli kombinacja już istnieje, usuń edytowaną (zachowaj istniejącą) i zakończ edycję
+      const next = combinations.filter((_, i) => i !== editingIndex);
+      onChange(next);
+      setQuery("");
+      setEditingIndex(null);
       return;
     }
-    
+
     const next = combinations.map((c, i) =>
       i === editingIndex ? updatedCombo : c
     );
@@ -84,15 +121,20 @@ export default function TagCombinationsPicker({
 
       {/* Pasek kombinacji – poziomy scroll bez zmiany wysokości całego formularza */}
       {combinations.length > 0 && (
-        <div className="relative">
+        <div className="relative" ref={containerRef}>
           <div className="flex flex-wrap gap-2 mt-2">
             {combinations.map((combo, idx) => (
-              <div key={idx} className="flex items-center bg-violet-600/80 text-white rounded-full px-3 py-1.5 text-sm whitespace-nowrap">
+              <div
+                key={idx}
+                className="flex items-center bg-indigo-600 text-white rounded-full px-3 py-1.5 text-sm whitespace-nowrap"
+              >
                 <div className="flex items-center">
                   {combo.map((tag, i) => (
                     <span key={i} className="flex items-center">
                       <span>{tag}</span>
-                      {i < combo.length - 1 && <span className="px-1 text-slate-200/70">+</span>}
+                      {i < combo.length - 1 && (
+                        <span className="px-1 text-slate-200/70">+</span>
+                      )}
                     </span>
                   ))}
                 </div>
@@ -101,7 +143,7 @@ export default function TagCombinationsPicker({
                   <button
                     type="button"
                     onClick={() => setEditingIndex(idx)}
-                    className="p-1 rounded hover:bg-violet-500/40 transition"
+                    className="p-1 rounded hover:bg-indigo-700 transition"
                     title="Dodaj tag"
                   >
                     <Plus className="w-4 h-4" />
@@ -120,8 +162,13 @@ export default function TagCombinationsPicker({
           </div>
 
           {editingIndex !== null && (
-            <div className="absolute left-0 right-0 top-full mt-2 z-50 rounded-xl border border-indigo-700 bg-indigo-950/70 backdrop-blur-sm p-4 shadow-xl">
-              <p className="text-indigo-300 text-xs mb-3">
+            <div
+              ref={dropdownRef}
+              className={`absolute left-0 right-0 z-50 rounded-xl border border-slate-700 bg-slate-800 p-4 shadow-xl ${
+                dropdownAbove ? "bottom-full mb-2" : "top-full mt-2"
+              }`}
+            >
+              <p className="text-slate-300 text-xs mb-3">
                 Dodaj tag lub projekt do kombinacji:
               </p>
               <Autocomplete

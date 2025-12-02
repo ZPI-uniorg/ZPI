@@ -669,7 +669,7 @@ export default function KanbanPage() {
                   {(col.tasks ?? []).map((item) => (
                     <div
                       key={item.task_id}
-                      className={`rounded-lg bg-violet-600/90 hover:bg-violet-500 text-white px-3 py-3 text-sm cursor-pointer transition flex flex-col gap-2 shadow-sm min-h-[90px] ${
+                      className={`rounded-lg bg-indigo-600/90 hover:bg-indigo-500 text-white px-3 py-3 text-sm cursor-pointer transition flex flex-col gap-2 shadow-sm min-h-[90px] ${
                         draggedItem?.task_id === item.task_id
                           ? "opacity-50"
                           : ""

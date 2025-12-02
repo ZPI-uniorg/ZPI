@@ -3,7 +3,67 @@ import { Link, useNavigate } from "react-router-dom";
 import useAuth from "../../../auth/useAuth.js";
 import { registerOrganization } from "../../../api/organizations.js";
 
-const initialOrganization = { name: "", description: "" };
+const initialOrganization = { name: "", description: "", slug: "" };
+// Slugify with Polish/European char mapping
+function slugify(text) {
+  const map = {
+    ą: "a",
+    ć: "c",
+    ę: "e",
+    ł: "l",
+    ń: "n",
+    ó: "o",
+    ś: "s",
+    ź: "z",
+    ż: "z",
+    Ą: "A",
+    Ć: "C",
+    Ę: "E",
+    Ł: "L",
+    Ń: "N",
+    Ó: "O",
+    Ś: "S",
+    Ź: "Z",
+    Ż: "Z",
+    ü: "u",
+    ö: "o",
+    ä: "a",
+    ß: "ss",
+    é: "e",
+    è: "e",
+    ê: "e",
+    ë: "e",
+    á: "a",
+    à: "a",
+    â: "a",
+    ã: "a",
+    å: "a",
+    ç: "c",
+    í: "i",
+    ì: "i",
+    î: "i",
+    ï: "i",
+    ú: "u",
+    ù: "u",
+    û: "u",
+    ü: "u",
+    ñ: "n",
+    ý: "y",
+    ÿ: "y",
+  };
+  return text
+    .toString()
+    .split("")
+    .map((c) => map[c] || c)
+    .join("")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036F]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
 const initialAdmin = {
   first_name: "",
   last_name: "",
@@ -33,6 +93,7 @@ function RegisterOrganizationPage() {
   const { isAuthenticated } = useAuth();
 
   const [organization, setOrganization] = useState(initialOrganization);
+  // No longer needed: slug is always auto-generated
   const [admin, setAdmin] = useState(initialAdmin);
   const [status, setStatus] = useState({ type: null, message: "" });
   const [submitting, setSubmitting] = useState(false);
@@ -64,7 +125,12 @@ function RegisterOrganizationPage() {
 
   const handleOrganizationChange = useCallback((event) => {
     const { name, value } = event.target;
-    setOrganization((prev) => ({ ...prev, [name]: value }));
+    setOrganization((prev) => {
+      if (name === "name") {
+        return { ...prev, name: value, slug: slugify(value) };
+      }
+      return { ...prev, [name]: value };
+    });
   }, []);
 
   const handleAdminChange = useCallback((event) => {
@@ -88,6 +154,7 @@ function RegisterOrganizationPage() {
           organization: {
             name: organization.name.trim(),
             description: organization.description.trim(),
+            slug: organization.slug.trim(),
           },
           admin: {
             username: admin.username.trim(),
@@ -126,9 +193,9 @@ function RegisterOrganizationPage() {
   );
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4 py-8">
+    <div className="min-h-screen h-screen overflow-y-auto flex items-center justify-center bg-slate-900 px-4 py-8">
       <form
-        className="w-[min(720px,100%)] bg-slate-800 rounded-xl p-8 shadow text-slate-100 flex flex-col gap-6"
+        className="w-[min(720px,100%)] bg-slate-800 rounded-xl p-8 shadow text-slate-100 flex flex-col gap-6 my-auto"
         onSubmit={handleSubmit}
       >
         <h1 className="m-0 text-[28px] font-bold text-slate-100">
@@ -148,9 +215,13 @@ function RegisterOrganizationPage() {
                 name="name"
                 value={organization.name}
                 onChange={(e) => {
-                  const val = e.target.value;
+                  let val = e.target.value;
+                  // Only allow alphanumeric and spaces (no special chars)
+                  val = val.replace(/[^\p{L}\p{N} ]+/gu, "");
                   if (val.length <= 100) {
-                    handleOrganizationChange(e);
+                    handleOrganizationChange({
+                      target: { name: "name", value: val },
+                    });
                   }
                 }}
                 placeholder="Koło Naukowe AI"
@@ -158,25 +229,57 @@ function RegisterOrganizationPage() {
                 required
                 className="w-full border border-slate-600 rounded-[12px] p-3 pr-16 text-[16px] bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
               />
-              <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
-                organization.name.length >= 100 ? 'text-red-400' : 
-                organization.name.length >= 80 ? 'text-yellow-400' : 
-                'text-slate-400'
-              }`}>
+              <div
+                className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                  organization.name.length >= 100
+                    ? "text-red-400"
+                    : organization.name.length >= 80
+                    ? "text-yellow-400"
+                    : "text-slate-400"
+                }`}
+              >
                 {organization.name.length}/100
               </div>
             </div>
+          </label>
+          <label className="flex flex-col gap-2">
+            <span className="font-semibold text-slate-200">
+              Slug (adres URL)
+            </span>
+            <div className="relative flex items-center gap-2">
+              <input
+                name="slug"
+                value={organization.slug}
+                readOnly
+                tabIndex={-1}
+                maxLength={100}
+                className="w-full border border-slate-600 rounded-[12px] p-3 pr-16 text-[16px] bg-slate-900 text-slate-400 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 opacity-70 cursor-not-allowed"
+                placeholder="adres-url"
+              />
+              <span className="text-xs text-slate-400">
+                {window.location.origin}/org/
+                <b>{organization.slug || "adres-url"}</b>
+              </span>
+            </div>
+            <span className="text-xs text-slate-400">
+              Adres URL organizacji jest generowany automatycznie na podstawie
+              nazwy.
+            </span>
           </label>
           <label className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="font-semibold text-slate-200">
                 Opis (opcjonalny)
               </span>
-              <span className={`text-xs font-medium ${
-                organization.description.length >= 500 ? 'text-red-400' : 
-                organization.description.length >= 400 ? 'text-yellow-400' : 
-                'text-slate-400'
-              }`}>
+              <span
+                className={`text-xs font-medium ${
+                  organization.description.length >= 500
+                    ? "text-red-400"
+                    : organization.description.length >= 400
+                    ? "text-yellow-400"
+                    : "text-slate-400"
+                }`}
+              >
                 {organization.description.length}/500
               </span>
             </div>
@@ -217,11 +320,15 @@ function RegisterOrganizationPage() {
                   maxLength={50}
                   className="w-full border border-slate-600 rounded-[12px] p-3 pr-14 text-[16px] bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
                 />
-                <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
-                  admin.first_name.length >= 50 ? 'text-red-400' : 
-                  admin.first_name.length >= 40 ? 'text-yellow-400' : 
-                  'text-slate-400'
-                }`}>
+                <div
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                    admin.first_name.length >= 50
+                      ? "text-red-400"
+                      : admin.first_name.length >= 40
+                      ? "text-yellow-400"
+                      : "text-slate-400"
+                  }`}
+                >
                   {admin.first_name.length}/50
                 </div>
               </div>
@@ -241,11 +348,15 @@ function RegisterOrganizationPage() {
                   maxLength={50}
                   className="w-full border border-slate-600 rounded-[12px] p-3 pr-14 text-[16px] bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
                 />
-                <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
-                  admin.last_name.length >= 50 ? 'text-red-400' : 
-                  admin.last_name.length >= 40 ? 'text-yellow-400' : 
-                  'text-slate-400'
-                }`}>
+                <div
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                    admin.last_name.length >= 50
+                      ? "text-red-400"
+                      : admin.last_name.length >= 40
+                      ? "text-yellow-400"
+                      : "text-slate-400"
+                  }`}
+                >
                   {admin.last_name.length}/50
                 </div>
               </div>
@@ -268,11 +379,15 @@ function RegisterOrganizationPage() {
                 required
                 className="w-full border border-slate-600 rounded-[12px] p-3 pr-16 text-[16px] bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
               />
-              <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
-                admin.email.length >= 100 ? 'text-red-400' : 
-                admin.email.length >= 80 ? 'text-yellow-400' : 
-                'text-slate-400'
-              }`}>
+              <div
+                className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                  admin.email.length >= 100
+                    ? "text-red-400"
+                    : admin.email.length >= 80
+                    ? "text-yellow-400"
+                    : "text-slate-400"
+                }`}
+              >
                 {admin.email.length}/100
               </div>
             </div>
@@ -293,11 +408,15 @@ function RegisterOrganizationPage() {
                 required
                 className="w-full border border-slate-600 rounded-[12px] p-3 pr-16 text-[16px] bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
               />
-              <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
-                admin.username.length >= 50 ? 'text-red-400' : 
-                admin.username.length >= 40 ? 'text-yellow-400' : 
-                'text-slate-400'
-              }`}>
+              <div
+                className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                  admin.username.length >= 50
+                    ? "text-red-400"
+                    : admin.username.length >= 40
+                    ? "text-yellow-400"
+                    : "text-slate-400"
+                }`}
+              >
                 {admin.username.length}/50
               </div>
             </div>
@@ -320,11 +439,15 @@ function RegisterOrganizationPage() {
                   required
                   className="w-full border border-slate-600 rounded-[12px] p-3 pr-16 text-[16px] bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
                 />
-                <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
-                  admin.password.length >= 128 ? 'text-red-400' : 
-                  admin.password.length >= 100 ? 'text-yellow-400' : 
-                  'text-slate-400'
-                }`}>
+                <div
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                    admin.password.length >= 128
+                      ? "text-red-400"
+                      : admin.password.length >= 100
+                      ? "text-yellow-400"
+                      : "text-slate-400"
+                  }`}
+                >
                   {admin.password.length}/128
                 </div>
               </div>
@@ -348,11 +471,15 @@ function RegisterOrganizationPage() {
                   required
                   className="w-full border border-slate-600 rounded-[12px] p-3 pr-16 text-[16px] bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
                 />
-                <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
-                  admin.confirmPassword.length >= 128 ? 'text-red-400' : 
-                  admin.confirmPassword.length >= 100 ? 'text-yellow-400' : 
-                  'text-slate-400'
-                }`}>
+                <div
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                    admin.confirmPassword.length >= 128
+                      ? "text-red-400"
+                      : admin.confirmPassword.length >= 100
+                      ? "text-yellow-400"
+                      : "text-slate-400"
+                  }`}
+                >
                   {admin.confirmPassword.length}/128
                 </div>
               </div>
