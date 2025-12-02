@@ -34,10 +34,8 @@ function getEventsForHour(events, dateStr, hourStart) {
     const startDate = ev.date;
     const endDate = ev.endDate || ev.date;
 
-    // Pomiń wydarzenia wielodniowe lub całodniowe - będą pokazane osobno
-    const isMultiDay = endDate !== startDate;
-    const isAllDay = !ev.start_time && !ev.end_time;
-    if (isMultiDay || isAllDay) return false;
+    // Pomiń wydarzenia wielodniowe - będą pokazane osobno
+    if (endDate !== startDate) return false;
 
     // Sprawdź czy wydarzenie jest w tym dniu
     if (dateStr !== startDate) return false;
@@ -54,11 +52,8 @@ function getAllDayEvents(events, dateStr) {
     const startDate = ev.date;
     const endDate = ev.endDate || ev.date;
 
-    // Wydarzenia wielodniowe lub całodniowe (bez start_time)
-    const isMultiDay = endDate !== startDate;
-    const isAllDay = !ev.start_time && !ev.end_time;
-    
-    if (!isMultiDay && !isAllDay) return false;
+    // Tylko wydarzenia wielodniowe
+    if (endDate === startDate) return false;
 
     // Sprawdź czy wydarzenie obejmuje ten dzień
     return dateStr >= startDate && dateStr <= endDate;

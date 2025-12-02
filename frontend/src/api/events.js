@@ -10,12 +10,9 @@ function toFormData(payload) {
   return params;
 }
 
-function buildDateTime(date, time, isAllDay = false, isEndTime = false) {
+function buildDateTime(date, time) {
   if (!date) return "";
-  if (isAllDay || !time) {
-    // For all-day events, use 00:00:00 for start and 23:59:59 for end
-    return isEndTime ? `${date} 23:59:59` : `${date} 00:00:00`;
-  }
+  if (!time) return `${date} 00:00:00`;
   return `${date} ${time}:00`;
 }
 
@@ -37,15 +34,14 @@ function buildPermissionsString(combinations = [], tags = []) {
 }
 
 export async function createEvent(organizationId, actorUsername, payload) {
-  const isAllDay = !payload.start_time && !payload.end_time;
   const params = new URLSearchParams();
   params.append("username", actorUsername);
   params.append("name", payload.name || payload.title || "");
   params.append("description", payload.description || "");
-  params.append("start_time", buildDateTime(payload.date, payload.start_time, isAllDay, false));
+  params.append("start_time", buildDateTime(payload.date, payload.start_time));
   params.append(
     "end_time",
-    buildDateTime(payload.endDate || payload.date, payload.end_time, isAllDay, true)
+    buildDateTime(payload.endDate || payload.date, payload.end_time)
   );
   params.append(
     "permissions",
@@ -64,19 +60,16 @@ export async function updateEvent(
   actorUsername,
   payload
 ) {
-  const isAllDay = !payload.start_time && !payload.end_time;
   const response = await apiClient.put(
     `events/update/${organizationId}/${eventId}/`,
     {
       username: actorUsername,
       name: payload.name || payload.title || "",
       description: payload.description || "",
-      start_time: buildDateTime(payload.date, payload.start_time, isAllDay, false),
+      start_time: buildDateTime(payload.date, payload.start_time),
       end_time: buildDateTime(
         payload.endDate || payload.date,
-        payload.end_time,
-        isAllDay,
-        true
+        payload.end_time
       ),
       permissions: buildPermissionsString(
         payload.combinations || [],
@@ -95,18 +88,33 @@ export async function deleteEvent(organizationId, eventId, actorUsername) {
   });
 }
 
-export async function getAllEvents(organizationId, actorUsername, startDate = null, endDate = null) {
+export async function getAllEvents(
+  organizationId,
+  actorUsername,
+  startDate = null,
+  endDate = null
+) {
   const params = { username: actorUsername };
   if (startDate) params.start_date = startDate;
   if (endDate) params.end_date = endDate;
-  const response = await apiClient.get(`events/all/${organizationId}/`, { params });
+  const response = await apiClient.get(`events/all/${organizationId}/`, {
+    params,
+  });
   return response.data;
 }
 
-export async function getUserEvents(organizationId, actorUsername, startDate = null, endDate = null) {
+export async function getUserEvents(
+  organizationId,
+  actorUsername,
+  startDate = null,
+  endDate = null
+) {
   const params = {};
   if (startDate) params.start_date = startDate;
   if (endDate) params.end_date = endDate;
-  const response = await apiClient.get(`events/my/${organizationId}/${actorUsername}/`, { params });
+  const response = await apiClient.get(
+    `events/my/${organizationId}/${actorUsername}/`,
+    { params }
+  );
   return response.data;
 }

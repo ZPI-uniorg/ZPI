@@ -131,9 +131,6 @@ export default function EventEditPage() {
     editingEvent?.start_time || presetTime || ""
   );
   const [endTime, setEndTime] = useState(editingEvent?.end_time || "");
-  const [isAllDay, setIsAllDay] = useState(
-    !editingEvent?.start_time && !editingEvent?.end_time
-  );
   const [isEditing, setIsEditing] = useState(!editingEvent);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -188,9 +185,9 @@ export default function EventEditPage() {
             description: description.trim(),
             date,
             endDate,
-            start_time: isAllDay ? "" : startTime,
-            end_time: isAllDay ? "" : endTime,
-            combinations,            // <-- PRZEKAZUJ KOMBINACJE KOMBINACJE
+            start_time: startTime,
+            end_time: endTime,
+            combinations, // <-- PRZEKAZUJ KOMBINACJE
           }
         );
         (updated.permissions || []).forEach((tag) => {
@@ -432,24 +429,6 @@ export default function EventEditPage() {
             </label>
 
             <div className="flex flex-col gap-4">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={isAllDay}
-                  onChange={(e) => {
-                    setIsAllDay(e.target.checked);
-                    if (e.target.checked) {
-                      setStartTime("");
-                      setEndTime("");
-                    }
-                  }}
-                  className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-900"
-                />
-                <span className="text-slate-300 text-sm font-medium">
-                  Wydarzenie całodniowe
-                </span>
-              </label>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <label className="flex flex-col gap-2">
                   <span className="text-slate-300 text-sm font-medium">
@@ -478,31 +457,29 @@ export default function EventEditPage() {
                 </label>
               </div>
 
-              {!isAllDay && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <label className="flex flex-col gap-2">
-                    <span className="text-slate-300 text-sm font-medium">
-                      Godzina rozpoczęcia
-                    </span>
-                    <TimeSelect
-                      value={startTime}
-                      onChange={setStartTime}
-                      placeholder="-- Wybierz --"
-                    />
-                  </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <label className="flex flex-col gap-2">
+                  <span className="text-slate-300 text-sm font-medium">
+                    Godzina rozpoczęcia
+                  </span>
+                  <TimeSelect
+                    value={startTime}
+                    onChange={setStartTime}
+                    placeholder="-- Wybierz --"
+                  />
+                </label>
 
-                  <label className="flex flex-col gap-2">
-                    <span className="text-slate-300 text-sm font-medium">
-                      Godzina zakończenia
-                    </span>
-                    <TimeSelect
-                      value={endTime}
-                      onChange={setEndTime}
-                      placeholder="-- Wybierz --"
-                    />
-                  </label>
-                </div>
-              )}
+                <label className="flex flex-col gap-2">
+                  <span className="text-slate-300 text-sm font-medium">
+                    Godzina zakończenia
+                  </span>
+                  <TimeSelect
+                    value={endTime}
+                    onChange={setEndTime}
+                    placeholder="-- Wybierz --"
+                  />
+                </label>
+              </div>
             </div>
 
             {/* REPLACED: simple tags -> combinations picker */}

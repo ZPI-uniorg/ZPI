@@ -125,25 +125,25 @@ export default function FiltersPanel({
             <div className="inline-flex items-center gap-2 rounded-full bg-slate-800/60 p-1">
               <button
                 type="button"
-                onClick={() => setLogic("AND")}
-                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition ${
-                  logic === "AND"
-                    ? "bg-violet-600 text-white"
-                    : "text-slate-300 hover:text-white hover:bg-slate-700/60"
-                }`}
-              >
-                AND
-              </button>
-              <button
-                type="button"
                 onClick={() => setLogic("OR")}
                 className={`px-4 py-1.5 rounded-full text-xs font-semibold transition ${
                   logic === "OR"
-                    ? "bg-violet-600 text-white"
+                    ? "bg-indigo-600 text-white"
                     : "text-slate-300 hover:text-white hover:bg-slate-700/60"
                 }`}
               >
                 OR
+              </button>
+              <button
+                type="button"
+                onClick={() => setLogic("AND")}
+                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition ${
+                  logic === "AND"
+                    ? "bg-indigo-600 text-white"
+                    : "text-slate-300 hover:text-white hover:bg-slate-700/60"
+                }`}
+              >
+                AND
               </button>
             </div>
           </div>
@@ -177,13 +177,13 @@ export default function FiltersPanel({
         <div className="flex gap-2 border-t border-[rgba(148,163,184,0.2)] px-5 py-4">
           <button
             onClick={() => navigate("/organization/project/new")}
-            className="flex-1 rounded-[14px] bg-violet-600 py-3 text-sm font-semibold text-white shadow-md hover:brightness-110 transition"
+            className="flex-1 rounded-[14px] bg-indigo-600 py-3 text-sm font-semibold text-white shadow-md hover:brightness-110 transition"
           >
             nowy projekt
           </button>
           <button
             onClick={() => navigate("/organization/tag/new")}
-            className="flex-1 rounded-[14px] bg-violet-600 py-3 text-sm font-semibold text-white shadow-md hover:brightness-110 transition"
+            className="flex-1 rounded-[14px] bg-indigo-600 py-3 text-sm font-semibold text-white shadow-md hover:brightness-110 transition"
           >
             nowy tag
           </button>

@@ -138,9 +138,6 @@ export default function CalendarPage() {
         .slice(0, 5);
       const endTimePart = (splitEnd[1] || "").replace("+00:00", "").slice(0, 5);
 
-      // Detect all-day events (00:00 to 23:59)
-      const isAllDay = startTimePart === "00:00" && (endTimePart === "23:59" || endTimePart === "00:00");
-
       const perms = ev.permissions || ev.tags || [];
       const tagCombinations = perms
         .filter((p) => p.includes("+"))
@@ -153,8 +150,8 @@ export default function CalendarPage() {
         title: ev.name,
         name: ev.name,
         description: ev.description || "",
-        start_time: isAllDay ? "" : startTimePart || "",
-        end_time: isAllDay ? "" : endTimePart || "",
+        start_time: startTimePart || "",
+        end_time: endTimePart || "",
         date: startDatePart,
         endDate: endDatePart,
         tags: plainTags,

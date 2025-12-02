@@ -108,24 +108,32 @@ export default function MiniCalendar() {
 
   const events = React.useMemo(() => {
     const allProjectEvents = Object.values(eventsByProject || {}).flat();
-    return allProjectEvents.map((ev) => {
-      const rawStart = ev.start_time ? String(ev.start_time) : "";
-      const splitStart = rawStart.includes("T")
-        ? rawStart.replace("T", " ").split(" ")
-        : rawStart.split(" ");
-      const datePart = splitStart[0] || "";
-      const startTimePart = (splitStart[1] || "")
-        .replace("+00:00", "")
-        .slice(0, 5);
+    const seenIds = new Set();
+    const uniqueEvents = [];
 
-      return {
-        id: ev.event_id,
-        event_id: ev.event_id,
-        title: ev.name,
-        date: datePart,
-        start_time: startTimePart,
-      };
+    allProjectEvents.forEach((ev) => {
+      if (!seenIds.has(ev.event_id)) {
+        seenIds.add(ev.event_id);
+        const rawStart = ev.start_time ? String(ev.start_time) : "";
+        const splitStart = rawStart.includes("T")
+          ? rawStart.replace("T", " ").split(" ")
+          : rawStart.split(" ");
+        const datePart = splitStart[0] || "";
+        const startTimePart = (splitStart[1] || "")
+          .replace("+00:00", "")
+          .slice(0, 5);
+
+        uniqueEvents.push({
+          id: ev.event_id,
+          event_id: ev.event_id,
+          title: ev.name,
+          date: datePart,
+          start_time: startTimePart,
+        });
+      }
     });
+
+    return uniqueEvents;
   }, [eventsByProject]);
   const handlePrev = () => {
     setDate(({ year, month }) => {

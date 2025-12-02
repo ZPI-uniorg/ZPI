@@ -44,7 +44,7 @@ export function ProjectsProvider({
     chatsError: null,
 
     selectedTags: [],
-    logic: "AND",
+    logic: "OR",
   });
 
   const projectTags = useMemo(() => {

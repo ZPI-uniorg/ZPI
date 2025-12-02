@@ -717,7 +717,7 @@ function OrganizationsPage() {
                                   onClick={() => toggleExistingTag(tag)}
                                   className={`px-3 py-1 rounded-full text-xs font-medium border transition ${
                                     active
-                                      ? "bg-violet-600/90 border-violet-500 text-white shadow-sm hover:bg-violet-500"
+                                      ? "bg-indigo-600 border-indigo-500 text-white shadow-sm hover:bg-indigo-500"
                                       : "bg-slate-700/70 border-slate-600 text-slate-300 hover:bg-slate-600/70 hover:text-white"
                                   }`}
                                   title={
@@ -742,7 +742,7 @@ function OrganizationsPage() {
                             member.tags.map((tag) => (
                               <span
                                 key={tag}
-                                className="px-3 py-1 rounded-full text-xs bg-violet-700 text-white"
+                                className="px-3 py-1 rounded-full text-xs bg-indigo-700 text-white"
                               >
                                 {tag}
                               </span>
@@ -889,7 +889,7 @@ function OrganizationsPage() {
                 <button
                   type="submit"
                   disabled={memberEditSubmitting}
-                  className="bg-gradient-to-r from-indigo-500 to-violet-500 text-white px-5 py-2 rounded font-semibold disabled:opacity-60"
+                  className="bg-indigo-600 text-white px-5 py-2 rounded font-semibold disabled:opacity-60 hover:brightness-110 transition"
                 >
                   {memberEditSubmitting ? "Zapisywanie…" : "Zapisz zmiany"}
                 </button>
@@ -932,11 +932,15 @@ function OrganizationsPage() {
                     maxLength={50}
                     className="w-full rounded px-3 py-2 pr-16 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
                   />
-                  <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
-                    memberForm.first_name.length >= 50 ? 'text-red-400' : 
-                    memberForm.first_name.length >= 40 ? 'text-yellow-400' : 
-                    'text-slate-400'
-                  }`}>
+                  <div
+                    className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                      memberForm.first_name.length >= 50
+                        ? "text-red-400"
+                        : memberForm.first_name.length >= 40
+                        ? "text-yellow-400"
+                        : "text-slate-400"
+                    }`}
+                  >
                     {memberForm.first_name.length}/50
                   </div>
                 </div>
@@ -956,11 +960,15 @@ function OrganizationsPage() {
                     maxLength={50}
                     className="w-full rounded px-3 py-2 pr-16 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
                   />
-                  <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
-                    memberForm.last_name.length >= 50 ? 'text-red-400' : 
-                    memberForm.last_name.length >= 40 ? 'text-yellow-400' : 
-                    'text-slate-400'
-                  }`}>
+                  <div
+                    className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                      memberForm.last_name.length >= 50
+                        ? "text-red-400"
+                        : memberForm.last_name.length >= 40
+                        ? "text-yellow-400"
+                        : "text-slate-400"
+                    }`}
+                  >
                     {memberForm.last_name.length}/50
                   </div>
                 </div>
@@ -985,11 +993,15 @@ function OrganizationsPage() {
                   maxLength={100}
                   className="w-full rounded px-3 py-2 pr-16 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
                 />
-                <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
-                  memberForm.email.length >= 100 ? 'text-red-400' : 
-                  memberForm.email.length >= 80 ? 'text-yellow-400' : 
-                  'text-slate-400'
-                }`}>
+                <div
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                    memberForm.email.length >= 100
+                      ? "text-red-400"
+                      : memberForm.email.length >= 80
+                      ? "text-yellow-400"
+                      : "text-slate-400"
+                  }`}
+                >
                   {memberForm.email.length}/100
                 </div>
               </div>
@@ -1015,11 +1027,15 @@ function OrganizationsPage() {
                     required
                     className="w-full rounded px-3 py-2 pr-16 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
                   />
-                  <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
-                    memberForm.username.length >= 50 ? 'text-red-400' : 
-                    memberForm.username.length >= 40 ? 'text-yellow-400' : 
-                    'text-slate-400'
-                  }`}>
+                  <div
+                    className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                      memberForm.username.length >= 50
+                        ? "text-red-400"
+                        : memberForm.username.length >= 40
+                        ? "text-yellow-400"
+                        : "text-slate-400"
+                    }`}
+                  >
                     {memberForm.username.length}/50
                   </div>
                 </div>
@@ -1042,11 +1058,15 @@ function OrganizationsPage() {
                     required
                     className="w-full rounded px-3 py-2 pr-16 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
                   />
-                  <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
-                    memberForm.password.length >= 128 ? 'text-red-400' : 
-                    memberForm.password.length >= 100 ? 'text-yellow-400' : 
-                    'text-slate-400'
-                  }`}>
+                  <div
+                    className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                      memberForm.password.length >= 128
+                        ? "text-red-400"
+                        : memberForm.password.length >= 100
+                        ? "text-yellow-400"
+                        : "text-slate-400"
+                    }`}
+                  >
                     {memberForm.password.length}/128
                   </div>
                 </div>
@@ -1082,7 +1102,7 @@ function OrganizationsPage() {
               <button
                 type="submit"
                 disabled={memberSubmitting}
-                className="bg-gradient-to-r from-indigo-500 to-violet-500 text-white px-5 py-2 rounded font-semibold disabled:opacity-60"
+                className="bg-indigo-600 text-white px-5 py-2 rounded font-semibold disabled:opacity-60 hover:brightness-110 transition"
               >
                 {memberSubmitting ? "Dodawanie…" : "Dodaj członka"}
               </button>
