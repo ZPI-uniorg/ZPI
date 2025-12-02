@@ -8,6 +8,7 @@ export default function ChatPanel({
   setQuery,
   addChat,
   loading = false,
+  isAdmin = false,
 }) {
   const navigate = useNavigate();
   console.log("totototo", chats);
@@ -80,14 +81,28 @@ export default function ChatPanel({
               <div className="w-10 h-10 rounded-full bg-slate-700/60 flex items-center justify-center text-[10px] font-medium">
                 {(c.title || "??").slice(0, 2).toUpperCase()}
               </div>
-              <div className="flex-1">
-                <p className="font-medium text-sm">
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm truncate">
                   {c.title || "Unnamed Chat"}
                 </p>
                 {c.tags?.length ? (
-                  <p className="text-[11px] text-slate-400">
-                    {c.tags.join(", ")}
-                  </p>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {c.tags.map((tag, idx) => {
+                      // If tag contains +, it's a combination - display with spaces
+                      const displayTag = tag.includes("+")
+                        ? tag.split("+").join(" + ")
+                        : tag;
+                      return (
+                        <span
+                          key={idx}
+                          className="bg-fuchsia-700/80 text-white px-1.5 py-0.5 rounded text-[10px] truncate max-w-[120px]"
+                          title={displayTag}
+                        >
+                          {displayTag}
+                        </span>
+                      );
+                    })}
+                  </div>
                 ) : null}
               </div>
             </div>
@@ -96,8 +111,14 @@ export default function ChatPanel({
       </div>
       <div className="pt-4">
         <button
-          onClick={addChat}
-          className="w-full py-3 rounded-[14px] text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition"
+          onClick={() => isAdmin && addChat()}
+          disabled={!isAdmin}
+          className="w-full py-3 rounded-[14px] text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-indigo-600"
+          title={
+            isAdmin
+              ? "Stwórz nowy chat"
+              : "Tylko administratorzy mogą tworzyć czaty"
+          }
         >
           nowy chat
         </button>

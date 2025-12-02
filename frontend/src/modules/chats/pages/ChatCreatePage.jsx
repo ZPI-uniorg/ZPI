@@ -12,7 +12,7 @@ export default function ChatCreatePage() {
   const { organization } = useAuth();
   const [searchParams] = useSearchParams();
   const organizationId = searchParams.get("org") || null;
-  const { projects } = useProjects();
+  const { projects, refreshChats } = useProjects();
   const [title, setTitle] = useState("");
   const [combinations, setCombinations] = useState([]);
 
@@ -45,7 +45,10 @@ export default function ChatCreatePage() {
     };
     apiClient
       .post(`chats/${finalOrgId}/create/`, payload)
-      .then(() => navigate("/dashboard"))
+      .then(async () => {
+        await refreshChats();
+        navigate("/dashboard");
+      })
       .catch((e) => {
         if (e.response) {
           console.error(

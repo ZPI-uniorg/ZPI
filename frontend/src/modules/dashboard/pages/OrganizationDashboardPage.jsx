@@ -130,6 +130,7 @@ export default function OrganizationDashboardPage() {
             query={query}
             setQuery={setQuery}
             addChat={() => navigate("/chat/new")}
+            isAdmin={activeOrganization?.role === "admin"}
           />
         </div>
         <div className="flex flex-col lg:basis-[45%] grow gap-4 md:gap-6 min-h-0 max-w-full min-w-0">

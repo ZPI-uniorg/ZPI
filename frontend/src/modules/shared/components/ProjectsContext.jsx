@@ -254,11 +254,17 @@ export function ProjectsProvider({
           ? `chats/all/${organization.id}/`
           : `chats/my/${organization.id}/`;
         const res = await apiClient.get(endpoint);
-        const chats = (res.data?.chats || []).map((c) => ({
-          chat_id: c.chat_id,
-          title: c.name,
-          tags: c.tags || [],
-        }));
+
+        // Deduplicate chats by chat_id
+        const chatMap = new Map();
+        (res.data?.chats || []).forEach((c) => {
+          chatMap.set(c.chat_id, {
+            chat_id: c.chat_id,
+            title: c.name,
+            tags: c.tags || [],
+          });
+        });
+        const chats = Array.from(chatMap.values());
 
         console.log(
           "Chats loaded:",
@@ -343,7 +349,8 @@ export function ProjectsProvider({
     if (!sel.length) return state.chats;
     const splitTags = (arr) =>
       arr.flatMap((t) => t.split(/[+,]/).map((s) => s.trim())).filter(Boolean);
-    return state.chats.filter((c) => {
+
+    const filtered = state.chats.filter((c) => {
       const tags = splitTags(c.tags || []);
       if (state.logic === "AND") {
         return sel.every((tag) => tags.includes(tag));
@@ -351,6 +358,13 @@ export function ProjectsProvider({
         return sel.some((tag) => tags.includes(tag));
       }
     });
+
+    // Deduplicate by chat_id
+    const chatMap = new Map();
+    filtered.forEach((c) => {
+      chatMap.set(c.chat_id, c);
+    });
+    return Array.from(chatMap.values());
   }, [state.chats, state.selectedTags, state.logic]);
 
   // Filtrowanie eventów
@@ -429,6 +443,10 @@ export function ProjectsProvider({
       chats: filteredChats,
       chatsLoading: state.chatsLoading,
       chatsError: state.chatsError,
+      refreshChats: async () => {
+        if (!state.userMember) return;
+        await loadChats(state.userMember);
+      },
 
       selectedTags: state.selectedTags,
       setSelectedTags: (tags) => {
@@ -448,6 +466,7 @@ export function ProjectsProvider({
       state,
       projectTags,
       loadProjects,
+      loadChats,
       loadEvents,
       loadEventsForDateRange,
       filterByProjects,
