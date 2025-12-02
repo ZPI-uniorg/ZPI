@@ -256,7 +256,11 @@ export default function CalendarWeekView({ weekDays, events }) {
                     title={`${ev.title} - ${ev.start_time} - ${ev.end_time}`}
                     onClick={(e) => handleEventClick(e, ev)}
                   >
-                    <span className="truncate flex-shrink">{ev.title}</span>
+                    <span className="truncate flex-shrink">
+                      {ev.start_time === "00:00" && ev.end_time === "00:00"
+                        ? ev.title
+                        : `${ev.start_time}-${ev.end_time} ${ev.title}`}
+                    </span>
                     {(() => {
                       const allTags = [
                         ...ev.tags,
@@ -370,7 +374,7 @@ export default function CalendarWeekView({ weekDays, events }) {
                         >
                           <div className="font-semibold text-[9px] flex items-center gap-0.5 overflow-hidden">
                             <span className="truncate flex-shrink">
-                              {ev.start_time} {ev.title}
+                              {ev.start_time}-{ev.end_time} {ev.title}
                             </span>
                             {columnInfo.totalColumns === 1 &&
                               (() => {
