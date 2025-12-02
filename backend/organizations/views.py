@@ -347,9 +347,7 @@ def get_organization_users(request, organization_id):
             organization__id=organization_id, user__username=username
         )
 
-        if membership.role not in ["admin", "coordinator"]:
-            return JsonResponse({"error": "Permission denied"}, status=403)
-
+        # All organization members can see the user list
         memberships = Membership.objects.filter(organization__id=organization_id)
         users = [
             {
