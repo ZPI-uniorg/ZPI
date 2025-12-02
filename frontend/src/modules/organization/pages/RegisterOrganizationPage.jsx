@@ -193,9 +193,9 @@ function RegisterOrganizationPage() {
   );
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4 py-8">
+    <div className="min-h-screen h-screen overflow-y-auto flex items-center justify-center bg-slate-900 px-4 py-8">
       <form
-        className="w-[min(720px,100%)] bg-slate-800 rounded-xl p-8 shadow text-slate-100 flex flex-col gap-6"
+        className="w-[min(720px,100%)] bg-slate-800 rounded-xl p-8 shadow text-slate-100 flex flex-col gap-6 my-auto"
         onSubmit={handleSubmit}
       >
         <h1 className="m-0 text-[28px] font-bold text-slate-100">

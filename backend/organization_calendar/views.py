@@ -25,6 +25,17 @@ def get_all_events(request, organization_id):
 
         organization = Organization.objects.get(id=organization_id)
         events = Event.objects.filter(organization=organization)
+
+        # Apply date filtering if provided
+        start_date = request.GET.get("start_date")
+        end_date = request.GET.get("end_date")
+        if start_date:
+            # Events that end on or after the start date
+            events = events.filter(end_time__date__gte=start_date)
+        if end_date:
+            # Events that start on or before the end date
+            events = events.filter(start_time__date__lte=end_date)
+
         events_data = []
 
         for event in events:
@@ -68,9 +79,20 @@ def get_user_events(request, organization_id, username):
         organization = Organization.objects.get(id=organization_id)
         user_permissions = membership.permissions.all()
 
+        # Apply date filtering if provided
+        all_events = Event.objects.filter(organization=organization)
+        start_date = request.GET.get("start_date")
+        end_date = request.GET.get("end_date")
+        if start_date:
+            # Events that end on or after the start date
+            all_events = all_events.filter(end_time__date__gte=start_date)
+        if end_date:
+            # Events that start on or before the end date
+            all_events = all_events.filter(start_time__date__lte=end_date)
+
         events = []
 
-        for event in Event.objects.filter(organization=organization):
+        for event in all_events:
             event_permissions = event.permissions.all()
 
             if len(event_permissions) == 0:

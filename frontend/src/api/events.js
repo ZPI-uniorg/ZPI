@@ -10,9 +10,12 @@ function toFormData(payload) {
   return params;
 }
 
-function buildDateTime(date, time) {
+function buildDateTime(date, time, isAllDay = false, isEndTime = false) {
   if (!date) return "";
-  if (!time) return `${date} 00:00:00`;
+  if (isAllDay || !time) {
+    // For all-day events, use 00:00:00 for start and 23:59:59 for end
+    return isEndTime ? `${date} 23:59:59` : `${date} 00:00:00`;
+  }
   return `${date} ${time}:00`;
 }
 
@@ -34,14 +37,15 @@ function buildPermissionsString(combinations = [], tags = []) {
 }
 
 export async function createEvent(organizationId, actorUsername, payload) {
+  const isAllDay = !payload.start_time && !payload.end_time;
   const params = new URLSearchParams();
   params.append("username", actorUsername);
   params.append("name", payload.name || payload.title || "");
   params.append("description", payload.description || "");
-  params.append("start_time", buildDateTime(payload.date, payload.start_time));
+  params.append("start_time", buildDateTime(payload.date, payload.start_time, isAllDay, false));
   params.append(
     "end_time",
-    buildDateTime(payload.endDate || payload.date, payload.end_time)
+    buildDateTime(payload.endDate || payload.date, payload.end_time, isAllDay, true)
   );
   params.append(
     "permissions",
@@ -60,16 +64,19 @@ export async function updateEvent(
   actorUsername,
   payload
 ) {
+  const isAllDay = !payload.start_time && !payload.end_time;
   const response = await apiClient.put(
     `events/update/${organizationId}/${eventId}/`,
     {
       username: actorUsername,
       name: payload.name || payload.title || "",
       description: payload.description || "",
-      start_time: buildDateTime(payload.date, payload.start_time),
+      start_time: buildDateTime(payload.date, payload.start_time, isAllDay, false),
       end_time: buildDateTime(
         payload.endDate || payload.date,
-        payload.end_time
+        payload.end_time,
+        isAllDay,
+        true
       ),
       permissions: buildPermissionsString(
         payload.combinations || [],

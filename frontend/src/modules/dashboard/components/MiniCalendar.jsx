@@ -51,7 +51,13 @@ function getEventsForDay(events, year, month, day) {
 
 export default function MiniCalendar() {
   const navigate = useNavigate();
-  const { eventsByProject, eventsLoading, loadEventsForDateRange, projects, userMember } = useProjects();
+  const {
+    eventsByProject,
+    eventsLoading,
+    loadEventsForDateRange,
+    projects,
+    userMember,
+  } = useProjects();
   const today = new Date();
   const [date, setDate] = useState({
     year: today.getFullYear(),
@@ -65,11 +71,16 @@ export default function MiniCalendar() {
     const { year, month } = date;
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
-    const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
-    const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`;
+    const startDate = `${year}-${String(month + 1).padStart(2, "0")}-01`;
+    const endDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(
+      lastDay.getDate()
+    ).padStart(2, "0")}`;
 
     // Fetch if date range changed or if it's the first load (both are null)
-    if (lastFetchRef.current.startDate !== startDate || lastFetchRef.current.endDate !== endDate) {
+    if (
+      lastFetchRef.current.startDate !== startDate ||
+      lastFetchRef.current.endDate !== endDate
+    ) {
       lastFetchRef.current = { startDate, endDate };
       if (loadEventsRef.current) {
         loadEventsRef.current(startDate, endDate);
@@ -82,23 +93,31 @@ export default function MiniCalendar() {
     if (!loadEventsForDateRange || !userMember || projects.length === 0) return;
     const { year, month } = date;
     const lastDay = new Date(year, month + 1, 0);
-    const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
-    const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`;
-    if (lastFetchRef.current.startDate === startDate && lastFetchRef.current.endDate === endDate) return;
+    const startDate = `${year}-${String(month + 1).padStart(2, "0")}-01`;
+    const endDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(
+      lastDay.getDate()
+    ).padStart(2, "0")}`;
+    if (
+      lastFetchRef.current.startDate === startDate &&
+      lastFetchRef.current.endDate === endDate
+    )
+      return;
     lastFetchRef.current = { startDate, endDate };
     loadEventsForDateRange(startDate, endDate);
   }, [loadEventsForDateRange, userMember, projects.length]);
 
   const events = React.useMemo(() => {
     const allProjectEvents = Object.values(eventsByProject || {}).flat();
-    return allProjectEvents.map(ev => {
+    return allProjectEvents.map((ev) => {
       const rawStart = ev.start_time ? String(ev.start_time) : "";
       const splitStart = rawStart.includes("T")
         ? rawStart.replace("T", " ").split(" ")
         : rawStart.split(" ");
       const datePart = splitStart[0] || "";
-      const startTimePart = (splitStart[1] || "").replace("+00:00", "").slice(0, 5);
-      
+      const startTimePart = (splitStart[1] || "")
+        .replace("+00:00", "")
+        .slice(0, 5);
+
       return {
         id: ev.event_id,
         event_id: ev.event_id,
@@ -147,7 +166,7 @@ export default function MiniCalendar() {
   };
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="w-full h-full flex flex-col min-w-[280px]">
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
           <button
@@ -230,7 +249,7 @@ export default function MiniCalendar() {
                     {dayEvents.slice(0, 2).map((ev) => (
                       <div
                         key={ev.id}
-                        className="w-full truncate text-[9px] bg-violet-600/80 text-white px-0.5 rounded leading-tight h-[12px] flex-shrink-0 hover:bg-violet-500 transition"
+                        className="w-full truncate text-[9px] bg-indigo-600/80 text-white px-0.5 rounded leading-tight h-[12px] flex-shrink-0 hover:bg-indigo-700 transition"
                         title={ev.title}
                         onClick={(e) => handleEventClick(e, ev)}
                       >

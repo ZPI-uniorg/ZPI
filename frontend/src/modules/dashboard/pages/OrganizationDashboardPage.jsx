@@ -17,9 +17,11 @@ export default function OrganizationDashboardPage() {
   const {
     projects,
     projectsLoading,
+    projectsInitialized,
     projectsError,
     chats,
     chatsLoading,
+    userMemberLoading,
   } = useProjects();
 
   const projectList = projects;
@@ -95,7 +97,7 @@ export default function OrganizationDashboardPage() {
     if (q) result = result.filter((c) => c.title.toLowerCase().includes(q));
     return result;
   }, [chats, query]);
-  console.log('Chaty (po filtrach z kontekstu):', filteredChats);
+  console.log("Chaty (po filtrach z kontekstu):", filteredChats);
 
   const prevKanban = () => {
     setKanbanIndex((i) =>
@@ -110,27 +112,41 @@ export default function OrganizationDashboardPage() {
     );
   };
 
+  // Decide when to show the Kanban skeleton
+  // Keep skeleton until projects are initialized; then rely on board loading
+  const previewLoading =
+    !projectsInitialized ||
+    userMemberLoading ||
+    projectsLoading ||
+    (currentProject ? kanbanLoading : false);
+
   return (
-    <div className="flex h-full flex-col min-h-0 overflow-hidden bg-[linear-gradient(145deg,#0f172a,#1e293b)] px-[clamp(24px,5vw,48px)] py-4 text-slate-100">
-      <div className="flex flex-1 min-h-0 gap-6 max-w-[90vw] mx-auto w-full overflow-hidden">
-        <ChatPanel
-          chats={filteredChats}
-          loading={chatsLoading}
-          query={query}
-          setQuery={setQuery}
-          addChat={() => navigate("/chat/new")}
-        />
-        <div className="flex flex-col basis-[45%] grow gap-6 h-full min-h-0 overflow-hidden">
-          <div className="flex-1 min-h-0 bg-[rgba(15,23,42,0.92)] rounded-[24px] p-4 shadow-[0_25px_50px_rgba(15,23,42,0.45)] flex items-start justify-center text-slate-300 border border-[rgba(148,163,184,0.35)] overflow-hidden">
+    <div className="flex h-full flex-col min-h-0 overflow-x-auto overflow-y-auto bg-[linear-gradient(145deg,#0f172a,#1e293b)] px-4 md:px-[clamp(24px,5vw,48px)] py-4 text-slate-100">
+      <div className="flex flex-col lg:flex-row flex-1 min-h-0 gap-4 md:gap-6 w-full max-w-full">
+        <div className="lg:basis-[30%] min-h-[300px] lg:min-h-0 flex-shrink-0 max-w-full">
+          <ChatPanel
+            chats={filteredChats}
+            loading={chatsLoading}
+            query={query}
+            setQuery={setQuery}
+            addChat={() => navigate("/chat/new")}
+          />
+        </div>
+        <div className="flex flex-col lg:basis-[45%] grow gap-4 md:gap-6 min-h-0 max-w-full min-w-0">
+          <div className="flex-1 min-h-[300px] lg:min-h-0 bg-[rgba(15,23,42,0.92)] rounded-[20px] md:rounded-[24px] p-3 md:p-4 shadow-[0_25px_50px_rgba(15,23,42,0.45)] flex items-start justify-center text-slate-300 border border-[rgba(148,163,184,0.35)] overflow-auto">
             <MiniCalendar />
           </div>
-          <div className="flex-1 min-h-0 bg-[rgba(15,23,42,0.92)] rounded-[24px] p-4 shadow-[0_25px_50px_rgba(15,23,42,0.45)] flex flex-col text-slate-300 border border-[rgba(148,163,184,0.35)] overflow-hidden">
+          <div className="flex-1 min-h-[300px] lg:min-h-0 bg-[rgba(15,23,42,0.92)] rounded-[20px] md:rounded-[24px] p-3 md:p-4 shadow-[0_25px_50px_rgba(15,23,42,0.45)] flex flex-col text-slate-300 border border-[rgba(148,163,184,0.35)] overflow-auto">
             <KanbanPreview
               project={currentProject}
               board={currentBoard}
               onPrev={prevKanban}
               onNext={nextKanban}
-              loading={kanbanLoading || projectsLoading}
+              loading={previewLoading}
+              projectsLoading={
+                !projectsInitialized || userMemberLoading || projectsLoading
+              }
+              projectsInitialized={projectsInitialized}
               error={kanbanError || projectsError}
             />
           </div>
