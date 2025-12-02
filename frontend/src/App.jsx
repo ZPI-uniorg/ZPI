@@ -7,6 +7,7 @@ import RegisterOrganizationPage from "./modules/organization/pages/RegisterOrgan
 import OrganizationsPage from "./modules/organization/pages/OrganizationsPage.jsx";
 import DashboardPage from "./modules/dashboard/pages/DashboardPage.jsx";
 import OrganizationDashboardPage from "./modules/dashboard/pages/OrganizationDashboardPage.jsx";
+import ProjectsListPage from "./modules/dashboard/pages/ProjectsListPage.jsx";
 import OrganizationPage from "./modules/organization/pages/OrganizationPage.jsx";
 import ProjectEditPage from "./modules/organization/pages/ProjectEditPage.jsx";
 import TagEditPage from "./modules/organization/pages/TagEditPage.jsx";
@@ -37,6 +38,7 @@ function App() {
                   path="dashboard"
                   element={<OrganizationDashboardPage />}
                 />
+                <Route path="projects" element={<ProjectsListPage />} />
                 <Route
                   path="account/password"
                   element={<ChangePasswordPage />}
