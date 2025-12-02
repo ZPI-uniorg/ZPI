@@ -52,7 +52,7 @@ export default function Autocomplete({
       />
       {open && options.length > 0 && (
         <div
-          className={`absolute left-0 top-full z-10 w-full ${dropdownClassName || ""} bg-slate-900 border border-slate-700 rounded shadow max-h-40 overflow-y-auto mt-1`}
+          className={`absolute left-0 top-full z-50 w-full ${dropdownClassName || ""} bg-slate-900 border border-slate-700 rounded shadow max-h-40 overflow-y-auto mt-1`}
         >
           {options.map((opt, i) => (
             <div

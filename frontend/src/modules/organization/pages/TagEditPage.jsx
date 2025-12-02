@@ -66,8 +66,6 @@ export default function TagEditPage() {
     };
   }, [organization?.id, user?.username, editingTagName]);          // CHANGED deps
 
-  const tagName = editingTag?.name || null;
-
   const filteredMembers = availableMembers
     .filter((m) => !members.some((mem) => mem.id === m.id))
     .filter((m) =>
@@ -136,7 +134,7 @@ export default function TagEditPage() {
       >
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-2">
           <h1 className="text-lg font-semibold text-slate-200">
-            {editingTag ? "Edytuj tag" : "Nowy tag"}
+            {editingTagName ? "Edytuj tag" : "Nowy tag"}
           </h1>
           <button
             type="button"
@@ -209,9 +207,9 @@ export default function TagEditPage() {
             className="bg-gradient-to-r from-indigo-500 to-violet-500 text-white px-10 py-3 rounded-xl text-lg font-semibold shadow hover:brightness-110 transition w-full md:w-auto"
             disabled={!name.trim() || submitting}
           >
-            {submitting ? "Zapisywanie..." : editingTag ? "Zaktualizuj tag" : "Stwórz tag"}
+            {submitting ? "Zapisywanie..." : editingTagName ? "Zaktualizuj tag" : "Stwórz tag"}
           </button>
-         {editingTag && (
+         {editingTagName && (
             <button
               type="button"
               className="border border-red-500 px-8 py-3 rounded-xl text-lg text-red-400 bg-transparent hover:bg-red-500/10 transition w-full md:w-auto"

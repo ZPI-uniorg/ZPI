@@ -344,7 +344,7 @@ export default function CalendarWeekView({ weekDays, events }) {
                           style={{
                             top: position.top,
                             height: position.height,
-                            minHeight: "20px",
+                            minHeight: "24px",
                             left: leftOffset,
                             width: actualWidth,
                             zIndex: zIndex,

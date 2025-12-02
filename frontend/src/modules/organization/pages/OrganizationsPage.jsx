@@ -7,6 +7,7 @@ import {
   updateOrganizationMember,
   updateOrganizationMemberProfile,
   updateMemberPermissions, // <-- DODANE
+  getTags,
 } from "../../../api/organizations.js";
 import useAuth from "../../../auth/useAuth.js";
 import { useProjects } from "../../shared/components/ProjectsContext.jsx"; // <-- KONTEKST PROJEKTÓW
@@ -76,6 +77,7 @@ function OrganizationsPage() {
   const [editingTagsUser, setEditingTagsUser] = useState(null); // <-- edycja tagów login
   const [editTags, setEditTags] = useState([]); // <-- robocza lista tagów
   const [deletingUsername, setDeletingUsername] = useState(null); // <-- NEW
+  const [orgTags, setOrgTags] = useState([]);
 
   const selectedOrganization = useMemo(
     () => organizations.find((org) => org.id === selectedOrgId) ?? null,
@@ -185,6 +187,27 @@ function OrganizationsPage() {
       loadMembers(selectedOrgId);
     }
   }, [selectedOrgId, loadMembers]);
+
+  // Fetch organization tags (same source as FiltersPanel)
+  useEffect(() => {
+    if (!selectedOrgId || !user?.username) {
+      setOrgTags([]);
+      return;
+    }
+    let ignore = false;
+    getTags(selectedOrgId, user.username)
+      .then((data) => {
+        if (ignore) return;
+        setOrgTags(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (!ignore) setOrgTags([]);
+      })
+      .finally(() => {});
+    return () => {
+      ignore = true;
+    };
+  }, [selectedOrgId, user?.username]);
 
   useEffect(() => {
     setEditingMember(null);
@@ -357,10 +380,16 @@ function OrganizationsPage() {
     }
   };
 
-  // Sugerowane tagi: nazwy projektów + istniejące tagi członków
+  // Sugerowane tagi: nazwy projektów + tagi z organizacji (jak w filtrach) + istniejące tagi członków
   const projectTagSuggestions = useMemo(
     () => projects.map((p) => p.name).filter(Boolean),
     [projects]
+  );
+  const orgTagNames = useMemo(
+    () => (orgTags || [])
+      .map((t) => t.name)
+      .filter((name) => !!name && !name.includes("+")),
+    [orgTags]
   );
   const memberDerivedTags = useMemo(() => {
     const s = new Set();
@@ -370,9 +399,13 @@ function OrganizationsPage() {
   const allTagSuggestions = useMemo(
     () =>
       Array.from(
-        new Set([...projectTagSuggestions, ...memberDerivedTags])
+        new Set([
+          ...projectTagSuggestions,
+          ...orgTagNames,
+          ...memberDerivedTags,
+        ])
       ).sort(),
-    [projectTagSuggestions, memberDerivedTags]
+    [projectTagSuggestions, orgTagNames, memberDerivedTags]
   );
 
   const startEditTags = (member) => {
