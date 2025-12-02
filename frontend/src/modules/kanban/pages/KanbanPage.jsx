@@ -271,14 +271,6 @@ export default function KanbanPage() {
 
   // Column drag & drop handlers
   const handleColumnDragStart = (e, columnId) => {
-    const columnIndex = columns.findIndex(col => col.column_id === columnId);
-    console.log('🔵 [COLUMN DRAG START]', {
-      columnId,
-      columnIndex,
-      columnTitle: columns[columnIndex]?.title,
-      currentPosition: columns[columnIndex]?.position,
-      totalColumns: columns.length
-    });
     setDraggedColumn(columnId);
     e.dataTransfer.effectAllowed = "move";
   };
@@ -287,13 +279,6 @@ export default function KanbanPage() {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
     if (draggedColumn && draggedColumn !== columnId) {
-      const targetIndex = columns.findIndex(col => col.column_id === columnId);
-      console.log('🟡 [COLUMN DRAG OVER]', {
-        draggedColumnId: draggedColumn,
-        targetColumnId: columnId,
-        targetIndex,
-        targetTitle: columns[targetIndex]?.title
-      });
       setDraggedOverColumn(columnId);
     }
   };
@@ -307,14 +292,6 @@ export default function KanbanPage() {
     
     if (draggedIdx === -1 || targetIdx === -1) return;
 
-    console.log('🟢 [COLUMN DROP START]', {
-      draggedColumnId: draggedColumn,
-      targetColumnId,
-      draggedIdx,
-      targetIdx,
-      beforeOrder: columns.map(c => ({ id: c.column_id, title: c.title, position: c.position }))
-    });
-
     // Reorder columns locally
     const prevBoard = { ...board };
     const newColumns = [...columns];
@@ -326,19 +303,13 @@ export default function KanbanPage() {
       col.position = idx;
     });
 
-    console.log('🟢 [COLUMN DROP - NEW ORDER]', {
-      afterOrder: newColumns.map(c => ({ id: c.column_id, title: c.title, position: c.position }))
-    });
-
     setBoard({ ...board, columns: newColumns });
     handleDragEnd();
 
     // Update backend - send update for all columns that changed position
     try {
-      const updatesToSend = [];
       const updatePromises = newColumns.map((col, idx) => {
         // Update ALL columns to ensure correct positions
-        updatesToSend.push({ columnId: col.column_id, title: col.title, oldPos: columns.find(c => c.column_id === col.column_id)?.position, newPos: idx });
         return updateColumn(
           organization.id,
           board.board_id,
@@ -348,29 +319,15 @@ export default function KanbanPage() {
         );
       });
 
-      console.log('🟢 [COLUMN DROP - BACKEND UPDATES]', { updatesToSend });
-
       await Promise.all(updatePromises);
-      
-      console.log('✅ [COLUMN DROP - SUCCESS]', 'All backend updates completed');
-      // Don't refetch immediately - trust the optimistic update
     } catch (err) {
-      console.error('❌ [COLUMN DROP - ERROR]', err);
+      console.error('Failed to reorder column:', err);
       setBoard(prevBoard);
     }
   };
 
   // Task reordering within same column
   const handleTaskDragStart = (e, task, columnId, position) => {
-    const column = columns.find(col => col.column_id === columnId);
-    console.log('🔵 [TASK DRAG START]', {
-      taskId: task.task_id,
-      taskTitle: task.title,
-      columnId,
-      columnTitle: column?.title,
-      position,
-      taskPosition: task.position
-    });
     setDraggedItem(task);
     setDraggedFrom(columnId);
     setDraggedTaskPosition(position);
@@ -380,12 +337,6 @@ export default function KanbanPage() {
   const handleTaskDragOver = (e, columnId, position) => {
     e.preventDefault();
     if (draggedFrom === columnId && draggedTaskPosition !== position) {
-      console.log('🟡 [TASK DRAG OVER]', {
-        draggedTaskPosition,
-        targetPosition: position,
-        columnId,
-        sameColumn: draggedFrom === columnId
-      });
       setDragOverTaskPosition(position);
     }
   };
@@ -398,14 +349,6 @@ export default function KanbanPage() {
 
     // Case 1: Moving to different column (existing logic)
     if (draggedFrom !== targetColumnId) {
-      console.log('🟢 [TASK DROP - CROSS COLUMN]', {
-        taskId: draggedItem.task_id,
-        taskTitle: draggedItem.title,
-        fromColumnId: draggedFrom,
-        toColumnId: targetColumnId,
-        targetPosition
-      });
-
       const fromColumn = columns.find((col) => col.column_id === draggedFrom);
       const toColumn = columns.find((col) => col.column_id === targetColumnId);
 
@@ -421,7 +364,6 @@ export default function KanbanPage() {
       handleDragEnd();
 
       try {
-        console.log('🟢 [TASK DROP - SENDING TO BACKEND]', { new_column_id: targetColumnId });
         await updateTask(
           organization.id,
           board.board_id,
@@ -430,10 +372,9 @@ export default function KanbanPage() {
           user.username,
           { new_column_id: targetColumnId }
         );
-        console.log('✅ [TASK DROP - CROSS COLUMN SUCCESS]');
         // Don't refetch immediately - trust the optimistic update
       } catch (err) {
-        console.error('❌ [TASK DROP - CROSS COLUMN ERROR]', err);
+        console.error('Failed to move task:', err);
         setBoard(prevBoard);
       }
       return;
@@ -441,23 +382,12 @@ export default function KanbanPage() {
 
     // Case 2: Reordering within same column
     if (draggedTaskPosition === targetPosition) {
-      console.log('⚠️ [TASK DROP - SAME POSITION]', 'No reordering needed');
       handleDragEnd();
       return;
     }
 
     const column = columns.find((col) => col.column_id === targetColumnId);
     if (!column) return;
-
-    console.log('🟢 [TASK DROP - REORDER START]', {
-      taskId: draggedItem.task_id,
-      taskTitle: draggedItem.title,
-      columnId: targetColumnId,
-      columnTitle: column.title,
-      fromPosition: draggedTaskPosition,
-      toPosition: targetPosition,
-      beforeOrder: column.tasks.map(t => ({ id: t.task_id, title: t.title, position: t.position }))
-    });
 
     const prevBoard = board;
     const newTasks = [...column.tasks];
@@ -469,16 +399,11 @@ export default function KanbanPage() {
       task.position = idx;
     });
 
-    console.log('🟢 [TASK DROP - NEW ORDER]', {
-      afterOrder: newTasks.map(t => ({ id: t.task_id, title: t.title, position: t.position }))
-    });
-
     column.tasks = newTasks;
     setBoard({ ...board });
     handleDragEnd();
 
     try {
-      console.log('🟢 [TASK DROP - SENDING TO BACKEND]', { position: targetPosition });
       await updateTask(
         organization.id,
         board.board_id,
@@ -487,10 +412,9 @@ export default function KanbanPage() {
         user.username,
         { position: targetPosition }
       );
-      console.log('✅ [TASK DROP - REORDER SUCCESS]');
       // Don't refetch immediately - trust the optimistic update
     } catch (err) {
-      console.error('❌ [TASK DROP - REORDER ERROR]', err);
+      console.error('Failed to reorder task:', err);
       setBoard(prevBoard);
     }
   };
