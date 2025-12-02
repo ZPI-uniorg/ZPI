@@ -107,15 +107,6 @@ function AppLayoutContent() {
               >
                 <Filter className="w-5 h-5" />
               </button>
-              <button
-                type="button"
-                onClick={() => navigate("/organization/project/new")}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/20 border border-indigo-500/40 text-indigo-300 hover:bg-indigo-600/30 hover:text-indigo-200 transition-colors text-sm font-medium"
-                title="Utwórz nowy projekt"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Nowy projekt</span>
-              </button>
               <nav className="flex items-center gap-2 ml-6">
                 {NAV_LINKS.map((link) => (
                   <NavLink

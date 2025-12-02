@@ -39,6 +39,7 @@ export default function KanbanPage() {
     projects,
     projectsLoading: loading,
     projectsError: error,
+    userRole,
   } = useProjects();
 
   const [index, setIndex] = useState(0);
@@ -100,6 +101,21 @@ export default function KanbanPage() {
     totalProjects === 0 ? 0 : Math.min(index, totalProjects - 1);
   const project = totalProjects === 0 ? null : projects[safeIndex] || null;
   const columns = Array.isArray(board?.columns) ? board.columns : [];
+
+  // Check if the current user can create columns/tasks
+  // Only admins and project coordinators can create
+  const canCreate = React.useMemo(() => {
+    if (!user || !project || !userRole) return false;
+
+    // Admins can always create
+    if (userRole === "admin") return true;
+
+    // Project coordinator can create
+    if (project.coordinator_username === user.username) return true;
+
+    // Otherwise, cannot create (ordinary members)
+    return false;
+  }, [user, project, userRole]);
 
   // Extract unique assignees from all tasks
   const uniqueAssignees = React.useMemo(() => {
@@ -908,14 +924,20 @@ export default function KanbanPage() {
           </button>
           <button
             onClick={handleAddColumn}
-            disabled={boardLoading || !board}
+            disabled={boardLoading || !board || !canCreate}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-slate-100 transition ${
-              boardLoading || !board
-                ? "bg-slate-700/40 cursor-not-allowed"
+              boardLoading || !board || !canCreate
+                ? "bg-slate-700/40 cursor-not-allowed opacity-50"
                 : "bg-slate-700/60 hover:bg-slate-700"
             }`}
             aria-label="Dodaj kolumnę"
-            title={!board ? "Ładowanie tablicy..." : "Dodaj kolumnę"}
+            title={
+              !board
+                ? "Ładowanie tablicy..."
+                : !canCreate
+                ? "Tylko admin i koordynator projektu mogą dodawać kolumny"
+                : "Dodaj kolumnę"
+            }
           >
             <Plus className="w-5 h-5" />
             <span className="text-sm font-semibold">Dodaj kolumnę</span>
@@ -930,16 +952,18 @@ export default function KanbanPage() {
                 },
               })
             }
-            disabled={boardLoading || columns.length === 0}
+            disabled={boardLoading || columns.length === 0 || !canCreate}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-white transition ${
-              boardLoading || columns.length === 0
-                ? "bg-indigo-600/40 cursor-not-allowed"
+              boardLoading || columns.length === 0 || !canCreate
+                ? "bg-indigo-600/40 cursor-not-allowed opacity-50"
                 : "bg-indigo-600 hover:bg-indigo-500"
             }`}
             aria-label="Nowe zadanie"
             title={
               columns.length === 0
                 ? "Najpierw dodaj kolumnę"
+                : !canCreate
+                ? "Tylko admin i koordynator projektu mogą dodawać zadania"
                 : "Dodaj nowe zadanie"
             }
           >
@@ -973,13 +997,19 @@ export default function KanbanPage() {
             <div className="text-slate-400 text-sm">
               Brak kolumn w tym kanbanie.
             </div>
-            <button
-              onClick={handleAddColumn}
-              className="px-5 py-2 rounded-lg bg-slate-700/60 hover:bg-slate-700 text-slate-100 transition flex items-center gap-2"
-            >
-              <Plus className="w-5 h-5" />
-              Dodaj kolumnę
-            </button>
+            {canCreate ? (
+              <button
+                onClick={handleAddColumn}
+                className="px-5 py-2 rounded-lg bg-slate-700/60 hover:bg-slate-700 text-slate-100 transition flex items-center gap-2"
+              >
+                <Plus className="w-5 h-5" />
+                Dodaj kolumnę
+              </button>
+            ) : (
+              <div className="text-slate-500 text-xs italic">
+                Tylko admin i koordynator projektu mogą dodawać kolumny
+              </div>
+            )}
           </div>
         ) : (
           <div
@@ -1091,26 +1121,34 @@ export default function KanbanPage() {
                 >
                   {(col.tasks?.length ?? 0) === 0 && (
                     <div className="w-full text-xs text-slate-500 italic py-8 rounded-lg border-2 border-dashed border-slate-700 transition-all flex flex-col items-center justify-center gap-2">
-                      <button
-                        onClick={() =>
-                          navigate("/kanban/task/edit", {
-                            state: {
-                              projectId: project.id,
-                              boardId: board.board_id,
-                              columnId: col.column_id,
-                              returnTo: "kanban",
-                            },
-                          })
-                        }
-                        className="flex items-center gap-2 hover:text-indigo-400"
-                        title="Dodaj pierwsze zadanie do tej kolumny"
-                      >
-                        <Plus className="w-4 h-4" />
-                        <span>Dodaj zadanie</span>
-                      </button>
-                      <span className="text-[10px] text-slate-600">
-                        lub przeciągnij tutaj
-                      </span>
+                      {canCreate ? (
+                        <>
+                          <button
+                            onClick={() =>
+                              navigate("/kanban/task/edit", {
+                                state: {
+                                  projectId: project.id,
+                                  boardId: board.board_id,
+                                  columnId: col.column_id,
+                                  returnTo: "kanban",
+                                },
+                              })
+                            }
+                            className="flex items-center gap-2 hover:text-indigo-400"
+                            title="Dodaj pierwsze zadanie do tej kolumny"
+                          >
+                            <Plus className="w-4 h-4" />
+                            <span>Dodaj zadanie</span>
+                          </button>
+                          <span className="text-[10px] text-slate-600">
+                            lub przeciągnij tutaj
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-[10px] text-slate-600">
+                          Pusta kolumna
+                        </span>
+                      )}
                     </div>
                   )}
                   {(col.tasks ?? []).map((item, taskIndex) => {
@@ -1203,7 +1241,7 @@ export default function KanbanPage() {
                       </div>
                     );
                   })}
-                  {(col.tasks?.length ?? 0) > 0 && (
+                  {(col.tasks?.length ?? 0) > 0 && canCreate && (
                     <button
                       onClick={() =>
                         navigate("/kanban/task/edit", {

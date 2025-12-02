@@ -150,10 +150,13 @@ def add_column(request, organization_id, board_id):
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
 
-        if membership.role == "member" or (
-            membership.role == "coordinator"
-            and board.project.tag not in membership.permissions
-        ):
+        # Check if user is admin or coordinator of this project
+        is_admin = membership.role == "admin"
+        is_coordinator = (
+            board.project.coordinator and board.project.coordinator.username == username
+        )
+
+        if not (is_admin or is_coordinator):
             return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         title = request.POST.get("title")
@@ -206,10 +209,13 @@ def update_column_position(request, organization_id, board_id, column_id):
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
 
-        if membership.role == "member" or (
-            membership.role == "coordinator"
-            and board.project.tag not in membership.permissions
-        ):
+        # Check if user is admin or coordinator of this project
+        is_admin = membership.role == "admin"
+        is_coordinator = (
+            board.project.coordinator and board.project.coordinator.username == username
+        )
+
+        if not (is_admin or is_coordinator):
             return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         column = KanbanColumn.objects.get(column_id=column_id, board=board)
@@ -258,10 +264,13 @@ def delete_column(request, organization_id, board_id, column_id):
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
 
-        if membership.role == "member" or (
-            membership.role == "coordinator"
-            and board.project.tag not in membership.permissions
-        ):
+        # Check if user is admin or coordinator of this project
+        is_admin = membership.role == "admin"
+        is_coordinator = (
+            board.project.coordinator and board.project.coordinator.username == username
+        )
+
+        if not (is_admin or is_coordinator):
             return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         column = KanbanColumn.objects.get(column_id=column_id, board=board)
@@ -339,10 +348,14 @@ def add_task(request, organization_id, board_id, column_id):
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
 
-        if (
-            membership.role != "admin"
-            and board.project.tag not in membership.permissions
-        ):
+        # Check if user is admin, or coordinator of this project, or has project permissions
+        is_admin = membership.role == "admin"
+        is_coordinator = (
+            board.project.coordinator and board.project.coordinator.username == username
+        )
+        has_project_permission = board.project.tag in membership.permissions.all()
+
+        if not (is_admin or is_coordinator or has_project_permission):
             return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         column = KanbanColumn.objects.get(column_id=column_id, board=board)
@@ -484,7 +497,6 @@ def delete_task(request, organization_id, board_id, column_id, task_id):
                 {"error": "Użytkownik nie jest uwierzytelniony"}, status=401
             )
 
-        data = json.loads(request.body)
         username = request.user.username
         membership = Membership.objects.get(
             user__username=username, organization__id=organization_id
@@ -492,10 +504,13 @@ def delete_task(request, organization_id, board_id, column_id, task_id):
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
 
-        if membership.role == "member" or (
-            membership.role == "coordinator"
-            and board.project.tag not in membership.permissions
-        ):
+        # Check if user is admin or coordinator of this project
+        is_admin = membership.role == "admin"
+        is_coordinator = (
+            board.project.coordinator and board.project.coordinator.username == username
+        )
+
+        if not (is_admin or is_coordinator):
             return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         column = KanbanColumn.objects.get(column_id=column_id, board=board)
