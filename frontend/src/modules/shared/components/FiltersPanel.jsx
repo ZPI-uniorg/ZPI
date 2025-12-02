@@ -16,7 +16,7 @@ export default function FiltersPanel({
 }) {
   const tagListRootRef = useRef(null);
   const navigate = useNavigate();
-  const { projects } = useProjects();
+  const { projects, projectsVersion } = useProjects();
   const { organization, user } = useAuth();
   const [allTags, setAllTags] = useState([]);
   const [tagsLoading, setTagsLoading] = useState(false);
@@ -42,7 +42,7 @@ export default function FiltersPanel({
     return () => {
       ignore = true;
     };
-  }, [organization?.id, user?.username]);
+  }, [organization?.id, user?.username, projectsVersion]);
 
   // Funkcja rozbijająca złożone nazwy na składniki
   const splitNames = (namesArr) => {

@@ -33,6 +33,7 @@ export function ProjectsProvider({
     projectsLoading: true,
     projectsError: null,
     projectsInitialized: false,
+    projectsVersion: 0,
 
     allEvents: [],
     eventsByProject: {},
@@ -401,8 +402,13 @@ export function ProjectsProvider({
       projectsLoading: state.projectsLoading,
       projectsInitialized: state.projectsInitialized,
       projectsError: state.projectsError,
-      refreshProjects: () => state.userMember && loadProjects(state.userMember),
+      refreshProjects: async () => {
+        if (!state.userMember) return;
+        await loadProjects(state.userMember);
+        setState((s) => ({ ...s, projectsVersion: s.projectsVersion + 1 }));
+      },
       projectTags,
+      projectsVersion: state.projectsVersion,
 
       allEvents: state.allEvents,
       eventsByProject: filteredEventsByProject,

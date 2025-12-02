@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { TAGS, renameTag, deleteTag } from "../../../api/fakeData.js";
+import { TAGS, renameTag } from "../../../api/fakeData.js";
 import useAuth from "../../../auth/useAuth.js";
-import { getOrganizationMembers, createTag } from "../../../api/organizations.js";
+import { useProjects } from "../../shared/components/ProjectsContext.jsx";
+import { getOrganizationMembers, createTag, deleteTag } from "../../../api/organizations.js";
 import Autocomplete from "../../shared/components/Autocomplete.jsx";
 
 export default function TagEditPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, organization } = useAuth();
+  const { refreshProjects } = useProjects();
   const editingTagRaw = location.state?.tag || null;              // <-- NEW
   const editingTagName = typeof editingTagRaw === 'string'
     ? editingTagRaw
@@ -120,10 +122,37 @@ export default function TagEditPage() {
     }
   };
 
-  const handleDelete = () => {
-    if (!editingTagName) return;                                   // CHANGED
-    deleteTag(editingTagName);
-    navigate("/dashboard");
+  const handleDelete = async () => {
+    if (!editingTagName || !organization?.id || !user?.username) return;
+    if (!window.confirm(`Czy na pewno chcesz usunąć tag "${editingTagName}"? Ta operacja jest nieodwracalna.`)) {
+      return;
+    }
+    
+    setSubmitting(true);
+    setError(null);
+    
+    try {
+      await deleteTag(organization.id, editingTagName, user.username);
+      // Remove from local TAGS array
+      const idx = TAGS.indexOf(editingTagName);
+      if (idx !== -1) TAGS.splice(idx, 1);
+      // Refresh projects to update cache
+      await refreshProjects();
+      navigate("/dashboard", {
+        state: {
+          message: `Tag "${editingTagName}" został usunięty.`,
+          tagDeleted: true
+        }
+      });
+    } catch (err) {
+      setError(
+        err?.response?.data?.error ??
+        err?.response?.data?.detail ??
+        "Nie udało się usunąć tagu."
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -204,7 +233,7 @@ export default function TagEditPage() {
         <div className="flex flex-col md:flex-row gap-4 justify-between items-center mt-8">
           <button
             type="submit"
-            className="bg-gradient-to-r from-indigo-500 to-violet-500 text-white px-10 py-3 rounded-xl text-lg font-semibold shadow hover:brightness-110 transition w-full md:w-auto"
+            className="bg-gradient-to-r from-indigo-500 to-violet-500 text-white px-10 py-3 rounded-xl text-lg font-semibold shadow hover:brightness-110 transition w-full md:w-auto disabled:opacity-50"
             disabled={!name.trim() || submitting}
           >
             {submitting ? "Zapisywanie..." : editingTagName ? "Zaktualizuj tag" : "Stwórz tag"}
@@ -212,10 +241,11 @@ export default function TagEditPage() {
          {editingTagName && (
             <button
               type="button"
-              className="border border-red-500 px-8 py-3 rounded-xl text-lg text-red-400 bg-transparent hover:bg-red-500/10 transition w-full md:w-auto"
+              className="border border-red-500 px-8 py-3 rounded-xl text-lg text-red-400 bg-transparent hover:bg-red-500/10 transition w-full md:w-auto disabled:opacity-50"
               onClick={handleDelete}
+              disabled={submitting}
             >
-              Usuń tag
+              {submitting ? "Usuwanie..." : "Usuń tag"}
             </button>
          )}
         </div>
