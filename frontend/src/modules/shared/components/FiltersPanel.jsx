@@ -44,22 +44,27 @@ export default function FiltersPanel({
     };
   }, [organization?.id, user?.username]);
 
-  const projectNames = useMemo(
-    () => new Set(projects.map((p) => p.name).filter(Boolean)),
-    [projects]
-  );
+  // Funkcja rozbijająca złożone nazwy na składniki
+  const splitNames = (namesArr) => {
+    return namesArr
+      .flatMap(name => name.split(/[+,]/).map(s => s.trim()))
+      .filter(Boolean);
+  };
 
-	const tags = useMemo(() => {
-        return allTags
-            .map(t => t.name)
-            .filter(name => !projectNames.has(name))
-            .filter(name => !name.includes('+'));
-    }, [allTags, projectNames]);
+  // Zbierz wszystkie nazwy projektów
+  const projectNamesRaw = useMemo(() => projects.map((p) => p.name).filter(Boolean), [projects]);
+  // Rozbij projekty na składniki
+  const projectNames = useMemo(() => splitNames(projectNamesRaw), [projectNamesRaw]);
 
-  const allFilterItems = useMemo(
-    () => [...tags, ...projects.map((p) => p.name).filter(Boolean)].sort(),
-    [tags, projects]
-  );
+  // Zbierz wszystkie nazwy tagów
+  const tagNamesRaw = useMemo(() => allTags.map((t) => t.name).filter(Boolean), [allTags]);
+  // Rozbij tagi na składniki
+  const tagNames = useMemo(() => splitNames(tagNamesRaw), [tagNamesRaw]);
+
+  // Połącz projekty i tagi, usuń duplikaty
+  const allFilterItems = useMemo(() => {
+    return Array.from(new Set([...projectNames, ...tagNames])).sort();
+  }, [projectNames, tagNames]);
 
   useEffect(() => {
     console.log('Lista filtrów (allFilterItems):', allFilterItems);
