@@ -72,7 +72,7 @@ export default function ChatPage() {
           <h1 className="text-2xl font-semibold text-slate-100">{channel}</h1>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => isAdmin && navigate("/chats/new")}
+              onClick={() => isAdmin && navigate("/chat/new")}
               disabled={!canCreateChat}
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-indigo-600"
               aria-label="Nowy chat"
