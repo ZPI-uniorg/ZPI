@@ -11,7 +11,8 @@ function getMonthMatrix(year, month) {
 
   const matrix = [];
   let day = 1 - firstWeekDay;
-  for (let i = 0; i < 5; i++) {
+  // Always generate at least 4 weeks, but add more if needed
+  while (true) {
     const week = [];
     for (let j = 0; j < 7; j++, day++) {
       if (day > 0 && day <= daysInMonth) {
@@ -21,6 +22,10 @@ function getMonthMatrix(year, month) {
       }
     }
     matrix.push(week);
+    // Stop if last day of month is in this week and it's not the first cell
+    if (week.includes(daysInMonth)) break;
+    // Prevent infinite loop (should never happen)
+    if (matrix.length > 6) break;
   }
   return matrix;
 }
@@ -79,12 +84,12 @@ export default function CalendarMonthView({
   };
 
   return (
-    <div className="flex-1 h-full min-h-0 bg-slate-900/95 rounded-2xl shadow-[0_30px_60px_rgba(15,23,42,0.45)] border border-slate-700 p-4 overflow-hidden flex flex-col">
+    <div className="flex-1 h-full min-h-0 bg-slate-900/95 rounded-2xl shadow-[0_30px_60px_rgba(15,23,42,0.45)] border border-slate-700 p-2 overflow-hidden flex flex-col">
       <div className="grid grid-cols-7 gap-px bg-slate-700/30 mb-px">
         {WEEKDAYS.map((day) => (
           <div
             key={day}
-            className="bg-slate-900/95 text-center font-semibold text-slate-300 py-3 text-sm"
+            className="bg-slate-900/95 text-center font-bold text-slate-200 py-2 text-xs"
           >
             {day}
           </div>
@@ -92,18 +97,20 @@ export default function CalendarMonthView({
       </div>
 
       {loading ? (
-        <div className="flex-1 min-h-0 grid grid-rows-5 gap-px bg-slate-700/30 overflow-hidden">
-          {Array.from({ length: 5 }).map((_, weekIdx) => (
+        <div
+          className={`flex-1 min-h-0 grid grid-rows-${matrix.length} gap-px bg-slate-700/30 overflow-hidden`}
+        >
+          {Array.from({ length: matrix.length }).map((_, weekIdx) => (
             <div key={weekIdx} className="grid grid-cols-7 gap-px min-h-0">
               {Array.from({ length: 7 }).map((_, dayIdx) => (
                 <div
                   key={`${weekIdx}-${dayIdx}`}
-                  className="bg-slate-900/95 p-2 flex flex-col overflow-hidden min-h-0"
+                  className="bg-slate-900/95 p-1 flex flex-col overflow-hidden min-h-0"
                 >
-                  <div className="w-6 h-4 bg-slate-700 rounded animate-pulse mb-2" />
-                  <div className="flex flex-col gap-1">
-                    <div className="h-6 bg-slate-700/60 rounded animate-pulse" />
-                    <div className="h-6 bg-slate-700/50 rounded animate-pulse" />
+                  <div className="w-6 h-4 bg-slate-700 rounded animate-pulse mb-1" />
+                  <div className="flex flex-col gap-0.5">
+                    <div className="h-4 bg-slate-700/60 rounded animate-pulse" />
+                    <div className="h-4 bg-slate-700/50 rounded animate-pulse" />
                   </div>
                 </div>
               ))}
@@ -111,7 +118,9 @@ export default function CalendarMonthView({
           ))}
         </div>
       ) : (
-        <div className="flex-1 min-h-0 grid grid-rows-5 gap-px bg-slate-700/30 overflow-hidden">
+        <div
+          className={`flex-1 min-h-0 grid grid-rows-${matrix.length} gap-px bg-slate-700/30 overflow-hidden`}
+        >
           {matrix.map((week, weekIdx) => (
             <div key={weekIdx} className="grid grid-cols-7 gap-px min-h-0">
               {week.map((day, dayIdx) => {
@@ -122,15 +131,15 @@ export default function CalendarMonthView({
                 return (
                   <div
                     key={`${weekIdx}-${dayIdx}`}
-                    className={`bg-slate-900/95 p-3 flex flex-col overflow-hidden min-h-0 transition-colors ${
+                    className={`bg-slate-900/95 p-1 flex flex-col overflow-hidden min-h-0 transition-colors ${
                       isTodayDay ? "bg-indigo-900/20" : ""
                     } ${day ? "hover:bg-slate-800/70 cursor-pointer" : ""}`}
                     onClick={() => handleDayClick(day)}
                   >
                     <div
-                      className={`text-sm font-semibold mb-2 ${
+                      className={`text-xs font-bold mb-1 ${
                         isTodayDay
-                          ? "bg-indigo-600 text-white w-7 h-7 rounded-full flex items-center justify-center"
+                          ? "bg-indigo-600 text-white w-6 h-6 rounded-full flex items-center justify-center"
                           : day
                           ? "text-slate-200"
                           : "text-slate-600"
@@ -138,8 +147,8 @@ export default function CalendarMonthView({
                     >
                       {day || ""}
                     </div>
-                    <div className="flex flex-col gap-1 overflow-y-auto flex-1 min-h-0 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
-                      {dayEvents.slice(0, 4).map((ev) => {
+                    <div className="flex flex-col gap-0.5 overflow-y-auto flex-1 min-h-0 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+                      {dayEvents.slice(0, 7).map((ev) => {
                         const dayStr = `${year}-${String(month + 1).padStart(
                           2,
                           "0"
@@ -151,82 +160,56 @@ export default function CalendarMonthView({
                         return (
                           <div
                             key={ev.id}
-                            className={`group text-xs text-white px-2 py-1 cursor-pointer hover:shadow-md transition ${
+                            className={`text-[9px] px-2 py-1 ${
                               isMultiDay
                                 ? isStart
                                   ? "rounded-l"
                                   : isEnd
                                   ? "rounded-r"
-                                  : ""
+                                  : "rounded-sm"
                                 : "rounded"
-                            } bg-indigo-600 border-l-4 border-indigo-800`}
-                            title={`${ev.title}${
-                              isMultiDay
-                                ? ` (${
-                                    isStart
-                                      ? "początek"
-                                      : isEnd
-                                      ? "koniec"
-                                      : "trwa"
-                                  })`
-                                : ""
-                            }`}
+                            } cursor-pointer hover:shadow-lg transition flex items-center gap-1 overflow-hidden bg-indigo-600 text-white border border-white/15 border-l-4 border-indigo-800 shadow-md`}
+                            title={`${ev.title} - ${ev.start_time} - ${ev.end_time}`}
                             onClick={(e) => handleEventClick(e, ev)}
                           >
-                            <div className="font-medium flex items-center gap-1 overflow-hidden">
-                              <span className="truncate flex-shrink">
-                                {ev.title}
-                              </span>
-                              {(() => {
-                                const maxVisibleTags = 2;
-                                const allTags = [
-                                  ...ev.tags.map((tag) => ({
-                                    type: "single",
-                                    value: tag,
-                                  })),
-                                  ...(ev.tagCombinations || []).map(
-                                    (combo) => ({ type: "combo", value: combo })
-                                  ),
-                                ];
-                                const visibleTags = allTags.slice(
-                                  0,
-                                  maxVisibleTags
-                                );
-                                const hiddenCount =
-                                  allTags.length - maxVisibleTags;
-
-                                return (
-                                  <>
-                                    {visibleTags.map((tag, idx) => (
-                                      <span
-                                        key={idx}
-                                        className="bg-fuchsia-700/80 px-1 rounded text-[9px] truncate max-w-[60px] flex-shrink-0"
-                                        title={
-                                          tag.type === "combo"
-                                            ? tag.value.join(" + ")
-                                            : tag.value
-                                        }
-                                      >
-                                        {tag.type === "combo"
-                                          ? tag.value.join(" + ")
-                                          : tag.value}
-                                      </span>
-                                    ))}
-                                    {hiddenCount > 0 && (
-                                      <span className="bg-fuchsia-700/80 px-1 rounded text-[9px] flex-shrink-0">
-                                        +{hiddenCount}
-                                      </span>
-                                    )}
-                                  </>
-                                );
-                              })()}
-                            </div>
+                            <span className="truncate flex-shrink">
+                              {ev.title}
+                            </span>
+                            {(() => {
+                              const allTags = [
+                                ...ev.tags,
+                                ...(ev.tagCombinations || []).map((combo) =>
+                                  combo.join(" + ")
+                                ),
+                              ];
+                              const maxVisible = 1;
+                              const visible = allTags.slice(0, maxVisible);
+                              const hiddenCount = allTags.length - maxVisible;
+                              return (
+                                <>
+                                  {visible.map((tag, idx) => (
+                                    <span
+                                      key={idx}
+                                      className="bg-fuchsia-700/80 px-1 rounded text-[7px] truncate max-w-[50px] flex-shrink-0"
+                                      title={tag}
+                                    >
+                                      {tag}
+                                    </span>
+                                  ))}
+                                  {hiddenCount > 0 && (
+                                    <span className="bg-fuchsia-700/80 px-1 rounded text-[7px] flex-shrink-0">
+                                      +{hiddenCount}
+                                    </span>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </div>
                         );
                       })}
-                      {dayEvents.length > 4 && (
-                        <div className="text-[10px] text-slate-400 px-2 py-1 italic">
-                          +{dayEvents.length - 4} więcej
+                      {dayEvents.length > 7 && (
+                        <div className="text-[9px] text-slate-400 px-1 py-0.5 italic">
+                          +{dayEvents.length - 7} więcej
                         </div>
                       )}
                     </div>

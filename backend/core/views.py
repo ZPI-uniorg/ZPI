@@ -54,6 +54,8 @@ def login_view(request, organization_name):
                         "id": organization.id,
                         "name": organization.name,
                         "description": organization.description,
+                        "slug": organization.slug,
+                        "role": membership.role,
                     },
                 },
                 status=200,
