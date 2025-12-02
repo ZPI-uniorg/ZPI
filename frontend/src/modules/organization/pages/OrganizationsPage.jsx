@@ -10,6 +10,7 @@ import {
   getTags,
 } from "../../../api/organizations.js";
 import useAuth from "../../../auth/useAuth.js";
+import { sanitizeUsername, sanitizeEmail, sanitizePassword } from "../../shared/utils/sanitize.js";
 import { useProjects } from "../../shared/components/ProjectsContext.jsx"; // <-- KONTEKST PROJEKTÓW
 
 const emptyMemberForm = {
@@ -895,7 +896,10 @@ function OrganizationsPage() {
                 <input
                   name="first_name"
                   value={memberEditForm.first_name}
-                  onChange={handleEditMemberFormChange}
+                  onChange={(e) => {
+                    const cleaned = sanitizeUsername(e.target.value).slice(0,50);
+                    handleEditMemberFormChange({ target: { name: 'first_name', value: cleaned } });
+                  }}
                   className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500"
                 />
               </label>
@@ -904,7 +908,10 @@ function OrganizationsPage() {
                 <input
                   name="last_name"
                   value={memberEditForm.last_name}
-                  onChange={handleEditMemberFormChange}
+                  onChange={(e) => {
+                    const cleaned = sanitizeUsername(e.target.value).slice(0,50);
+                    handleEditMemberFormChange({ target: { name: 'last_name', value: cleaned } });
+                  }}
                   className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500"
                 />
               </label>
@@ -914,7 +921,10 @@ function OrganizationsPage() {
                   name="email"
                   type="email"
                   value={memberEditForm.email}
-                  onChange={handleEditMemberFormChange}
+                  onChange={(e) => {
+                    const cleaned = sanitizeEmail(e.target.value).slice(0,100);
+                    handleEditMemberFormChange({ target: { name: 'email', value: cleaned } });
+                  }}
                   className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500"
                 />
               </label>
@@ -957,10 +967,8 @@ function OrganizationsPage() {
                     name="first_name"
                     value={memberForm.first_name}
                     onChange={(e) => {
-                      const val = e.target.value;
-                      if (val.length <= 50) {
-                        handleMemberFormChange(e);
-                      }
+                      const cleaned = sanitizeUsername(e.target.value).slice(0,50);
+                      handleMemberFormChange({ target: { name: 'first_name', value: cleaned } });
                     }}
                     maxLength={50}
                     className="w-full rounded px-3 py-2 pr-16 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
@@ -981,10 +989,8 @@ function OrganizationsPage() {
                     name="last_name"
                     value={memberForm.last_name}
                     onChange={(e) => {
-                      const val = e.target.value;
-                      if (val.length <= 50) {
-                        handleMemberFormChange(e);
-                      }
+                      const cleaned = sanitizeUsername(e.target.value).slice(0,50);
+                      handleMemberFormChange({ target: { name: 'last_name', value: cleaned } });
                     }}
                     maxLength={50}
                     className="w-full rounded px-3 py-2 pr-16 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
@@ -1010,10 +1016,8 @@ function OrganizationsPage() {
                   type="email"
                   value={memberForm.email}
                   onChange={(e) => {
-                    const val = e.target.value;
-                    if (val.length <= 100) {
-                      handleMemberFormChange(e);
-                    }
+                    const cleaned = sanitizeEmail(e.target.value).slice(0,100);
+                    handleMemberFormChange({ target: { name: 'email', value: cleaned } });
                   }}
                   maxLength={100}
                   className="w-full rounded px-3 py-2 pr-16 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
@@ -1038,10 +1042,8 @@ function OrganizationsPage() {
                     name="username"
                     value={memberForm.username}
                     onChange={(e) => {
-                      const val = e.target.value;
-                      if (val.length <= 50) {
-                        handleMemberFormChange(e);
-                      }
+                      const cleaned = sanitizeUsername(e.target.value).slice(0,50);
+                      handleMemberFormChange({ target: { name: 'username', value: cleaned } });
                     }}
                     placeholder="np. member-abc123"
                     maxLength={50}
@@ -1065,10 +1067,8 @@ function OrganizationsPage() {
                     type="text"
                     value={memberForm.password}
                     onChange={(e) => {
-                      const val = e.target.value;
-                      if (val.length <= 128) {
-                        handleMemberFormChange(e);
-                      }
+                      const cleaned = sanitizePassword(e.target.value,128);
+                      handleMemberFormChange({ target: { name: 'password', value: cleaned } });
                     }}
                     placeholder="Wygeneruj bezpieczne hasło"
                     maxLength={128}

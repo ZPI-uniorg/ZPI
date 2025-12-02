@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { EURO_ALNUM_PATTERN, sanitizeWithPolicy } from "../../shared/utils/sanitize.js";
 import { useLocation, useNavigate } from "react-router-dom";
 import useAuth from "../../../auth/useAuth.js";
 import { useProjects } from "../../shared/components/ProjectsContext.jsx";
@@ -612,10 +613,8 @@ export default function KanbanPage() {
                         className="w-full bg-slate-900/40 border border-slate-600 rounded px-2 py-1 pr-12 text-slate-100 outline-none focus:border-indigo-500"
                         value={editingColumnName}
                         onChange={(e) => {
-                          const val = e.target.value;
-                          if (val.length <= 50) {
-                            setEditingColumnName(val);
-                          }
+                          const cleaned = sanitizeWithPolicy(e.target.value, { maxLength: 50, pattern: EURO_ALNUM_PATTERN });
+                          setEditingColumnName(cleaned);
                         }}
                         onKeyDown={handleRenameKeyDown}
                         onBlur={handleRenameSave}

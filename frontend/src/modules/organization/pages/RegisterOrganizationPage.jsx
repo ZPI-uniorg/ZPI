@@ -2,68 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import useAuth from "../../../auth/useAuth.js";
 import { registerOrganization } from "../../../api/organizations.js";
+import { EURO_ALNUM_PATTERN, sanitizeWithPolicy, sanitizeDescription, sanitizeUsername, sanitizeEmail, sanitizePassword, sanitizeSlug } from "../../shared/utils/sanitize.js";
 
 const initialOrganization = { name: "", description: "", slug: "" };
-// Slugify with Polish/European char mapping
-function slugify(text) {
-  const map = {
-    ą: "a",
-    ć: "c",
-    ę: "e",
-    ł: "l",
-    ń: "n",
-    ó: "o",
-    ś: "s",
-    ź: "z",
-    ż: "z",
-    Ą: "A",
-    Ć: "C",
-    Ę: "E",
-    Ł: "L",
-    Ń: "N",
-    Ó: "O",
-    Ś: "S",
-    Ź: "Z",
-    Ż: "Z",
-    ü: "u",
-    ö: "o",
-    ä: "a",
-    ß: "ss",
-    é: "e",
-    è: "e",
-    ê: "e",
-    ë: "e",
-    á: "a",
-    à: "a",
-    â: "a",
-    ã: "a",
-    å: "a",
-    ç: "c",
-    í: "i",
-    ì: "i",
-    î: "i",
-    ï: "i",
-    ú: "u",
-    ù: "u",
-    û: "u",
-    ü: "u",
-    ñ: "n",
-    ý: "y",
-    ÿ: "y",
-  };
-  return text
-    .toString()
-    .split("")
-    .map((c) => map[c] || c)
-    .join("")
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036F]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
+// Use shared sanitizeSlug for consistency with backend logic
 const initialAdmin = {
   first_name: "",
   last_name: "",
@@ -127,7 +69,10 @@ function RegisterOrganizationPage() {
     const { name, value } = event.target;
     setOrganization((prev) => {
       if (name === "name") {
-        return { ...prev, name: value, slug: slugify(value) };
+        return { ...prev, name: value, slug: sanitizeSlug(value) };
+      }
+      if (name === "slug") {
+        return { ...prev, slug: sanitizeSlug(value) };
       }
       return { ...prev, [name]: value };
     });
@@ -215,14 +160,8 @@ function RegisterOrganizationPage() {
                 name="name"
                 value={organization.name}
                 onChange={(e) => {
-                  let val = e.target.value;
-                  // Only allow alphanumeric and spaces (no special chars)
-                  val = val.replace(/[^\p{L}\p{N} ]+/gu, "");
-                  if (val.length <= 100) {
-                    handleOrganizationChange({
-                      target: { name: "name", value: val },
-                    });
-                  }
+                  const cleaned = sanitizeWithPolicy(e.target.value, { maxLength: 100, pattern: EURO_ALNUM_PATTERN });
+                  handleOrganizationChange({ target: { name: "name", value: cleaned } });
                 }}
                 placeholder="Koło Naukowe AI"
                 maxLength={100}
@@ -287,10 +226,8 @@ function RegisterOrganizationPage() {
               name="description"
               value={organization.description}
               onChange={(e) => {
-                const val = e.target.value;
-                if (val.length <= 500) {
-                  handleOrganizationChange(e);
-                }
+                const cleaned = sanitizeDescription(e.target.value, 500);
+                handleOrganizationChange({ target: { name: "description", value: cleaned } });
               }}
               rows={3}
               placeholder="Czym zajmuje się organizacja?"
@@ -312,10 +249,8 @@ function RegisterOrganizationPage() {
                   name="first_name"
                   value={admin.first_name}
                   onChange={(e) => {
-                    const val = e.target.value;
-                    if (val.length <= 50) {
-                      handleAdminChange(e);
-                    }
+                    const cleaned = sanitizeUsername(e.target.value).slice(0,50);
+                    handleAdminChange({ target: { name: "first_name", value: cleaned } });
                   }}
                   maxLength={50}
                   className="w-full border border-slate-600 rounded-[12px] p-3 pr-14 text-[16px] bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
@@ -340,10 +275,8 @@ function RegisterOrganizationPage() {
                   name="last_name"
                   value={admin.last_name}
                   onChange={(e) => {
-                    const val = e.target.value;
-                    if (val.length <= 50) {
-                      handleAdminChange(e);
-                    }
+                    const cleaned = sanitizeUsername(e.target.value).slice(0,50);
+                    handleAdminChange({ target: { name: "last_name", value: cleaned } });
                   }}
                   maxLength={50}
                   className="w-full border border-slate-600 rounded-[12px] p-3 pr-14 text-[16px] bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
@@ -370,10 +303,8 @@ function RegisterOrganizationPage() {
                 type="email"
                 value={admin.email}
                 onChange={(e) => {
-                  const val = e.target.value;
-                  if (val.length <= 100) {
-                    handleAdminChange(e);
-                  }
+                  const cleaned = sanitizeEmail(e.target.value).slice(0,100);
+                  handleAdminChange({ target: { name: "email", value: cleaned } });
                 }}
                 maxLength={100}
                 required
@@ -399,10 +330,8 @@ function RegisterOrganizationPage() {
                 name="username"
                 value={admin.username}
                 onChange={(e) => {
-                  const val = e.target.value;
-                  if (val.length <= 50) {
-                    handleAdminChange(e);
-                  }
+                  const cleaned = sanitizeUsername(e.target.value).slice(0,50);
+                  handleAdminChange({ target: { name: "username", value: cleaned } });
                 }}
                 maxLength={50}
                 required
@@ -430,10 +359,8 @@ function RegisterOrganizationPage() {
                   type="password"
                   value={admin.password}
                   onChange={(e) => {
-                    const val = e.target.value;
-                    if (val.length <= 128) {
-                      handleAdminChange(e);
-                    }
+                    const cleaned = sanitizePassword(e.target.value,128);
+                    handleAdminChange({ target: { name: "password", value: cleaned } });
                   }}
                   maxLength={128}
                   required
@@ -462,10 +389,8 @@ function RegisterOrganizationPage() {
                   type="password"
                   value={admin.confirmPassword}
                   onChange={(e) => {
-                    const val = e.target.value;
-                    if (val.length <= 128) {
-                      handleAdminChange(e);
-                    }
+                    const cleaned = sanitizePassword(e.target.value,128);
+                    handleAdminChange({ target: { name: "confirmPassword", value: cleaned } });
                   }}
                   maxLength={128}
                   required

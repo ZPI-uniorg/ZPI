@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { EURO_ALNUM_PATTERN, sanitizeWithPolicy, sanitizeDescription } from "../../shared/utils/sanitize.js";
 import { useNavigate, useLocation } from "react-router-dom";
 import useAuth from "../../../auth/useAuth.js";
 import { createTask, updateTask, deleteTask } from "../../../api/kanban.js";
@@ -304,10 +305,8 @@ export default function TaskEditPage() {
                   className="border border-slate-600 w-full rounded-lg px-3 py-2 pr-16 bg-slate-800 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
                   value={title}
                   onChange={(e) => {
-                    const val = e.target.value;
-                    if (val.length <= 50) {
-                      setTitle(val);
-                    }
+                    const cleaned = sanitizeWithPolicy(e.target.value, { maxLength: 50, pattern: EURO_ALNUM_PATTERN });
+                    setTitle(cleaned);
                   }}
                   placeholder="Np. Implementacja modułu logowania"
                   maxLength={50}
@@ -338,10 +337,8 @@ export default function TaskEditPage() {
                 className="border border-slate-600 rounded-lg px-3 py-2 bg-slate-800 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 min-h-[120px] resize-y"
                 value={description}
                 onChange={(e) => {
-                  const val = e.target.value;
-                  if (val.length <= 500) {
-                    setDescription(val);
-                  }
+                  const cleaned = sanitizeDescription(e.target.value, 500);
+                  setDescription(cleaned);
                 }}
                 placeholder="Szczegółowy opis zadania..."
                 maxLength={500}
