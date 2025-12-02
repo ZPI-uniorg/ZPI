@@ -2,7 +2,14 @@ import React from "react";
 import { Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-export default function TagList({ tags, projects = [], selectedTags, logic, setLogic, toggleTag }) {
+export default function TagList({
+  tags,
+  projects = [],
+  selectedTags,
+  logic,
+  setLogic,
+  toggleTag,
+}) {
   const navigate = useNavigate();
 
   const handleEdit = (tag) => {
@@ -19,28 +26,6 @@ export default function TagList({ tags, projects = [], selectedTags, logic, setL
     <div className="border-t border-slate-600/30 pt-2 flex flex-col flex-1 min-h-0">
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm md:text-base text-slate-300">Tagi</span>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setLogic("AND")}
-            className={`px-4 py-2 text-sm font-semibold rounded-full transition ${
-              logic === "AND"
-                ? "bg-violet-500 text-white shadow-lg shadow-violet-500/30"
-                : "bg-slate-700/50 text-slate-300 hover:bg-slate-700/70"
-            }`}
-          >
-            AND
-          </button>
-          <button
-            onClick={() => setLogic("OR")}
-            className={`px-4 py-2 text-sm font-semibold rounded-full transition ${
-              logic === "OR"
-                ? "bg-violet-500 text-white shadow-lg shadow-violet-500/30"
-                : "bg-slate-700/50 text-slate-300 hover:bg-slate-700/70"
-            }`}
-          >
-            OR
-          </button>
-        </div>
       </div>
       <ul className="flex-1 overflow-y-auto pr-2 space-y-1.5 overscroll-contain">
         {tags.map((t) => {
@@ -76,9 +61,11 @@ export default function TagList({ tags, projects = [], selectedTags, logic, setL
                 <span className="text-xs opacity-60 mr-1">
                   {isProject ? "📁" : "🏷️"}
                 </span>
-                <span className={`text-sm md:text-[15px] leading-none ${
-                  isProject ? "text-violet-200 font-medium" : "text-slate-300"
-                }`}>
+                <span
+                  className={`text-sm md:text-[15px] leading-none ${
+                    isProject ? "text-violet-200 font-medium" : "text-slate-300"
+                  }`}
+                >
                   {t}
                 </span>
                 {isProject && (

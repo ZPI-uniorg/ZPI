@@ -7,7 +7,8 @@ import { Settings, FolderOpen, Calendar, Users } from "lucide-react";
 export default function ProjectsListPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { allProjects, projectsLoading, projectsInitialized, projectsError } = useProjects();
+  const { allProjects, projectsLoading, projectsInitialized, projectsError } =
+    useProjects();
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredProjects = allProjects.filter((p) => {
@@ -42,7 +43,7 @@ export default function ProjectsListPage() {
           </div>
           <button
             onClick={() => navigate("/organization/project/new")}
-            className="px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-semibold shadow-lg shadow-violet-500/30 hover:brightness-110 transition"
+            className="px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:brightness-110 transition"
           >
             + Nowy projekt
           </button>
@@ -55,14 +56,14 @@ export default function ProjectsListPage() {
             placeholder="Szukaj projektu po nazwie, opisie lub koordynatorze..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl bg-slate-800/60 border border-slate-700/50 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 transition"
+            className="w-full px-4 py-3 rounded-xl bg-slate-800/60 border border-slate-700/50 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition"
           />
         </div>
 
         {/* Loading State */}
         {!projectsInitialized || projectsLoading ? (
           <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-violet-500 border-t-transparent"></div>
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-indigo-500 border-t-transparent"></div>
             <p className="mt-4 text-slate-400">Ładowanie projektów...</p>
           </div>
         ) : projectsError ? (
@@ -82,22 +83,23 @@ export default function ProjectsListPage() {
           /* Projects Grid */
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filteredProjects.map((project) => {
-              const isCoordinator = project.coordinator_username === user?.username;
-              
+              const isCoordinator =
+                project.coordinator_username === user?.username;
+
               return (
                 <div
                   key={project.id}
                   onClick={() => handleProjectClick(project)}
-                  className="group relative bg-slate-900/95 rounded-2xl p-6 border border-slate-700/50 shadow-lg hover:shadow-xl hover:border-violet-500/40 transition-all cursor-pointer"
+                  className="group relative bg-slate-900/95 rounded-2xl p-6 border border-slate-700/50 shadow-lg hover:shadow-xl hover:border-indigo-500/40 transition-all cursor-pointer"
                 >
                   {/* Header */}
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-violet-500/30">
+                      <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-indigo-500 flex items-center justify-center">
                         <FolderOpen className="w-5 h-5 text-white" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-lg font-semibold text-slate-100 truncate group-hover:text-violet-300 transition">
+                        <h3 className="text-lg font-semibold text-slate-100 truncate group-hover:text-indigo-300 transition">
                           {project.name}
                         </h3>
                       </div>
@@ -123,9 +125,11 @@ export default function ProjectsListPage() {
                     <div className="flex items-center gap-2 text-sm">
                       <Users className="w-4 h-4 text-slate-500 flex-shrink-0" />
                       <span className="text-slate-400">Koordynator:</span>
-                      <span className={`font-medium truncate ${
-                        isCoordinator ? "text-violet-400" : "text-slate-300"
-                      }`}>
+                      <span
+                        className={`font-medium truncate ${
+                          isCoordinator ? "text-indigo-400" : "text-slate-300"
+                        }`}
+                      >
                         {project.coordinator_username}
                         {isCoordinator && " (Ty)"}
                       </span>
@@ -139,16 +143,16 @@ export default function ProjectsListPage() {
                         Twój projekt
                       </span>
                     )}
-                    {project.tags && project.tags.length > 0 && (
+                    {project.tags &&
+                      project.tags.length > 0 &&
                       project.tags.map((tag, idx) => (
                         <span
                           key={idx}
-                          className="px-2 py-1 text-xs font-medium rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30"
+                          className="px-2 py-1 text-xs font-medium rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
                         >
                           {tag}
                         </span>
-                      ))
-                    )}
+                      ))}
                   </div>
                 </div>
               );

@@ -31,7 +31,7 @@ def login_view(request, organization_name):
             return JsonResponse(
                 {
                     "status": "error",
-                    "message": "User is not a member of the organization",
+                    "message": "Użytkownik nie jest członkiem organizacji",
                 },
                 status=403,
             )
@@ -60,7 +60,8 @@ def login_view(request, organization_name):
             )
         else:
             return JsonResponse(
-                {"status": "error", "message": "Invalid credentials"}, status=401
+                {"status": "error", "message": "Nieprawidłowe dane logowania"},
+                status=401,
             )
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
@@ -81,7 +82,7 @@ def logout_view(request, organization_name):
             )
         else:
             return JsonResponse(
-                {"status": "error", "message": "User is not authenticated"}, status=401
+                {"status": "error", "message": "Użytkownik nie jest uwierzytelniony"},
             )
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
@@ -97,19 +98,20 @@ def change_password_view(request):
 
             if not request.user.check_password(old_password):
                 return JsonResponse(
-                    {"status": "error", "message": "Old password is incorrect"},
+                    {"status": "error", "message": "Stare hasło jest niepoprawne"},
                     status=400,
                 )
 
             request.user.set_password(new_password)
             request.user.save()
             return JsonResponse(
-                {"status": "success", "message": "Password changed successfully"},
+                {"status": "success", "message": "Hasło zostało pomyślnie zmienione"},
                 status=200,
             )
         else:
             return JsonResponse(
-                {"status": "error", "message": "User is not authenticated"}, status=401
+                {"status": "error", "message": "Użytkownik nie jest uwierzytelniony"},
+                status=401,
             )
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
@@ -123,14 +125,15 @@ def login_status_view(request):
             return JsonResponse(
                 {
                     "status": "success",
-                    "message": "User is authenticated",
+                    "message": "Użytkownik jest uwierzytelniony",
                     "username": request.user.username,
                 },
                 status=200,
             )
         else:
             return JsonResponse(
-                {"status": "error", "message": "User is not authenticated"}, status=401
+                {"status": "error", "message": "Użytkownik nie jest uwierzytelniony"},
+                status=401,
             )
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)}, status=500)

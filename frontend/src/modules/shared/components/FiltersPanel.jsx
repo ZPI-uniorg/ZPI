@@ -31,7 +31,21 @@ export default function FiltersPanel({
     getTags(organization.id, user.username)
       .then((data) => {
         if (ignore) return;
-        setAllTags(Array.isArray(data) ? data : []);
+        const orgId = String(organization.id);
+        const items = Array.isArray(data) ? data : [];
+        // Filter tags to the current organization only, handling various possible shapes
+        const filtered = items.filter((t) => {
+          const oid =
+            t.organization_id ??
+            t.organizationId ??
+            t.orgId ??
+            (typeof t.organization === "object"
+              ? t.organization?.id
+              : undefined) ??
+            t.org?.id;
+          return oid !== undefined && String(oid) === orgId;
+        });
+        setAllTags(filtered);
       })
       .catch(() => {
         if (!ignore) setAllTags([]);
@@ -47,17 +61,26 @@ export default function FiltersPanel({
   // Funkcja rozbijająca złożone nazwy na składniki
   const splitNames = (namesArr) => {
     return namesArr
-      .flatMap(name => name.split(/[+,]/).map(s => s.trim()))
+      .flatMap((name) => name.split(/[+,]/).map((s) => s.trim()))
       .filter(Boolean);
   };
 
   // Zbierz wszystkie nazwy projektów
-  const projectNamesRaw = useMemo(() => allProjects.map((p) => p.name).filter(Boolean), [allProjects]);
+  const projectNamesRaw = useMemo(
+    () => allProjects.map((p) => p.name).filter(Boolean),
+    [allProjects]
+  );
   // Rozbij projekty na składniki
-  const projectNames = useMemo(() => splitNames(projectNamesRaw), [projectNamesRaw]);
+  const projectNames = useMemo(
+    () => splitNames(projectNamesRaw),
+    [projectNamesRaw]
+  );
 
   // Zbierz wszystkie nazwy tagów
-  const tagNamesRaw = useMemo(() => allTags.map((t) => t.name).filter(Boolean), [allTags]);
+  const tagNamesRaw = useMemo(
+    () => allTags.map((t) => t.name).filter(Boolean),
+    [allTags]
+  );
   // Rozbij tagi na składniki
   const tagNames = useMemo(() => splitNames(tagNamesRaw), [tagNamesRaw]);
 
@@ -67,8 +90,13 @@ export default function FiltersPanel({
   }, [projectNames, tagNames]);
 
   useEffect(() => {
-    console.log('Lista filtrów (allFilterItems):', allFilterItems);
-    console.log('Wybrane filtry (selectedTags):', selectedTags, '| Tryb logiczny:', logic);
+    console.log("Lista filtrów (allFilterItems):", allFilterItems);
+    console.log(
+      "Wybrane filtry (selectedTags):",
+      selectedTags,
+      "| Tryb logiczny:",
+      logic
+    );
   }, [allFilterItems, selectedTags, logic]);
 
   useEffect(() => {
@@ -111,25 +139,25 @@ export default function FiltersPanel({
             <div className="inline-flex items-center gap-2 rounded-full bg-slate-800/60 p-1">
               <button
                 type="button"
-                onClick={() => setLogic("AND")}
-                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition ${
-                  logic === "AND"
-                    ? "bg-violet-600 text-white shadow-[0_8px_24px_rgba(124,58,237,0.45)]"
-                    : "text-slate-300 hover:text-white hover:bg-slate-700/60"
-                }`}
-              >
-                AND
-              </button>
-              <button
-                type="button"
                 onClick={() => setLogic("OR")}
                 className={`px-4 py-1.5 rounded-full text-xs font-semibold transition ${
                   logic === "OR"
-                    ? "bg-violet-600 text-white shadow-[0_8px_24px_rgba(124,58,237,0.45)]"
+                    ? "bg-indigo-600 text-white"
                     : "text-slate-300 hover:text-white hover:bg-slate-700/60"
                 }`}
               >
                 OR
+              </button>
+              <button
+                type="button"
+                onClick={() => setLogic("AND")}
+                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition ${
+                  logic === "AND"
+                    ? "bg-indigo-600 text-white"
+                    : "text-slate-300 hover:text-white hover:bg-slate-700/60"
+                }`}
+              >
+                AND
               </button>
             </div>
           </div>
@@ -163,13 +191,13 @@ export default function FiltersPanel({
         <div className="flex gap-2 border-t border-[rgba(148,163,184,0.2)] px-5 py-4">
           <button
             onClick={() => navigate("/organization/project/new")}
-            className="flex-1 rounded-[14px] bg-gradient-to-r from-violet-500 to-fuchsia-500 py-3 text-sm font-semibold text-white shadow-md shadow-violet-500/30 hover:brightness-110 transition"
+            className="flex-1 rounded-[14px] bg-indigo-600 py-3 text-sm font-semibold text-white shadow-md hover:brightness-110 transition"
           >
             nowy projekt
           </button>
           <button
             onClick={() => navigate("/organization/tag/new")}
-            className="flex-1 rounded-[14px] bg-gradient-to-r from-violet-500 to-fuchsia-500 py-3 text-sm font-semibold text-white shadow-md shadow-violet-500/30 hover:brightness-110 transition"
+            className="flex-1 rounded-[14px] bg-indigo-600 py-3 text-sm font-semibold text-white shadow-md hover:brightness-110 transition"
           >
             nowy tag
           </button>

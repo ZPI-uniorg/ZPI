@@ -138,14 +138,19 @@ export default function CalendarPage() {
         .slice(0, 5);
       const endTimePart = (splitEnd[1] || "").replace("+00:00", "").slice(0, 5);
 
-      // Detect all-day events (00:00 to 23:59)
-      const isAllDay = startTimePart === "00:00" && (endTimePart === "23:59" || endTimePart === "00:00");
-
-      const perms = ev.permissions || ev.tags || [];
-      const tagCombinations = perms
-        .filter((p) => p.includes("+"))
-        .map((p) => p.split("+").filter(Boolean));
-      const plainTags = perms.filter((p) => !p.includes("+"));
+      const perms = Array.isArray(ev.permissions)
+        ? ev.permissions
+        : Array.isArray(ev.tags)
+        ? ev.tags
+        : [];
+      const tagCombinations = Array.isArray(perms)
+        ? perms
+            .filter((p) => typeof p === "string" && p.includes("+"))
+            .map((p) => p.split("+").filter(Boolean))
+        : [];
+      const plainTags = Array.isArray(perms)
+        ? perms.filter((p) => typeof p === "string" && !p.includes("+"))
+        : [];
 
       const parsed = {
         id: ev.event_id,
@@ -153,13 +158,13 @@ export default function CalendarPage() {
         title: ev.name,
         name: ev.name,
         description: ev.description || "",
-        start_time: isAllDay ? "" : startTimePart || "",
-        end_time: isAllDay ? "" : endTimePart || "",
+        start_time: startTimePart || "",
+        end_time: endTimePart || "",
         date: startDatePart,
         endDate: endDatePart,
-        tags: plainTags,
-        tagCombinations,
-        permissions: perms,
+        tags: Array.isArray(plainTags) ? plainTags : [],
+        tagCombinations: Array.isArray(tagCombinations) ? tagCombinations : [],
+        permissions: Array.isArray(perms) ? perms : [],
       };
 
       console.log("Parsed event:", parsed);

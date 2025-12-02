@@ -2,13 +2,20 @@ import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import useAuth from "../../../auth/useAuth.js";
 import { useProjects } from "../../shared/components/ProjectsContext.jsx";
-import { createProject, updateProject, deleteProject } from "../../../api/projects.js";
+import {
+  createProject,
+  updateProject,
+  deleteProject,
+} from "../../../api/projects.js";
 import {
   getOrganizationMembers,
   updateMemberPermissions,
 } from "../../../api/organizations.js";
 import Autocomplete from "../../shared/components/Autocomplete.jsx";
-import { sanitizeWithPolicy, EURO_ALNUM_PATTERN } from "../../shared/utils/sanitize.js";
+import {
+  sanitizeWithPolicy,
+  EURO_ALNUM_PATTERN,
+} from "../../shared/utils/sanitize.js";
 
 export default function ProjectEditPage() {
   const navigate = useNavigate();
@@ -224,31 +231,35 @@ export default function ProjectEditPage() {
   };
 
   const handleCancel = () => navigate("/dashboard");
-  
+
   const handleDelete = async () => {
     if (!editingProject?.id || !organization?.id || !user?.username) return;
-    if (!window.confirm(`Czy na pewno chcesz usunąć projekt "${editingProject.name}"? Ta operacja jest nieodwracalna.`)) {
+    if (
+      !window.confirm(
+        `Czy na pewno chcesz usunąć projekt "${editingProject.name}"? Ta operacja jest nieodwracalna.`
+      )
+    ) {
       return;
     }
-    
+
     setDeleting(true);
     setError(null);
-    
+
     try {
       await deleteProject(organization.id, editingProject.id, user.username);
       // Refresh projects to remove deleted project from cache
       await refreshProjects();
-      navigate("/dashboard", { 
-        state: { 
+      navigate("/dashboard", {
+        state: {
           message: `Projekt "${editingProject.name}" został usunięty.`,
-          projectDeleted: true 
-        } 
+          projectDeleted: true,
+        },
       });
     } catch (err) {
       setError(
         err?.response?.data?.error ??
-        err?.response?.data?.detail ??
-        "Nie udało się usunąć projektu."
+          err?.response?.data?.detail ??
+          "Nie udało się usunąć projektu."
       );
     } finally {
       setDeleting(false);
@@ -294,7 +305,10 @@ export default function ProjectEditPage() {
                   onChange={(e) => {
                     const raw = e.target.value;
                     // Apply generic sanitizer with explicit limit 50
-                    const cleaned = sanitizeWithPolicy(raw, { maxLength: 50, pattern: EURO_ALNUM_PATTERN });
+                    const cleaned = sanitizeWithPolicy(raw, {
+                      maxLength: 50,
+                      pattern: EURO_ALNUM_PATTERN,
+                    });
                     if (cleaned !== name || raw === cleaned) {
                       setName(cleaned);
                     }
@@ -302,11 +316,15 @@ export default function ProjectEditPage() {
                   placeholder="Nazwa projektu"
                   required
                 />
-                <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
-                  name.length >= 50 ? 'text-red-400' : 
-                  name.length >= 40 ? 'text-yellow-400' : 
-                  'text-slate-400'
-                }`}>
+                <div
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                    name.length >= 50
+                      ? "text-red-400"
+                      : name.length >= 40
+                      ? "text-yellow-400"
+                      : "text-slate-400"
+                  }`}
+                >
                   {name.length}/50
                 </div>
               </div>
@@ -397,9 +415,13 @@ export default function ProjectEditPage() {
         <div className="flex flex-col md:flex-row gap-4 justify-between items-center mt-8">
           <button
             type="submit"
-            className="bg-gradient-to-r from-indigo-500 to-violet-500 text-white px-10 py-3 rounded-xl text-lg font-semibold shadow hover:brightness-110 transition w-full md:w-auto disabled:opacity-50"
+            className="bg-indigo-500 text-white px-10 py-3 rounded-xl text-lg font-semibold shadow hover:brightness-110 transition w-full md:w-auto disabled:opacity-50"
             disabled={
-              !name.trim() || !coordinator || members.length === 0 || submitting || deleting
+              !name.trim() ||
+              !coordinator ||
+              members.length === 0 ||
+              submitting ||
+              deleting
             }
           >
             {isEditing ? "Zapisz zmiany" : "Stwórz projekt"}

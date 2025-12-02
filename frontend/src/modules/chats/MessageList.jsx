@@ -171,7 +171,9 @@ export default function MessageList({
               <div
                 key={m.id}
                 className={
-                  "flex flex-col gap-1 max-w-[70%] " +
+                  "flex flex-col max-w-[70%] " +
+                  (item.showTime ? "gap-1 " : "gap-0 ") +
+                  (item.showTime ? "" : "-mt-3 ") +
                   (m.mine ? "self-end items-end" : "self-start items-start")
                 }
               >
@@ -187,9 +189,10 @@ export default function MessageList({
                 )}
                 <div
                   className={
-                    "group relative px-4 py-2 rounded-xl text-sm leading-relaxed whitespace-pre-wrap break-words " +
+                    "group relative rounded-xl text-sm leading-relaxed whitespace-pre-wrap break-words " +
+                    (item.showTime ? "px-4 py-2 " : "px-4 py-1.5 ") +
                     (m.mine
-                      ? "bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-md"
+                      ? "bg-indigo-600 text-white shadow-md"
                       : "bg-slate-800 text-slate-100 border border-slate-700")
                   }
                   style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
