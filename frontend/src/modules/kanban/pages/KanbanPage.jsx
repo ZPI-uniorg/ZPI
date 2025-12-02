@@ -19,6 +19,7 @@ import {
   Trash2,
   Check,
   ChevronDown,
+  Filter,
 } from "lucide-react";
 
 export default function KanbanPage() {
@@ -48,6 +49,9 @@ export default function KanbanPage() {
   const [editingColumnName, setEditingColumnName] = useState("");
   // Project dropdown state
   const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
+  // Assignee filter state
+  const [assigneeFilterOpen, setAssigneeFilterOpen] = useState(false);
+  const [selectedAssignee, setSelectedAssignee] = useState("all"); // "all", "unassigned", or user_id
 
   useEffect(() => {
     if (projects.length === 0 || isInitialized) return;
@@ -82,6 +86,35 @@ export default function KanbanPage() {
     totalProjects === 0 ? 0 : Math.min(index, totalProjects - 1);
   const project = totalProjects === 0 ? null : projects[safeIndex] || null;
   const columns = Array.isArray(board?.columns) ? board.columns : [];
+
+  // Extract unique assignees from all tasks
+  const uniqueAssignees = React.useMemo(() => {
+    const assignees = new Map();
+    columns.forEach(col => {
+      (col.tasks ?? []).forEach(task => {
+        if (task.assigned_to && !assignees.has(task.assigned_to.id)) {
+          assignees.set(task.assigned_to.id, task.assigned_to);
+        }
+      });
+    });
+    return Array.from(assignees.values());
+  }, [columns]);
+
+  // Filter columns based on selected assignee
+  const filteredColumns = React.useMemo(() => {
+    if (selectedAssignee === "all") {
+      return columns;
+    }
+    return columns.map(col => ({
+      ...col,
+      tasks: (col.tasks ?? []).filter(task => {
+        if (selectedAssignee === "unassigned") {
+          return !task.assigned_to;
+        }
+        return task.assigned_to?.id === selectedAssignee;
+      })
+    }));
+  }, [columns, selectedAssignee]);
 
   // Fetch board data when project changes
   useEffect(() => {
@@ -517,6 +550,90 @@ export default function KanbanPage() {
           )}
         </div>
         <div className="flex items-center gap-3">
+          {/* Assignee Filter */}
+          <div className="relative">
+            <button
+              onClick={() => setAssigneeFilterOpen(!assigneeFilterOpen)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800/60 hover:bg-slate-700/60 text-slate-100 transition border border-slate-700"
+            >
+              <Filter className="w-4 h-4" />
+              <span className="text-sm">
+                {selectedAssignee === "all"
+                  ? "Wszystkie zadania"
+                  : selectedAssignee === "unassigned"
+                  ? "Nieprzypisane"
+                  : uniqueAssignees.find(a => a.id === selectedAssignee)
+                    ? `${uniqueAssignees.find(a => a.id === selectedAssignee).first_name} ${uniqueAssignees.find(a => a.id === selectedAssignee).last_name}`
+                    : "Filtruj"}
+              </span>
+              <ChevronDown
+                className={`w-4 h-4 transition-transform ${
+                  assigneeFilterOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+            {assigneeFilterOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setAssigneeFilterOpen(false)}
+                ></div>
+                <div className="absolute top-full left-0 mt-2 w-64 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-20 max-h-96 overflow-y-auto">
+                  <button
+                    onClick={() => {
+                      setSelectedAssignee("all");
+                      setAssigneeFilterOpen(false);
+                    }}
+                    className={`w-full px-4 py-3 text-left hover:bg-slate-700/60 transition flex items-center justify-between rounded-t-lg ${
+                      selectedAssignee === "all"
+                        ? "bg-slate-700/40 text-indigo-400"
+                        : "text-slate-200"
+                    } border-b border-slate-700`}
+                  >
+                    <span className="font-medium">Wszystkie zadania</span>
+                    {selectedAssignee === "all" && <Check className="w-4 h-4" />}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedAssignee("unassigned");
+                      setAssigneeFilterOpen(false);
+                    }}
+                    className={`w-full px-4 py-3 text-left hover:bg-slate-700/60 transition flex items-center justify-between ${
+                      selectedAssignee === "unassigned"
+                        ? "bg-slate-700/40 text-indigo-400"
+                        : "text-slate-200"
+                    } border-b border-slate-700`}
+                  >
+                    <span className="font-medium">Nieprzypisane</span>
+                    {selectedAssignee === "unassigned" && <Check className="w-4 h-4" />}
+                  </button>
+                  {uniqueAssignees.map((assignee, idx) => (
+                    <button
+                      key={assignee.id}
+                      onClick={() => {
+                        setSelectedAssignee(assignee.id);
+                        setAssigneeFilterOpen(false);
+                      }}
+                      className={`w-full px-4 py-3 text-left hover:bg-slate-700/60 transition flex items-center justify-between ${
+                        selectedAssignee === assignee.id
+                          ? "bg-slate-700/40 text-indigo-400"
+                          : "text-slate-200"
+                      } ${
+                        idx === uniqueAssignees.length - 1
+                          ? "rounded-b-lg"
+                          : "border-b border-slate-700"
+                      }`}
+                    >
+                      <span className="font-medium">
+                        {assignee.first_name} {assignee.last_name}
+                      </span>
+                      {selectedAssignee === assignee.id && <Check className="w-4 h-4" />}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
           <button
             onClick={handleAddColumn}
             disabled={boardLoading || !board}
@@ -599,7 +716,7 @@ export default function KanbanPage() {
             onMouseLeave={() => setIsMouseOver(false)}
             className="flex h-full gap-4 overflow-x-auto overflow-y-hidden overscroll-contain scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent p-1"
           >
-            {columns.map((col) => (
+            {filteredColumns.map((col) => (
               <div
                 key={col.column_id}
                 className="flex flex-col min-h-0 w-[calc(25%-12px)] min-w-[340px] max-w-[420px] rounded-lg bg-slate-800/60 border border-slate-700 shrink-0"
@@ -663,12 +780,28 @@ export default function KanbanPage() {
                 </div>
                 <div className="flex-1 min-h-0 p-3 space-y-2 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
                   {(col.tasks?.length ?? 0) === 0 && (
-                    <div className="text-xs text-slate-500 italic">Pusto</div>
+                    <button
+                      onClick={() =>
+                        navigate("/kanban/task/edit", {
+                          state: {
+                            projectId: project.id,
+                            boardId: board.board_id,
+                            columnId: col.column_id,
+                            returnTo: "kanban",
+                          },
+                        })
+                      }
+                      className="w-full text-xs text-slate-500 hover:text-indigo-400 italic py-8 rounded-lg border-2 border-dashed border-slate-700 hover:border-indigo-600/40 hover:bg-indigo-600/5 transition-all flex items-center justify-center gap-2"
+                      title="Dodaj pierwsze zadanie do tej kolumny"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Dodaj zadanie</span>
+                    </button>
                   )}
                   {(col.tasks ?? []).map((item) => (
                     <div
                       key={item.task_id}
-                      className={`rounded-lg bg-indigo-600/90 hover:bg-indigo-500 text-white px-3 py-3 text-sm cursor-pointer transition flex flex-col gap-2 shadow-sm min-h-[90px] ${
+                      className={`rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-700 hover:from-indigo-400 hover:to-indigo-600 text-white px-3 py-3 text-sm cursor-pointer transition-all duration-200 flex flex-col gap-2 shadow-md hover:shadow-lg min-h-[90px] ${
                         draggedItem?.task_id === item.task_id
                           ? "opacity-50"
                           : ""
@@ -739,6 +872,25 @@ export default function KanbanPage() {
                       )}
                     </div>
                   ))}
+                  {(col.tasks?.length ?? 0) > 0 && (
+                    <button
+                      onClick={() =>
+                        navigate("/kanban/task/edit", {
+                          state: {
+                            projectId: project.id,
+                            boardId: board.board_id,
+                            columnId: col.column_id,
+                            returnTo: "kanban",
+                          },
+                        })
+                      }
+                      className="w-full text-xs text-slate-400 hover:text-indigo-300 py-3 rounded-lg border border-dashed border-slate-700 hover:border-indigo-600/50 hover:bg-indigo-600/5 transition-all flex items-center justify-center gap-2"
+                      title="Dodaj kolejne zadanie"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Dodaj zadanie</span>
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
