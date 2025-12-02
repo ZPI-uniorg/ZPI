@@ -34,16 +34,21 @@ function getEventsForHour(events, dateStr, hourStart) {
     const startDate = ev.date;
     const endDate = ev.endDate || ev.date;
 
-    // Pomiń wydarzenia wielodniowe - będą pokazane osobno
-    if (endDate !== startDate) return false;
+    // Exclude true all-day events (00:00 → 00:00)
+    if (ev.start_time === "00:00" && ev.end_time === "00:00") return false;
 
-    // Sprawdź czy wydarzenie jest w tym dniu
-    if (dateStr !== startDate) return false;
+    // Render once on the start day at the start hour
+    if (dateStr === startDate && ev.start_time) {
+      const [startHour] = ev.start_time.split(":").map(Number);
+      return startHour === hourStart;
+    }
 
-    // Sprawdź godzinę rozpoczęcia
-    if (!ev.start_time) return false;
-    const [startHour] = ev.start_time.split(":").map(Number);
-    return startHour === hourStart;
+    // If event crosses midnight, render once on the end day at 00:00
+    if (startDate !== endDate && dateStr === endDate && ev.end_time) {
+      return hourStart === 0;
+    }
+
+    return false;
   });
 }
 
@@ -52,31 +57,47 @@ function getAllDayEvents(events, dateStr) {
     const startDate = ev.date;
     const endDate = ev.endDate || ev.date;
 
-    // Tylko wydarzenia wielodniowe
-    if (endDate === startDate) return false;
+    // Only show true all-day events (00:00 to 00:00) on startDate
+    if (ev.start_time === "00:00" && ev.end_time === "00:00") {
+      return dateStr === startDate;
+    }
 
-    // Sprawdź czy wydarzenie obejmuje ten dzień
-    return dateStr >= startDate && dateStr <= endDate;
+    // All other multi-day events (with specific times) should not appear here
+    return false;
   });
 }
 
 function calculateEventHeight(event, dateStr) {
   const [startHour, startMin] = event.start_time.split(":").map(Number);
   const [endHour, endMin] = event.end_time.split(":").map(Number);
+  const startDate = event.date;
+  const endDate = event.endDate || event.date;
 
-  // Dla wydarzeń jednodniowych
-  const eventStart = startHour + startMin / 60;
-  let eventEnd = endHour + endMin / 60;
-
-  // Jeśli wydarzenie przechodzi przez północ
-  if (eventEnd < eventStart) {
-    eventEnd += 24;
+  // If event spans multiple days
+  if (startDate !== endDate) {
+    // If we're displaying the start day (e.g., 23:00-00:00)
+    if (dateStr === startDate) {
+      const eventStart = startHour + startMin / 60;
+      const eventEnd = 24; // Go until midnight
+      const durationHours = eventEnd - eventStart;
+      const heightPx = durationHours * 60;
+      const topOffset = (startMin / 60) * 60;
+      return { top: `${topOffset}px`, height: `${heightPx}px` };
+    }
+    // If we're displaying the end day (e.g., 00:00-01:00)
+    if (dateStr === endDate) {
+      const eventStart = 0; // Start from midnight
+      const eventEnd = endHour + endMin / 60;
+      const durationHours = eventEnd - eventStart;
+      const heightPx = durationHours * 60;
+      return { top: "0px", height: `${heightPx}px` };
+    }
   }
 
-  const maxEnd = 24;
-  const displayEnd = Math.min(eventEnd, maxEnd);
-  const durationHours = displayEnd - eventStart;
-
+  // Single-day event
+  const eventStart = startHour + startMin / 60;
+  const eventEnd = endHour + endMin / 60;
+  const durationHours = eventEnd - eventStart;
   const heightPx = durationHours * 60;
   const topOffset = (startMin / 60) * 60;
 
@@ -216,37 +237,26 @@ export default function CalendarWeekView({ weekDays, events }) {
                 const isEnd = dateStr === (ev.endDate || ev.date);
                 const isMultiDay = ev.endDate && ev.endDate !== ev.date;
 
+                // Remove arrows and extra suffixes for multi-day events
                 let roundedClass = "rounded";
-                let arrow = "";
-                let titleSuffix = "";
-
                 if (isMultiDay) {
                   if (isStart && !isEnd) {
                     roundedClass = "rounded-l";
-                    arrow = " →";
-                    titleSuffix = " (początek)";
                   } else if (!isStart && isEnd) {
                     roundedClass = "rounded-r";
-                    arrow = "← ";
-                    titleSuffix = " (koniec)";
                   } else if (!isStart && !isEnd) {
                     roundedClass = "rounded-sm";
-                    arrow = "← → ";
-                    titleSuffix = " (trwa)";
                   }
                 }
 
                 return (
                   <div
                     key={ev.id}
-                    className={`text-[9px] px-2 py-1 ${roundedClass} cursor-pointer hover:shadow-md transition flex items-center gap-1 overflow-hidden bg-indigo-600 text-white border-l-4 border-indigo-800`}
-                    title={`${ev.title}${titleSuffix} - ${ev.start_time} - ${ev.end_time}`}
+                    className={`text-[9px] px-2 py-1 ${roundedClass} cursor-pointer hover:shadow-lg transition flex items-center gap-1 overflow-hidden bg-indigo-600 text-white border border-white/15 border-l-4 border-indigo-800 shadow-md`}
+                    title={`${ev.title} - ${ev.start_time} - ${ev.end_time}`}
                     onClick={(e) => handleEventClick(e, ev)}
                   >
-                    <span className="truncate flex-shrink">
-                      {arrow}
-                      {ev.title}
-                    </span>
+                    <span className="truncate flex-shrink">{ev.title}</span>
                     {(() => {
                       const allTags = [
                         ...ev.tags,
@@ -283,6 +293,12 @@ export default function CalendarWeekView({ weekDays, events }) {
             </div>
           );
         })}
+      </div>
+
+      {/* Separator directly under all-day events */}
+      <div className="grid grid-cols-[60px_repeat(7,1fr)] mb-1">
+        <div />
+        <div className="col-span-7 border-t border-slate-600/30" />
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -340,7 +356,7 @@ export default function CalendarWeekView({ weekDays, events }) {
                       return (
                         <div
                           key={ev.id}
-                          className="absolute text-[10px] text-white px-1 py-1 rounded cursor-pointer hover:shadow-lg hover:z-50 transition-all overflow-hidden bg-indigo-600 border-l-4 border-indigo-800"
+                          className="absolute text-[10px] text-white px-1 py-1 rounded cursor-pointer shadow-md hover:shadow-lg hover:z-50 transition-all overflow-hidden bg-indigo-600 border border-white/15 border-l-4 border-indigo-800"
                           style={{
                             top: position.top,
                             height: position.height,

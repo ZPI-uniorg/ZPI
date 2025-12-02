@@ -131,6 +131,12 @@ export default function EventEditPage() {
     editingEvent?.start_time || presetTime || ""
   );
   const [endTime, setEndTime] = useState(editingEvent?.end_time || "");
+  // All day: true if both times are empty or if explicitly set
+  const [isAllDay, setIsAllDay] = useState(
+    editingEvent?.isAllDay !== undefined
+      ? editingEvent.isAllDay
+      : !editingEvent?.start_time && !editingEvent?.end_time
+  );
   const [isEditing, setIsEditing] = useState(!editingEvent);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -171,7 +177,19 @@ export default function EventEditPage() {
       return;
     }
 
-    const flatTags = Array.from(new Set((combinations || []).flat()));
+    let submitStartTime = startTime;
+    let submitEndTime = endTime;
+    let submitEndDate = endDate;
+    if (isAllDay) {
+      // All-day event: 00:00 start, 00:00 end of next day
+      submitStartTime = "00:00";
+      // Calculate endDate + 1 day
+      const end = new Date(endDate);
+      end.setDate(end.getDate() + 1);
+      submitEndDate = end.toISOString().slice(0, 10);
+      submitEndTime = "00:00";
+    }
+
     setSubmitting(true);
     setError(null);
     try {
@@ -184,10 +202,11 @@ export default function EventEditPage() {
             name: title.trim(),
             description: description.trim(),
             date,
-            endDate,
-            start_time: startTime,
-            end_time: endTime,
-            combinations, // <-- PRZEKAZUJ KOMBINACJE
+            endDate: submitEndDate,
+            start_time: submitStartTime,
+            end_time: submitEndTime,
+            combinations,
+            isAllDay,
           }
         );
         (updated.permissions || []).forEach((tag) => {
@@ -198,10 +217,11 @@ export default function EventEditPage() {
           name: title.trim(),
           description: description.trim(),
           date,
-          endDate,
-          start_time: startTime,
-          end_time: endTime,
-          combinations, // <-- PRZEKAZUJ KOMBINACJE
+          endDate: submitEndDate,
+          start_time: submitStartTime,
+          end_time: submitEndTime,
+          combinations,
+          isAllDay,
         });
         (created.permissions || []).forEach((tag) => {
           if (!TAGS.includes(tag)) TAGS.push(tag);
@@ -457,29 +477,48 @@ export default function EventEditPage() {
                 </label>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <label className="flex flex-col gap-2">
-                  <span className="text-slate-300 text-sm font-medium">
-                    Godzina rozpoczęcia
-                  </span>
-                  <TimeSelect
-                    value={startTime}
-                    onChange={setStartTime}
-                    placeholder="-- Wybierz --"
+              <div className="flex items-center gap-4 mb-2">
+                <label className="flex items-center gap-2 select-none">
+                  <input
+                    type="checkbox"
+                    className="accent-indigo-600 w-5 h-5"
+                    checked={isAllDay}
+                    onChange={(e) => {
+                      setIsAllDay(e.target.checked);
+                      if (e.target.checked) {
+                        setStartTime("");
+                        setEndTime("");
+                      }
+                    }}
                   />
-                </label>
-
-                <label className="flex flex-col gap-2">
-                  <span className="text-slate-300 text-sm font-medium">
-                    Godzina zakończenia
-                  </span>
-                  <TimeSelect
-                    value={endTime}
-                    onChange={setEndTime}
-                    placeholder="-- Wybierz --"
-                  />
+                  <span className="text-slate-200 text-sm">Cały dzień</span>
                 </label>
               </div>
+              {!isAllDay && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <label className="flex flex-col gap-2">
+                    <span className="text-slate-300 text-sm font-medium">
+                      Godzina rozpoczęcia
+                    </span>
+                    <TimeSelect
+                      value={startTime}
+                      onChange={setStartTime}
+                      placeholder="-- Wybierz --"
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-2">
+                    <span className="text-slate-300 text-sm font-medium">
+                      Godzina zakończenia
+                    </span>
+                    <TimeSelect
+                      value={endTime}
+                      onChange={setEndTime}
+                      placeholder="-- Wybierz --"
+                    />
+                  </label>
+                </div>
+              )}
             </div>
 
             {/* REPLACED: simple tags -> combinations picker */}

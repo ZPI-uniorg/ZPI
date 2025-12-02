@@ -32,7 +32,16 @@ function getEventsForDay(events, year, month, day) {
   return events.filter((ev) => {
     const startDate = ev.date;
     const endDate = ev.endDate || ev.date;
-    // Wydarzenie jest widoczne jeśli dayStr jest między startDate a endDate
+    // All-day event: only show on startDate
+    if (
+      ev.start_time === "00:00" &&
+      ev.end_time === "00:00" &&
+      new Date(endDate).getTime() - new Date(startDate).getTime() ===
+        24 * 60 * 60 * 1000
+    ) {
+      return dayStr === startDate;
+    }
+    // Normal multi-day event: show on all days in range
     return dayStr >= startDate && dayStr <= endDate;
   });
 }
@@ -165,19 +174,9 @@ export default function CalendarMonthView({
                             onClick={(e) => handleEventClick(e, ev)}
                           >
                             <div className="font-medium flex items-center gap-1 overflow-hidden">
-                              {isMultiDay && !isStart && (
-                                <span className="text-[8px] flex-shrink-0">
-                                  ←
-                                </span>
-                              )}
                               <span className="truncate flex-shrink">
                                 {ev.title}
                               </span>
-                              {isMultiDay && !isEnd && (
-                                <span className="text-[8px] flex-shrink-0">
-                                  →
-                                </span>
-                              )}
                               {(() => {
                                 const maxVisibleTags = 2;
                                 const allTags = [

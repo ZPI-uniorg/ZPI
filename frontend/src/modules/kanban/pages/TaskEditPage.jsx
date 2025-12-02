@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react";
-import { EURO_ALNUM_PATTERN, sanitizeWithPolicy, sanitizeDescription } from "../../shared/utils/sanitize.js";
+import {
+  EURO_ALNUM_PATTERN,
+  sanitizeWithPolicy,
+  sanitizeDescription,
+} from "../../shared/utils/sanitize.js";
 import { useNavigate, useLocation } from "react-router-dom";
 import useAuth from "../../../auth/useAuth.js";
 import { createTask, updateTask, deleteTask } from "../../../api/kanban.js";
@@ -107,16 +111,9 @@ export default function TaskEditPage() {
       status: editingTask?.status || 1, // 1 = TODO
     };
 
-    // Optimistic: navigate immediately, let request finish in background
-    if (returnTo === "dashboard") {
-      navigate("/dashboard");
-    } else {
-      navigate("/kanban", { state: { projectId } });
-    }
-
+    // Wait for the request to complete, then navigate with refetch flag
     try {
       if (editingTask) {
-        // Update existing task
         await updateTask(
           organization.id,
           boardId,
@@ -135,7 +132,15 @@ export default function TaskEditPage() {
       }
     } catch (err) {
       console.error("Failed to save task:", err);
-      // Task will be missing on refetch; user can try again
+      setError("Nie udało się zapisać zadania");
+      return;
+    }
+
+    // Navigate with refetch flag after successful save
+    if (returnTo === "dashboard") {
+      navigate("/dashboard", { state: { refetch: true } });
+    } else {
+      navigate("/kanban", { state: { projectId, refetch: true } });
     }
   };
 
@@ -305,18 +310,25 @@ export default function TaskEditPage() {
                   className="border border-slate-600 w-full rounded-lg px-3 py-2 pr-16 bg-slate-800 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
                   value={title}
                   onChange={(e) => {
-                    const cleaned = sanitizeWithPolicy(e.target.value, { maxLength: 50, pattern: EURO_ALNUM_PATTERN });
+                    const cleaned = sanitizeWithPolicy(e.target.value, {
+                      maxLength: 50,
+                      pattern: EURO_ALNUM_PATTERN,
+                    });
                     setTitle(cleaned);
                   }}
                   placeholder="Np. Implementacja modułu logowania"
                   maxLength={50}
                   required
                 />
-                <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
-                  title.length >= 50 ? 'text-red-400' : 
-                  title.length >= 40 ? 'text-yellow-400' : 
-                  'text-slate-400'
-                }`}>
+                <div
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                    title.length >= 50
+                      ? "text-red-400"
+                      : title.length >= 40
+                      ? "text-yellow-400"
+                      : "text-slate-400"
+                  }`}
+                >
                   {title.length}/50
                 </div>
               </div>
@@ -325,11 +337,15 @@ export default function TaskEditPage() {
             <label className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
                 <span className="text-slate-300 text-sm font-medium">Opis</span>
-                <span className={`text-xs font-medium ${
-                  description.length >= 500 ? 'text-red-400' : 
-                  description.length >= 400 ? 'text-yellow-400' : 
-                  'text-slate-400'
-                }`}>
+                <span
+                  className={`text-xs font-medium ${
+                    description.length >= 500
+                      ? "text-red-400"
+                      : description.length >= 400
+                      ? "text-yellow-400"
+                      : "text-slate-400"
+                  }`}
+                >
                   {description.length}/500
                 </span>
               </div>

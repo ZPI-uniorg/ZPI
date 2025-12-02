@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
-import { EURO_ALNUM_PATTERN, sanitizeWithPolicy } from "../../shared/utils/sanitize.js";
+import {
+  EURO_ALNUM_PATTERN,
+  sanitizeWithPolicy,
+} from "../../shared/utils/sanitize.js";
 import { useLocation, useNavigate } from "react-router-dom";
 import useAuth from "../../../auth/useAuth.js";
 import { useProjects } from "../../shared/components/ProjectsContext.jsx";
@@ -43,6 +46,7 @@ export default function KanbanPage() {
   const [boardLoading, setBoardLoading] = useState(true); // Start as true
   const [boardError, setBoardError] = useState(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [refetchTrigger, setRefetchTrigger] = useState(0);
 
   const [draggedItem, setDraggedItem] = useState(null);
   const [draggedFrom, setDraggedFrom] = useState(null);
@@ -100,8 +104,8 @@ export default function KanbanPage() {
   // Extract unique assignees from all tasks
   const uniqueAssignees = React.useMemo(() => {
     const assignees = new Map();
-    columns.forEach(col => {
-      (col.tasks ?? []).forEach(task => {
+    columns.forEach((col) => {
+      (col.tasks ?? []).forEach((task) => {
         if (task.assigned_to && !assignees.has(task.assigned_to.id)) {
           assignees.set(task.assigned_to.id, task.assigned_to);
         }
@@ -113,37 +117,47 @@ export default function KanbanPage() {
   // Filter columns based on selected assignee
   const filteredColumns = React.useMemo(() => {
     let result = columns;
-    
+
     // Apply assignee filter
     if (selectedAssignee !== "all") {
-      result = columns.map(col => ({
+      result = columns.map((col) => ({
         ...col,
-        tasks: (col.tasks ?? []).filter(task => {
+        tasks: (col.tasks ?? []).filter((task) => {
           if (selectedAssignee === "unassigned") {
             return !task.assigned_to;
           }
           return task.assigned_to?.id === selectedAssignee;
-        })
+        }),
       }));
     }
-    
+
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      result = result.map(col => ({
+      result = result.map((col) => ({
         ...col,
-        tasks: (col.tasks ?? []).filter(task => 
-          task.title?.toLowerCase().includes(query) ||
-          task.description?.toLowerCase().includes(query) ||
-          task.task_id?.toString().includes(query)
-        )
+        tasks: (col.tasks ?? []).filter(
+          (task) =>
+            task.title?.toLowerCase().includes(query) ||
+            task.description?.toLowerCase().includes(query) ||
+            task.task_id?.toString().includes(query)
+        ),
       }));
     }
-    
+
     return result;
   }, [columns, selectedAssignee, searchQuery]);
 
-  // Fetch board data when project changes
+  // Check if we need to refetch after task creation/edit
+  useEffect(() => {
+    if (location.state?.refetch) {
+      setRefetchTrigger((prev) => prev + 1);
+      // Clear the state to prevent refetch on subsequent renders
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state?.refetch, navigate, location.pathname]);
+
+  // Fetch board data when project changes or refetch is triggered
   useEffect(() => {
     if (!project || !organization?.id || !user?.username) {
       setBoard(null);
@@ -176,7 +190,7 @@ export default function KanbanPage() {
     return () => {
       ignore = true;
     };
-  }, [project?.id, organization?.id, user?.username]);
+  }, [project?.id, organization?.id, user?.username, refetchTrigger]);
 
   const prev = () => {
     if (totalProjects === 0) return;
@@ -287,9 +301,13 @@ export default function KanbanPage() {
     e.preventDefault();
     if (!draggedColumn || draggedColumn === targetColumnId || !board) return;
 
-    const draggedIdx = columns.findIndex(col => col.column_id === draggedColumn);
-    const targetIdx = columns.findIndex(col => col.column_id === targetColumnId);
-    
+    const draggedIdx = columns.findIndex(
+      (col) => col.column_id === draggedColumn
+    );
+    const targetIdx = columns.findIndex(
+      (col) => col.column_id === targetColumnId
+    );
+
     if (draggedIdx === -1 || targetIdx === -1) return;
 
     // Reorder columns locally
@@ -321,7 +339,7 @@ export default function KanbanPage() {
 
       await Promise.all(updatePromises);
     } catch (err) {
-      console.error('Failed to reorder column:', err);
+      console.error("Failed to reorder column:", err);
       setBoard(prevBoard);
     }
   };
@@ -344,7 +362,7 @@ export default function KanbanPage() {
   const handleTaskDrop = async (e, targetColumnId, targetPosition) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (!draggedItem || !draggedFrom || !board) return;
 
     // Case 1: Moving to different column (existing logic)
@@ -374,7 +392,7 @@ export default function KanbanPage() {
         );
         // Don't refetch immediately - trust the optimistic update
       } catch (err) {
-        console.error('Failed to move task:', err);
+        console.error("Failed to move task:", err);
         setBoard(prevBoard);
       }
       return;
@@ -414,7 +432,7 @@ export default function KanbanPage() {
       );
       // Don't refetch immediately - trust the optimistic update
     } catch (err) {
-      console.error('Failed to reorder task:', err);
+      console.error("Failed to reorder task:", err);
       setBoard(prevBoard);
     }
   };
@@ -422,7 +440,7 @@ export default function KanbanPage() {
   // Deadline visualization helper
   const getDeadlineColor = (dueDate) => {
     if (!dueDate) return null;
-    
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const due = new Date(dueDate);
@@ -449,32 +467,51 @@ export default function KanbanPage() {
     if (!board || !project) return;
 
     const rows = [
-      ["Kolumna", "ID Zadania", "Tytuł", "Opis", "Termin", "Przypisany do", "Status"]
+      [
+        "Kolumna",
+        "ID Zadania",
+        "Tytuł",
+        "Opis",
+        "Termin",
+        "Przypisany do",
+        "Status",
+      ],
     ];
 
-    columns.forEach(col => {
-      (col.tasks ?? []).forEach(task => {
+    columns.forEach((col) => {
+      (col.tasks ?? []).forEach((task) => {
         rows.push([
           col.title,
           task.task_id,
           task.title,
           task.description || "",
           task.due_date || "",
-          task.assigned_to ? `${task.assigned_to.first_name} ${task.assigned_to.last_name}` : "Nieprzypisane",
-          task.status === 1 ? "To Do" : task.status === 2 ? "In Progress" : "Done"
+          task.assigned_to
+            ? `${task.assigned_to.first_name} ${task.assigned_to.last_name}`
+            : "Nieprzypisane",
+          task.status === 1
+            ? "To Do"
+            : task.status === 2
+            ? "In Progress"
+            : "Done",
         ]);
       });
     });
 
-    const csvContent = rows.map(row => 
-      row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")
-    ).join("\\n");
+    const csvContent = rows
+      .map((row) =>
+        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")
+      )
+      .join("\\n");
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", `${project.name}_kanban_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute(
+      "download",
+      `${project.name}_kanban_${new Date().toISOString().split("T")[0]}.csv`
+    );
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
@@ -771,9 +808,15 @@ export default function KanbanPage() {
                   ? "Wszystkie zadania"
                   : selectedAssignee === "unassigned"
                   ? "Nieprzypisane"
-                  : uniqueAssignees.find(a => a.id === selectedAssignee)
-                    ? `${uniqueAssignees.find(a => a.id === selectedAssignee).first_name} ${uniqueAssignees.find(a => a.id === selectedAssignee).last_name}`
-                    : "Filtruj"}
+                  : uniqueAssignees.find((a) => a.id === selectedAssignee)
+                  ? `${
+                      uniqueAssignees.find((a) => a.id === selectedAssignee)
+                        .first_name
+                    } ${
+                      uniqueAssignees.find((a) => a.id === selectedAssignee)
+                        .last_name
+                    }`
+                  : "Filtruj"}
               </span>
               <ChevronDown
                 className={`w-4 h-4 transition-transform ${
@@ -800,7 +843,9 @@ export default function KanbanPage() {
                     } border-b border-slate-700`}
                   >
                     <span className="font-medium">Wszystkie zadania</span>
-                    {selectedAssignee === "all" && <Check className="w-4 h-4" />}
+                    {selectedAssignee === "all" && (
+                      <Check className="w-4 h-4" />
+                    )}
                   </button>
                   <button
                     onClick={() => {
@@ -814,7 +859,9 @@ export default function KanbanPage() {
                     } border-b border-slate-700`}
                   >
                     <span className="font-medium">Nieprzypisane</span>
-                    {selectedAssignee === "unassigned" && <Check className="w-4 h-4" />}
+                    {selectedAssignee === "unassigned" && (
+                      <Check className="w-4 h-4" />
+                    )}
                   </button>
                   {uniqueAssignees.map((assignee, idx) => (
                     <button
@@ -836,7 +883,9 @@ export default function KanbanPage() {
                       <span className="font-medium">
                         {assignee.first_name} {assignee.last_name}
                       </span>
-                      {selectedAssignee === assignee.id && <Check className="w-4 h-4" />}
+                      {selectedAssignee === assignee.id && (
+                        <Check className="w-4 h-4" />
+                      )}
                     </button>
                   ))}
                 </div>
@@ -950,7 +999,9 @@ export default function KanbanPage() {
                 className={`flex flex-col min-h-0 w-[calc(25%-12px)] min-w-[340px] max-w-[420px] rounded-lg bg-slate-800/60 border border-slate-700 shrink-0 transition-all ${
                   draggedColumn === col.column_id ? "opacity-50" : ""
                 } ${
-                  draggedOverColumn === col.column_id ? "border-indigo-500 border-2" : ""
+                  draggedOverColumn === col.column_id
+                    ? "border-indigo-500 border-2"
+                    : ""
                 }`}
               >
                 <div className="px-4 py-3 border-b border-slate-700 text-sm font-semibold text-slate-200 flex items-center justify-between gap-2 cursor-move">
@@ -960,7 +1011,10 @@ export default function KanbanPage() {
                         className="w-full bg-slate-900/40 border border-slate-600 rounded px-2 py-1 pr-12 text-slate-100 outline-none focus:border-indigo-500"
                         value={editingColumnName}
                         onChange={(e) => {
-                          const cleaned = sanitizeWithPolicy(e.target.value, { maxLength: 50, pattern: EURO_ALNUM_PATTERN });
+                          const cleaned = sanitizeWithPolicy(e.target.value, {
+                            maxLength: 50,
+                            pattern: EURO_ALNUM_PATTERN,
+                          });
                           setEditingColumnName(cleaned);
                         }}
                         onKeyDown={handleRenameKeyDown}
@@ -968,11 +1022,15 @@ export default function KanbanPage() {
                         maxLength={50}
                         autoFocus
                       />
-                      <div className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
-                        editingColumnName.length >= 50 ? 'text-red-400' : 
-                        editingColumnName.length >= 40 ? 'text-yellow-400' : 
-                        'text-slate-400'
-                      }`}>
+                      <div
+                        className={`absolute right-2 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
+                          editingColumnName.length >= 50
+                            ? "text-red-400"
+                            : editingColumnName.length >= 40
+                            ? "text-yellow-400"
+                            : "text-slate-400"
+                        }`}
+                      >
                         {editingColumnName.length}/50
                       </div>
                     </div>
@@ -1013,7 +1071,7 @@ export default function KanbanPage() {
                     </button>
                   </div>
                 </div>
-                <div 
+                <div
                   className="flex-1 min-h-0 p-3 space-y-2 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
                   onDragOver={(e) => {
                     e.preventDefault();
@@ -1032,9 +1090,7 @@ export default function KanbanPage() {
                   }}
                 >
                   {(col.tasks?.length ?? 0) === 0 && (
-                    <div
-                      className="w-full text-xs text-slate-500 italic py-8 rounded-lg border-2 border-dashed border-slate-700 transition-all flex flex-col items-center justify-center gap-2"
-                    >
+                    <div className="w-full text-xs text-slate-500 italic py-8 rounded-lg border-2 border-dashed border-slate-700 transition-all flex flex-col items-center justify-center gap-2">
                       <button
                         onClick={() =>
                           navigate("/kanban/task/edit", {
@@ -1052,90 +1108,99 @@ export default function KanbanPage() {
                         <Plus className="w-4 h-4" />
                         <span>Dodaj zadanie</span>
                       </button>
-                      <span className="text-[10px] text-slate-600">lub przeciągnij tutaj</span>
+                      <span className="text-[10px] text-slate-600">
+                        lub przeciągnij tutaj
+                      </span>
                     </div>
                   )}
                   {(col.tasks ?? []).map((item, taskIndex) => {
                     const deadlineColor = getDeadlineColor(item.due_date);
                     return (
-                    <div
-                      key={item.task_id}
-                      className={`rounded-lg bg-gradient-to-br ${deadlineColor || "from-indigo-500 to-indigo-700"} hover:brightness-110 text-white px-3 py-3 text-sm cursor-pointer transition-all duration-200 flex flex-col gap-2 shadow-md hover:shadow-lg min-h-[90px] ${
-                        draggedItem?.task_id === item.task_id
-                          ? "opacity-50"
-                          : ""
-                      } ${
-                        dragOverTaskPosition === taskIndex && draggedFrom === col.column_id
-                          ? "border-2 border-white"
-                          : ""
-                      }`}
-                      title={item.title}
-                      draggable
-                      onDragStart={(e) =>
-                        handleTaskDragStart(e, item, col.column_id, taskIndex)
-                      }
-                      onDragOver={(e) => handleTaskDragOver(e, col.column_id, taskIndex)}
-                      onDrop={(e) => handleTaskDrop(e, col.column_id, taskIndex)}
-                      onDragEnd={handleDragEnd}
-                      onClick={() =>
-                        navigate("/kanban/task/edit", {
-                          state: {
-                            task: item,
-                            projectId: project.id,
-                            boardId: board.board_id,
-                            columnId: col.column_id,
-                            returnTo: "kanban",
-                          },
-                        })
-                      }
-                    >
-                      <div className="flex items-center justify-between gap-2 shrink-0">
-                        <span className="text-xs font-mono text-white/95 font-semibold">
-                          #{item.task_id}
-                        </span>
-                      </div>
                       <div
-                        className="font-medium text-sm leading-tight flex-1 overflow-hidden"
-                        style={{
-                          display: "-webkit-box",
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical",
-                        }}
+                        key={item.task_id}
+                        className={`rounded-lg bg-gradient-to-br ${
+                          deadlineColor || "from-indigo-500 to-indigo-700"
+                        } hover:brightness-110 text-white px-3 py-3 text-sm cursor-pointer transition-all duration-200 flex flex-col gap-2 shadow-md hover:shadow-lg min-h-[90px] ${
+                          draggedItem?.task_id === item.task_id
+                            ? "opacity-50"
+                            : ""
+                        } ${
+                          dragOverTaskPosition === taskIndex &&
+                          draggedFrom === col.column_id
+                            ? "border-2 border-white"
+                            : ""
+                        }`}
+                        title={item.title}
+                        draggable
+                        onDragStart={(e) =>
+                          handleTaskDragStart(e, item, col.column_id, taskIndex)
+                        }
+                        onDragOver={(e) =>
+                          handleTaskDragOver(e, col.column_id, taskIndex)
+                        }
+                        onDrop={(e) =>
+                          handleTaskDrop(e, col.column_id, taskIndex)
+                        }
+                        onDragEnd={handleDragEnd}
+                        onClick={() =>
+                          navigate("/kanban/task/edit", {
+                            state: {
+                              task: item,
+                              projectId: project.id,
+                              boardId: board.board_id,
+                              columnId: col.column_id,
+                              returnTo: "kanban",
+                            },
+                          })
+                        }
                       >
-                        {item.title}
-                      </div>
-                      {item.due_date && (
-                        <div className="text-xs text-white/80 flex items-center gap-1">
-                          <span>📅</span>
-                          <span>
-                            {new Date(item.due_date).toLocaleDateString(
-                              "pl-PL",
-                              {
-                                day: "2-digit",
-                                month: "2-digit",
-                                year: "numeric",
-                              }
-                            )}
+                        <div className="flex items-center justify-between gap-2 shrink-0">
+                          <span className="text-xs font-mono text-white/95 font-semibold">
+                            #{item.task_id}
                           </span>
                         </div>
-                      )}
-                      {item.assigned_to ? (
-                        <div className="flex items-center gap-2 mt-auto">
-                          <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-bold text-white">
-                            {item.assigned_to.first_name?.[0] || "?"}
-                            {item.assigned_to.last_name?.[0] || "?"}
+                        <div
+                          className="font-medium text-sm leading-tight flex-1 overflow-hidden"
+                          style={{
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                          }}
+                        >
+                          {item.title}
+                        </div>
+                        {item.due_date && (
+                          <div className="text-xs text-white/80 flex items-center gap-1">
+                            <span>📅</span>
+                            <span>
+                              {new Date(item.due_date).toLocaleDateString(
+                                "pl-PL",
+                                {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "numeric",
+                                }
+                              )}
+                            </span>
                           </div>
-                          <span className="text-xs text-white/90 truncate">
-                            {item.assigned_to.first_name}{" "}
-                            {item.assigned_to.last_name}
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="text-xs text-white/60 italic mt-auto">
-                          Nieprzypisane
-                        </div>
-                      )}
-                    </div>
+                        )}
+                        {item.assigned_to ? (
+                          <div className="flex items-center gap-2 mt-auto">
+                            <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-bold text-white">
+                              {item.assigned_to.first_name?.[0] || "?"}
+                              {item.assigned_to.last_name?.[0] || "?"}
+                            </div>
+                            <span className="text-xs text-white/90 truncate">
+                              {item.assigned_to.first_name}{" "}
+                              {item.assigned_to.last_name}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="text-xs text-white/60 italic mt-auto">
+                            Nieprzypisane
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
                   {(col.tasks?.length ?? 0) > 0 && (
