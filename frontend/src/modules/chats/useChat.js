@@ -37,7 +37,7 @@ export function useChat(
 
   // Fetch organization chats when organizationId changes
   useEffect(() => {
-    if (!organizationId) return; // keep default
+    if (!organizationId || !user?.username) return; // need both org and user
     const abort = new AbortController();
     (async () => {
       try {
@@ -51,7 +51,17 @@ export function useChat(
             headers,
           }
         );
-        if (!res.ok) throw new Error(`Failed chats load: ${res.status}`);
+        if (!res.ok) {
+          if (res.status === 404 || res.status === 400) {
+            console.warn(
+              "⚠️ User not member of organization or invalid request"
+            );
+            setChannels([]);
+            setChatMap({});
+            return;
+          }
+          throw new Error(`Failed chats load: ${res.status}`);
+        }
         const data = await res.json();
         const chats = data.chats || [];
         const filtered = chats.filter((c) => !!c.name);
@@ -61,11 +71,13 @@ export function useChat(
         );
         setChatMap(mapping);
       } catch (e) {
-        console.error("❌ Chats fetch error", e);
+        if (e.name !== "AbortError") {
+          console.error("❌ Chats fetch error", e);
+        }
       }
     })();
     return () => abort.abort();
-  }, [organizationId, tokens?.access]);
+  }, [organizationId, tokens?.access, user?.username]);
 
   // Auto-connect on mount and reconnect on channel/username/organization change
   useEffect(() => {

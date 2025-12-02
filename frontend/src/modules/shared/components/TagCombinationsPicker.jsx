@@ -51,11 +51,13 @@ export default function TagCombinationsPicker({
   }, [editingIndex]);
 
   const filtered = allSuggestions
+    .filter((s) => !s.includes("+")) // Only simple tags
     .filter((s) => s.toLowerCase().includes(query.toLowerCase()))
     .filter((s) => !currentCombination.includes(s))
     .slice(0, 75);
 
   const mainFiltered = allSuggestions
+    .filter((s) => !s.includes("+")) // Only simple tags
     .filter((s) => s.toLowerCase().includes(mainQuery.toLowerCase()))
     .slice(0, 75);
 

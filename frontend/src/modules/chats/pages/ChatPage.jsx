@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
-import { X } from "lucide-react";
+import { X, Plus } from "lucide-react";
 import ChannelSidebar from "../../chats/ChannelSidebar.jsx";
 import MessageList from "../../chats/MessageList.jsx";
 import { useChat } from "../../chats/useChat.js";
@@ -10,12 +10,19 @@ import { useProjects } from "../../shared/components/ProjectsContext.jsx";
 import { sanitizeChatMessage } from "../../shared/utils/sanitize.js";
 
 export default function ChatPage() {
-  const { user } = useAuth() || {};
+  const { user, organization: activeOrganization } = useAuth() || {};
   const [searchParams] = useSearchParams();
-  const { organization: activeOrganization } = useAuth();
   const navigate = useNavigate();
   const currentUser = user?.username || "Me";
   const initialChannel = searchParams.get("channel") || null;
+
+  // Redirect if no organization
+  useEffect(() => {
+    if (!activeOrganization?.id) {
+      navigate("/organizations");
+    }
+  }, [activeOrganization, navigate]);
+
   const {
     channel,
     channels,
@@ -49,6 +56,14 @@ export default function ChatPage() {
   };
 
   const disabled = status === "connecting";
+  const isAdmin = activeOrganization?.role === "admin";
+  const canCreateChat = isAdmin;
+
+  // Don't render if no organization
+  if (!activeOrganization?.id) {
+    return null;
+  }
+
   // Using context-filtered channels for the sidebar
   return (
     <div className="h-full overflow-hidden bg-[linear-gradient(145deg,#0f172a,#1e293b)] p-4 md:p-6">
@@ -56,6 +71,20 @@ export default function ChatPage() {
         <header className="flex items-center justify-between px-2">
           <h1 className="text-2xl font-semibold text-slate-100">{channel}</h1>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => isAdmin && navigate("/chats/new")}
+              disabled={!canCreateChat}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-indigo-600"
+              aria-label="Nowy chat"
+              title={
+                canCreateChat
+                  ? "Stwórz nowy chat"
+                  : "Tylko administratorzy mogą tworzyć czaty"
+              }
+            >
+              <Plus className="w-4 h-4" />
+              <span>Nowy chat</span>
+            </button>
             <button
               onClick={() => navigate("/dashboard")}
               className="p-2 rounded-lg hover:bg-slate-700/40 text-slate-300 transition"
