@@ -31,7 +31,21 @@ export default function FiltersPanel({
     getTags(organization.id, user.username)
       .then((data) => {
         if (ignore) return;
-        setAllTags(Array.isArray(data) ? data : []);
+        const orgId = String(organization.id);
+        const items = Array.isArray(data) ? data : [];
+        // Filter tags to the current organization only, handling various possible shapes
+        const filtered = items.filter((t) => {
+          const oid =
+            t.organization_id ??
+            t.organizationId ??
+            t.orgId ??
+            (typeof t.organization === "object"
+              ? t.organization?.id
+              : undefined) ??
+            t.org?.id;
+          return oid !== undefined && String(oid) === orgId;
+        });
+        setAllTags(filtered);
       })
       .catch(() => {
         if (!ignore) setAllTags([]);
@@ -49,12 +63,12 @@ export default function FiltersPanel({
     [projects]
   );
 
-	const tags = useMemo(() => {
-        return allTags
-            .map(t => t.name)
-            .filter(name => !projectNames.has(name))
-            .filter(name => !name.includes('+'));
-    }, [allTags, projectNames]);
+  const tags = useMemo(() => {
+    return allTags
+      .map((t) => t.name)
+      .filter((name) => !projectNames.has(name))
+      .filter((name) => !name.includes("+"));
+  }, [allTags, projectNames]);
 
   const allFilterItems = useMemo(
     () => [...tags, ...projects.map((p) => p.name).filter(Boolean)].sort(),
@@ -62,8 +76,13 @@ export default function FiltersPanel({
   );
 
   useEffect(() => {
-    console.log('Lista filtrów (allFilterItems):', allFilterItems);
-    console.log('Wybrane filtry (selectedTags):', selectedTags, '| Tryb logiczny:', logic);
+    console.log("Lista filtrów (allFilterItems):", allFilterItems);
+    console.log(
+      "Wybrane filtry (selectedTags):",
+      selectedTags,
+      "| Tryb logiczny:",
+      logic
+    );
   }, [allFilterItems, selectedTags, logic]);
 
   useEffect(() => {
@@ -109,7 +128,7 @@ export default function FiltersPanel({
                 onClick={() => setLogic("AND")}
                 className={`px-4 py-1.5 rounded-full text-xs font-semibold transition ${
                   logic === "AND"
-                    ? "bg-violet-600 text-white shadow-[0_8px_24px_rgba(124,58,237,0.45)]"
+                    ? "bg-violet-600 text-white"
                     : "text-slate-300 hover:text-white hover:bg-slate-700/60"
                 }`}
               >
@@ -120,7 +139,7 @@ export default function FiltersPanel({
                 onClick={() => setLogic("OR")}
                 className={`px-4 py-1.5 rounded-full text-xs font-semibold transition ${
                   logic === "OR"
-                    ? "bg-violet-600 text-white shadow-[0_8px_24px_rgba(124,58,237,0.45)]"
+                    ? "bg-violet-600 text-white"
                     : "text-slate-300 hover:text-white hover:bg-slate-700/60"
                 }`}
               >
@@ -158,13 +177,13 @@ export default function FiltersPanel({
         <div className="flex gap-2 border-t border-[rgba(148,163,184,0.2)] px-5 py-4">
           <button
             onClick={() => navigate("/organization/project/new")}
-            className="flex-1 rounded-[14px] bg-gradient-to-r from-violet-500 to-fuchsia-500 py-3 text-sm font-semibold text-white shadow-md shadow-violet-500/30 hover:brightness-110 transition"
+            className="flex-1 rounded-[14px] bg-violet-600 py-3 text-sm font-semibold text-white shadow-md hover:brightness-110 transition"
           >
             nowy projekt
           </button>
           <button
             onClick={() => navigate("/organization/tag/new")}
-            className="flex-1 rounded-[14px] bg-gradient-to-r from-violet-500 to-fuchsia-500 py-3 text-sm font-semibold text-white shadow-md shadow-violet-500/30 hover:brightness-110 transition"
+            className="flex-1 rounded-[14px] bg-violet-600 py-3 text-sm font-semibold text-white shadow-md hover:brightness-110 transition"
           >
             nowy tag
           </button>

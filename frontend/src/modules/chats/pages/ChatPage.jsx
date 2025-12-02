@@ -30,10 +30,11 @@ export default function ChatPage() {
   // Use filtered chats from global context; no local fetching here
   const { chats: contextChats, chatsLoading } = useProjects();
   const sidebarChannels = useMemo(
-    () => (contextChats || []).map((c) => ({
-      chat_id: c.chat_id,
-      name: c.title || c.name || String(c.chat_id),
-    })),
+    () =>
+      (contextChats || []).map((c) => ({
+        chat_id: c.chat_id,
+        name: c.title || c.name || String(c.chat_id),
+      })),
     [contextChats]
   );
   const [draft, setDraft] = useState("");
@@ -114,7 +115,7 @@ export default function ChatPage() {
                   <button
                     type="submit"
                     disabled={!draft.trim() || disabled}
-                    className="h-[46px] px-6 rounded-xl font-semibold bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-110 transition"
+                    className="h-[46px] px-6 rounded-xl font-semibold bg-indigo-600 text-white shadow disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-110 transition"
                   >
                     Wyślij
                   </button>
