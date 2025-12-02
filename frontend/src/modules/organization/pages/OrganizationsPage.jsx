@@ -301,6 +301,8 @@ function OrganizationsPage() {
 
   const handleRoleChange = async (memberId, newRole) => {
     if (!selectedOrgId || !user?.username) return;
+    // Prevent changing own role (even if admin) for safety
+    if (memberId === user.username) return;
     try {
       await updateOrganizationMember(selectedOrgId, memberId, user.username, {
         role: newRole,
@@ -463,6 +465,8 @@ function OrganizationsPage() {
 
   // Inline removal handlers
   const askRemoveMember = (username) => {
+    // Prevent asking to remove self
+    if (username === user?.username) return;
     setDeletingUsername(username);
   };
   const cancelRemoveMember = () => {
@@ -470,6 +474,11 @@ function OrganizationsPage() {
   };
   const confirmRemoveMember = async (memberId) => {
     if (!selectedOrgId || !user?.username) return;
+    // Extra guard: never remove self
+    if (memberId === user.username) {
+      setDeletingUsername(null);
+      return;
+    }
     try {
       await removeOrganizationMember(selectedOrgId, memberId, user.username);
       await loadMembers(selectedOrgId);
@@ -718,20 +727,26 @@ function OrganizationsPage() {
                     </td>
                     <td className="py-2 px-4">
                       {isAdmin ? (
-                        <select
-                          value={member.role}
-                          onChange={(e) =>
-                            handleRoleChange(member.username, e.target.value)
-                          }
-                          disabled={member.user === user?.id}
-                          className="rounded px-2 py-1 border border-slate-600 bg-slate-900 text-slate-100"
-                        >
-                          {Object.entries(ROLE_LABELS).map(([value, label]) => (
-                            <option key={value} value={value}>
-                              {label}
-                            </option>
-                          ))}
-                        </select>
+                        member.username === user?.username ? (
+                          // Own role: show non-interactive badge instead of select
+                          <span className="inline-flex items-center px-2 py-1 rounded border border-slate-600 bg-slate-800 text-slate-400 text-xs pointer-events-none select-none">
+                            {ROLE_LABELS[member.role] ?? member.role}
+                          </span>
+                        ) : (
+                          <select
+                            value={member.role}
+                            onChange={(e) =>
+                              handleRoleChange(member.username, e.target.value)
+                            }
+                            className="rounded px-2 py-1 border border-slate-600 bg-slate-900 text-slate-100"
+                          >
+                            {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                              <option key={value} value={value}>
+                                {label}
+                              </option>
+                            ))}
+                          </select>
+                        )
                       ) : (
                         <span className="text-slate-200">
                           {ROLE_LABELS[member.role] ?? member.role}
@@ -849,7 +864,7 @@ function OrganizationsPage() {
                               >
                                 Edytuj dane
                               </button>
-                              {member.user !== user?.id && (
+                              {member.user !== user?.id && member.username !== user?.username && (
                                 <button
                                   type="button"
                                   className="text-red-400 hover:underline"
