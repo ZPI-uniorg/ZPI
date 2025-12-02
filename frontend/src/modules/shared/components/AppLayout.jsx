@@ -1,82 +1,104 @@
-import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import useAuth from '../../../auth/useAuth.js';
-import { Settings, Filter, Plus, User } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { ProjectsProvider, useProjects } from '../components/ProjectsContext.jsx';
-import FiltersPanel from './FiltersPanel.jsx';
+import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
+import useAuth from "../../../auth/useAuth.js";
+import { Settings, Filter, Plus, User } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  ProjectsProvider,
+  useProjects,
+} from "../components/ProjectsContext.jsx";
+import FiltersPanel from "./FiltersPanel.jsx";
 
 const NAV_LINKS = [
-  { to: '/dashboard', label: 'Pulpit organizacji' },
-  { to: '/projects', label: 'Projekty' },
-  { to: '/calendar', label: 'Kalendarz' },
-  { to: '/kanban', label: 'Kanban' },
-  { to: '/chat', label: 'Chaty' },
-]
+  { to: "/dashboard", label: "Pulpit organizacji" },
+  { to: "/projects", label: "Projekty" },
+  { to: "/calendar", label: "Kalendarz" },
+  { to: "/kanban", label: "Kanban" },
+  { to: "/chat", label: "Chaty" },
+];
 
 function AppLayoutContent() {
   const { user, organization, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const fullName = `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.username;
+  // Only allow admins to see the settings button
+  // (already declared above)
+  const fullName =
+    `${user?.first_name || ""} ${user?.last_name || ""}`.trim() ||
+    user?.username;
   const { selectedTags, setSelectedTags, logic, setLogic } = useProjects();
+  const isAdmin = organization?.role === "admin";
+
+  // Redirect non-admins away from /organizations (settings) page
+  useEffect(() => {
+    if (!isAdmin && location.pathname.startsWith("/organizations")) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [isAdmin, location.pathname, navigate]);
 
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    setFiltersOpen(params.has('filters'));
+    setFiltersOpen(params.has("filters"));
   }, [location.search]);
 
   const openFilters = () => {
     const params = new URLSearchParams(location.search);
-    if (!params.has('filters')) {
-      params.set('filters', '1');
+    if (!params.has("filters")) {
+      params.set("filters", "1");
       navigate({ search: `?${params.toString()}` }, { replace: true });
     }
   };
   const closeFilters = () => {
     const params = new URLSearchParams(location.search);
-    if (params.has('filters')) {
-      params.delete('filters');
-      navigate({ search: params.toString() ? `?${params.toString()}` : '' }, { replace: true });
+    if (params.has("filters")) {
+      params.delete("filters");
+      navigate(
+        { search: params.toString() ? `?${params.toString()}` : "" },
+        { replace: true }
+      );
     }
   };
   const toggleTag = (t) => {
-    const newTags = selectedTags.includes(t) 
-      ? selectedTags.filter(x => x !== t) 
+    const newTags = selectedTags.includes(t)
+      ? selectedTags.filter((x) => x !== t)
       : [...selectedTags, t];
     setSelectedTags(newTags);
   };
 
   const getLinkClassName = ({ isActive }) => {
     const base =
-      'px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-150'
+      "px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-150";
     return isActive
       ? `${base} bg-sky-500/20 text-sky-200 border border-sky-500/40`
-      : `${base} text-slate-300 hover:text-white hover:bg-slate-700/40`
-  }
+      : `${base} text-slate-300 hover:text-white hover:bg-slate-700/40`;
+  };
 
+  // Only allow admins to see the settings button
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-slate-950 text-slate-100">
       <header className="sticky top-0 z-40 bg-slate-950/85 backdrop-blur border-b border-slate-800">
         <div className="mx-auto max-w-full px-4 py-3">
-          {/* Top Row - Logo, Settings, User */}
-          <div className="flex items-center justify-between gap-4 mb-3">
-            <div className="flex items-center gap-2">
-              <span className="text-lg font-semibold text-white">UniOrg</span>
-              {organization?.name ? (
-                <span className="text-sm text-slate-400">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4 min-w-0">
+              <span className="text-lg font-semibold text-white whitespace-nowrap">
+                UniOrg
+              </span>
+              {organization?.name && (
+                <span className="text-sm text-slate-400 truncate max-w-[160px]">
                   {organization.name}
                 </span>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => navigate('/organizations')}
-                className="p-2 rounded-lg hover:bg-slate-700/40 transition text-slate-300"
-                title="Ustawienia organizacji"
-              >
-                <Settings className="w-5 h-5" />
-              </button>
+              )}
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => navigate("/organizations")}
+                  className="p-2 rounded-lg hover:bg-slate-700/40 transition text-slate-300"
+                  title="Ustawienia organizacji"
+                >
+                  <Settings className="w-5 h-5" />
+                </button>
+              )}
               <button
                 type="button"
                 onClick={openFilters}
@@ -87,18 +109,30 @@ function AppLayoutContent() {
               </button>
               <button
                 type="button"
-                onClick={() => navigate('/organization/project/new')}
+                onClick={() => navigate("/organization/project/new")}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/20 border border-indigo-500/40 text-indigo-300 hover:bg-indigo-600/30 hover:text-indigo-200 transition-colors text-sm font-medium"
                 title="Utwórz nowy projekt"
               >
                 <Plus className="w-4 h-4" />
                 <span>Nowy projekt</span>
               </button>
+              <nav className="flex items-center gap-2 ml-6">
+                {NAV_LINKS.map((link) => (
+                  <NavLink
+                    key={link.to}
+                    to={link.to}
+                    className={getLinkClassName}
+                    end={link.to === "/"}
+                  >
+                    {link.label}
+                  </NavLink>
+                ))}
+              </nav>
             </div>
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => navigate('/profile')}
+                onClick={() => navigate("/profile")}
                 className="flex items-center gap-2 rounded-lg border border-transparent px-3 py-2 text-sm text-slate-300 transition hover:border-slate-600 hover:text-white"
               >
                 <User className="w-4 h-4" />
@@ -113,17 +147,9 @@ function AppLayoutContent() {
               </button>
             </div>
           </div>
-          {/* Bottom Row - Navigation */}
-          <nav className="flex items-center gap-2 border-t border-slate-800 pt-3">
-            {NAV_LINKS.map((link) => (
-              <NavLink key={link.to} to={link.to} className={getLinkClassName} end={link.to === '/'}>
-                {link.label}
-              </NavLink>
-            ))}
-          </nav>
         </div>
       </header>
-      <main className="flex-1 min-h-0 overflow-hidden">
+      <main className="flex-1 min-h-0 overflow-auto">
         <Outlet />
         <FiltersPanel
           filtersOpen={filtersOpen}
@@ -135,15 +161,8 @@ function AppLayoutContent() {
           toggleTag={toggleTag}
         />
       </main>
-      <footer className="border-t border-slate-800 bg-slate-950/90 py-4">
-        <div className="mx-auto flex max-w-6xl items-center justify-center px-6">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
-            @2025 UniOrg Z.P.I projekt
-          </p>
-        </div>
-      </footer>
     </div>
-  )
+  );
 }
 
 function AppLayout() {
@@ -161,4 +180,4 @@ function AppLayout() {
   );
 }
 
-export default AppLayout
+export default AppLayout;

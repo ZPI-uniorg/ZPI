@@ -26,10 +26,9 @@ function getMonthMatrix(year, month) {
   const daysInMonth = lastDay.getDate();
 
   const matrix = [];
-  let week = [];
   let day = 1 - firstWeekDay;
-  for (let i = 0; i < 6; i++) {
-    week = [];
+  while (true) {
+    const week = [];
     for (let j = 0; j < 7; j++, day++) {
       if (day > 0 && day <= daysInMonth) {
         week.push(day);
@@ -38,6 +37,8 @@ function getMonthMatrix(year, month) {
       }
     }
     matrix.push(week);
+    if (week.includes(daysInMonth)) break;
+    if (matrix.length > 6) break;
   }
   return matrix;
 }
@@ -213,8 +214,10 @@ export default function MiniCalendar() {
           ))}
         </div>
         {eventsLoading ? (
-          <div className="grid grid-cols-7 grid-rows-6 gap-0.5 flex-1">
-            {Array.from({ length: 42 }).map((_, idx) => (
+          <div
+            className={`grid grid-cols-7 grid-rows-${matrix.length} gap-0.5 flex-1`}
+          >
+            {Array.from({ length: matrix.length * 7 }).map((_, idx) => (
               <div
                 key={idx}
                 className="rounded-lg bg-slate-800/40 p-0.5 flex flex-col overflow-hidden"
@@ -228,7 +231,9 @@ export default function MiniCalendar() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-7 grid-rows-6 gap-0.5 flex-1">
+          <div
+            className={`grid grid-cols-7 grid-rows-${matrix.length} gap-0.5 flex-1`}
+          >
             {matrix.flat().map((day, idx) => {
               const dayEvents = day
                 ? getEventsForDay(events, year, month, day)
