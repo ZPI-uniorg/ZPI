@@ -418,9 +418,36 @@ function OrganizationsPage() {
   };
 
   const toggleExistingTag = (tag) => {
-    setEditTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
+    setEditTags((prev) => {
+      const isRemoving = prev.includes(tag);
+      
+      if (isRemoving) {
+        // Check if this user is a coordinator of a project with this tag
+        const editingMemberData = members.find(m => m.username === editingTagsUser);
+        
+        // Backend returns coordinator_username and coordinator_id as flat fields
+        const coordinatedProjects = projects.filter(
+          p => p.coordinator_username === editingTagsUser || 
+               p.coordinator_id === editingMemberData?.id
+        );
+        
+        const isCoordinatorTag = coordinatedProjects.some(
+          p => p.name === tag || (p.tags && p.tags.includes(tag))
+        );
+        
+        if (isCoordinatorTag) {
+          const project = coordinatedProjects.find(
+            p => p.name === tag || (p.tags && p.tags.includes(tag))
+          );
+          setMemberError(
+            `Nie można usunąć tagu "${tag}" - użytkownik jest koordynatorem projektu "${project?.name || tag}". Najpierw zmień koordynatora projektu lub usuń projekt.`
+          );
+          return prev; // Don't remove the tag
+        }
+      }
+      
+      return prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag];
+    });
   };
 
   const saveTags = () => {
@@ -759,23 +786,44 @@ function OrganizationsPage() {
                           {allTagSuggestions.length > 0 ? (
                             allTagSuggestions.map((tag) => {
                               const active = editTags.includes(tag);
+                              // Check if this user is coordinator of a project with this tag
+                              const editingMemberData = members.find(m => m.username === editingTagsUser);
+                              // Backend returns coordinator_username and coordinator_id as flat fields
+                              const coordinatedProjects = projects.filter(
+                                p => p.coordinator_username === editingTagsUser || 
+                                     p.coordinator_id === editingMemberData?.id
+                              );
+                              const isCoordinatorTag = coordinatedProjects.some(
+                                p => p.name === tag || (p.tags && p.tags.includes(tag))
+                              );
+                              const coordinatorProject = coordinatedProjects.find(
+                                p => p.name === tag || (p.tags && p.tags.includes(tag))
+                              );
+                              const isProtected = active && isCoordinatorTag;
+                              
                               return (
                                 <button
                                   key={tag}
                                   type="button"
                                   onClick={() => toggleExistingTag(tag)}
+                                  disabled={isProtected}
                                   className={`px-3 py-1 rounded-full text-xs font-medium border transition ${
-                                    active
+                                    isProtected
+                                      ? "bg-indigo-600/70 border-indigo-500/70 text-indigo-200 cursor-not-allowed opacity-75"
+                                      : active
                                       ? "bg-violet-600/90 border-violet-500 text-white shadow-sm hover:bg-violet-500"
                                       : "bg-slate-700/70 border-slate-600 text-slate-300 hover:bg-slate-600/70 hover:text-white"
                                   }`}
                                   title={
-                                    active
+                                    isProtected
+                                      ? `Koordynator projektu "${coordinatorProject?.name || tag}" - nie można usunąć`
+                                      : active
                                       ? "Usuń z wybranych"
                                       : "Dodaj do wybranych"
                                   }
                                 >
                                   {tag}
+                                  {isProtected && <span className="ml-1">🔒</span>}
                                 </button>
                               );
                             })

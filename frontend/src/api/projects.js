@@ -93,3 +93,21 @@ export async function getUserProjects(organizationId, actorUsername) {
 
   return response.data
 }
+
+export async function deleteProject(organizationId, projectId, actorUsername) {
+  if (!organizationId) {
+    throw new Error('organizationId is required')
+  }
+  if (!projectId) {
+    throw new Error('projectId is required')
+  }
+  if (!actorUsername) {
+    throw new Error('actorUsername is required')
+  }
+
+  const response = await apiClient.delete(`project/delete/${organizationId}/${projectId}/`, {
+    params: { username: actorUsername },
+  })
+
+  return response.data
+}

@@ -170,3 +170,13 @@ export async function updateMemberPermissions(
   );
   return response.data;
 }
+
+export async function deleteTag(organizationId, tagName, actorUsername) {
+  const response = await apiClient.delete(
+    `tags/delete/${organizationId}/${encodeURIComponent(tagName)}/`,
+    {
+      params: { username: actorUsername },
+    }
+  );
+  return response.data;
+}

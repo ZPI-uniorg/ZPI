@@ -435,7 +435,6 @@ def remove_organization_member(request, organization_id, username):
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User is not authenticated"}, status=401)
 
-        data = json.loads(request.body)
         admin_username = request.user.username
 
         membership = Membership.objects.get(
@@ -753,7 +752,7 @@ def delete_tag(request, organization_id, tag_name):
 
         username = request.user.username
         membership = Membership.objects.get(
-            organization__id=organization_id, user__id=username
+            organization__id=organization_id, user__username=username
         )
 
         if membership.role != "admin":
@@ -1034,6 +1033,44 @@ def get_user_projects(request, organization_id):
         project_list = [_project_to_dict(project) for project in projects]
 
         return JsonResponse(project_list, safe=False, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@require_http_methods(["DELETE"])
+@csrf_exempt
+def delete_project(request, organization_id, project_id):
+    try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User is not authenticated"}, status=401)
+
+        username = request.user.username
+        membership = Membership.objects.get(
+            organization__id=organization_id, user__username=username
+        )
+
+        # Only admin or project coordinator can delete project
+        project = Project.objects.get(id=project_id, organization__id=organization_id)
+        
+        if membership.role != "admin" and (
+            membership.role != "coordinator" or project.coordinator != membership.user
+        ):
+            return JsonResponse({"error": "Permission denied"}, status=403)
+
+        # Store tag reference before deleting project
+        project_tag = project.tag
+        
+        # Delete project (cascade will delete related KanbanBoard)
+        project.delete()
+        
+        # Delete the associated tag
+        project_tag.delete()
+
+        return JsonResponse({"message": "Project deleted successfully"}, status=200)
+    except Project.DoesNotExist:
+        return JsonResponse({"error": "Project not found"}, status=404)
+    except Membership.DoesNotExist:
+        return JsonResponse({"error": "Membership not found"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
