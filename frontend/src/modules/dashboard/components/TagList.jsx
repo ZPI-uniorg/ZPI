@@ -44,11 +44,16 @@ export default function TagList({ tags, projects = [], selectedTags, logic, setL
       </div>
       <ul className="flex-1 overflow-y-auto pr-2 space-y-1.5 overscroll-contain">
         {tags.map((t) => {
+          const isProject = projects.some((p) => p.name === t);
           return (
             <li key={t}>
               <label
                 htmlFor={`tag-${t}`}
-                className="group flex items-center gap-3 w-full cursor-pointer rounded-lg px-2 py-2"
+                className={`group flex items-center gap-3 w-full cursor-pointer rounded-lg px-2 py-2 transition-colors ${
+                  isProject
+                    ? "hover:bg-violet-500/10 border border-violet-500/20"
+                    : "hover:bg-slate-700/30 border border-transparent"
+                }`}
               >
                 <input
                   id={`tag-${t}`}
@@ -68,11 +73,23 @@ export default function TagList({ tags, projects = [], selectedTags, logic, setL
                     />
                   </svg>
                 </span>
-                <span className="text-sm md:text-[15px] text-slate-200 leading-none">{t}</span>
+                <span className="text-xs opacity-60 mr-1">
+                  {isProject ? "📁" : "🏷️"}
+                </span>
+                <span className={`text-sm md:text-[15px] leading-none ${
+                  isProject ? "text-violet-200 font-medium" : "text-slate-300"
+                }`}>
+                  {t}
+                </span>
+                {isProject && (
+                  <span className="ml-2 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30">
+                    projekt
+                  </span>
+                )}
                 <button
                   type="button"
                   className="ml-auto p-1 rounded hover:bg-slate-700/40 transition"
-                  title={projects.some((p) => p.name === t) ? "Edytuj projekt" : "Edytuj tag"}
+                  title={isProject ? "Edytuj projekt" : "Edytuj tag"}
                   onClick={(e) => {
                     e.preventDefault();
                     handleEdit(t);
