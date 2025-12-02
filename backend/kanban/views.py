@@ -11,18 +11,27 @@ import json
 def get_board(request, organization_id, project_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User not authenticated"}, status=401)
+            return JsonResponse(
+                {"error": "Użytkownik nie jest uwierzytelniony"}, status=401
+            )
 
         username = request.user.username
-        membership = Membership.objects.get(user__username=username, organization__id=organization_id)
+        membership = Membership.objects.get(
+            user__username=username, organization__id=organization_id
+        )
 
         project = Project.objects.get(id=project_id)
 
-        if membership.role != 'admin' and project.tag not in membership.permissions.all():
-            return JsonResponse({"error": "Permission denied"}, status=403)
+        if (
+            membership.role != "admin"
+            and project.tag not in membership.permissions.all()
+        ):
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         organization = Organization.objects.get(id=organization_id)
-        kanban_board = KanbanBoard.objects.get(organization=organization, project=project)
+        kanban_board = KanbanBoard.objects.get(
+            organization=organization, project=project
+        )
         board_data = {
             "board_id": kanban_board.board_id,
             "title": kanban_board.title,
@@ -32,11 +41,11 @@ def get_board(request, organization_id, project_id):
 
         return JsonResponse(board_data, status=200)
     except Organization.DoesNotExist:
-        return JsonResponse({"error": "Organization not found"}, status=404)
+        return JsonResponse({"error": "Organizacja nie znaleziona"}, status=404)
     except Project.DoesNotExist:
-        return JsonResponse({"error": "Project not found"}, status=404)
+        return JsonResponse({"error": "Projekt nie znaleziony"}, status=404)
     except KanbanBoard.DoesNotExist:
-        return JsonResponse({"error": "Kanban Board not found"}, status=404)
+        return JsonResponse({"error": "Tablica Kanban nie znaleziona"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
@@ -46,18 +55,27 @@ def get_board(request, organization_id, project_id):
 def get_board_with_content(request, organization_id, project_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User not authenticated"}, status=401)
+            return JsonResponse(
+                {"error": "Użytkownik nie jest uwierzytelniony"}, status=401
+            )
 
         username = request.user.username
-        membership = Membership.objects.get(user__username=username, organization__id=organization_id)
+        membership = Membership.objects.get(
+            user__username=username, organization__id=organization_id
+        )
 
         project = Project.objects.get(id=project_id)
 
-        if membership.role != 'admin' and project.tag not in membership.permissions.all():
-            return JsonResponse({"error": "Permission denied"}, status=403)
+        if (
+            membership.role != "admin"
+            and project.tag not in membership.permissions.all()
+        ):
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         organization = Organization.objects.get(id=organization_id)
-        kanban_board = KanbanBoard.objects.get(organization=organization, project=project)
+        kanban_board = KanbanBoard.objects.get(
+            organization=organization, project=project
+        )
 
         columns = KanbanColumn.objects.filter(board=kanban_board)
         columns_data = []
@@ -74,22 +92,28 @@ def get_board_with_content(request, organization_id, project_id):
                         "last_name": task.assigned_to.last_name,
                         "email": task.assigned_to.email,
                     }
-                tasks_data.append({
-                    "task_id": task.task_id,
-                    "title": task.title,
-                    "description": task.description,
-                    "position": task.position,
-                    "due_date": task.due_date,
-                    "assigned_to_id": task.assigned_to.id if task.assigned_to else None,
-                    "assigned_to": assigned_payload,
-                    "status": task.status,
-                })
-            columns_data.append({
-                "column_id": column.column_id,
-                "title": column.title,
-                "position": column.position,
-                "tasks": tasks_data,
-            })
+                tasks_data.append(
+                    {
+                        "task_id": task.task_id,
+                        "title": task.title,
+                        "description": task.description,
+                        "position": task.position,
+                        "due_date": task.due_date,
+                        "assigned_to_id": task.assigned_to.id
+                        if task.assigned_to
+                        else None,
+                        "assigned_to": assigned_payload,
+                        "status": task.status,
+                    }
+                )
+            columns_data.append(
+                {
+                    "column_id": column.column_id,
+                    "title": column.title,
+                    "position": column.position,
+                    "tasks": tasks_data,
+                }
+            )
 
         board_data = {
             "board_id": kanban_board.board_id,
@@ -101,11 +125,11 @@ def get_board_with_content(request, organization_id, project_id):
 
         return JsonResponse(board_data, status=200)
     except Organization.DoesNotExist:
-        return JsonResponse({"error": "Organization not found"}, status=404)
+        return JsonResponse({"error": "Organizacja nie znaleziona"}, status=404)
     except Project.DoesNotExist:
-        return JsonResponse({"error": "Project not found"}, status=404)
+        return JsonResponse({"error": "Projekt nie znaleziony"}, status=404)
     except KanbanBoard.DoesNotExist:
-        return JsonResponse({"error": "Kanban Board not found"}, status=404)
+        return JsonResponse({"error": "Tablica Kanban nie znaleziona"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
@@ -115,21 +139,28 @@ def get_board_with_content(request, organization_id, project_id):
 def add_column(request, organization_id, board_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User not authenticated"}, status=401)
+            return JsonResponse(
+                {"error": "Użytkownik nie jest uwierzytelniony"}, status=401
+            )
 
         username = request.user.username
-        membership = Membership.objects.get(user__username=username, organization__id=organization_id)
+        membership = Membership.objects.get(
+            user__username=username, organization__id=organization_id
+        )
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
 
-        if membership.role == 'member' or (membership.role == 'coordinator' and board.project.tag not in membership.permissions):
-            return JsonResponse({"error": "Permission denied"}, status=403)
+        if membership.role == "member" or (
+            membership.role == "coordinator"
+            and board.project.tag not in membership.permissions
+        ):
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         title = request.POST.get("title")
         position = request.POST.get("position")
 
         if not title:
-            return JsonResponse({"error": "Title not found"}, status=404)
+            return JsonResponse({"error": "Tytuł nie znaleziony"}, status=404)
         if not position:
             position = 0
 
@@ -148,9 +179,9 @@ def add_column(request, organization_id, board_id):
 
         return JsonResponse(kanban_column_data, status=201)
     except Organization.DoesNotExist:
-        return JsonResponse({"error": "Organization not found"}, status=404)
+        return JsonResponse({"error": "Organizacja nie znaleziona"}, status=404)
     except KanbanBoard.DoesNotExist:
-        return JsonResponse({"error": "Kanban Board not found"}, status=404)
+        return JsonResponse({"error": "Tablica Kanban nie znaleziona"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
@@ -160,25 +191,32 @@ def add_column(request, organization_id, board_id):
 def update_column_position(request, organization_id, board_id, column_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User not authenticated"}, status=401)
+            return JsonResponse(
+                {"error": "Użytkownik nie jest uwierzytelniony"}, status=401
+            )
 
         data = json.loads(request.body)
         position = data.get("position")
         title = data.get("title")
         username = request.user.username
 
-        membership = Membership.objects.get(user__username=username, organization__id=organization_id)
+        membership = Membership.objects.get(
+            user__username=username, organization__id=organization_id
+        )
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
 
-        if membership.role == 'member' or (membership.role == 'coordinator' and board.project.tag not in membership.permissions):
-            return JsonResponse({"error": "Permission denied"}, status=403)
+        if membership.role == "member" or (
+            membership.role == "coordinator"
+            and board.project.tag not in membership.permissions
+        ):
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         column = KanbanColumn.objects.get(column_id=column_id, board=board)
 
         # Allow updating title without requiring position.
         if position is None and title is None:
-            return JsonResponse({"error": "No fields to update"}, status=400)
+            return JsonResponse({"error": "Brak pól do aktualizacji"}, status=400)
 
         if position is not None:
             column.position = position
@@ -195,11 +233,11 @@ def update_column_position(request, organization_id, board_id, column_id):
 
         return JsonResponse(column_data, status=200)
     except Organization.DoesNotExist:
-        return JsonResponse({"error": "Organization not found"}, status=404)
+        return JsonResponse({"error": "Organizacja nie znaleziona"}, status=404)
     except KanbanBoard.DoesNotExist:
-        return JsonResponse({"error": "Kanban Board not found"}, status=404)
+        return JsonResponse({"error": "Tablica Kanban nie znaleziona"}, status=404)
     except KanbanColumn.DoesNotExist:
-        return JsonResponse({"error": "Kanban Column not found"}, status=404)
+        return JsonResponse({"error": "Kolumna Kanban nie znaleziona"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
@@ -209,27 +247,36 @@ def update_column_position(request, organization_id, board_id, column_id):
 def delete_column(request, organization_id, board_id, column_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User not authenticated"}, status=401)
+            return JsonResponse(
+                {"error": "Użytkownik nie jest uwierzytelniony"}, status=401
+            )
 
         username = request.user.username
-        membership = Membership.objects.get(user__username=username, organization__id=organization_id)
+        membership = Membership.objects.get(
+            user__username=username, organization__id=organization_id
+        )
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
 
-        if membership.role == 'member' or (membership.role == 'coordinator' and board.project.tag not in membership.permissions):
-            return JsonResponse({"error": "Permission denied"}, status=403)
+        if membership.role == "member" or (
+            membership.role == "coordinator"
+            and board.project.tag not in membership.permissions
+        ):
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         column = KanbanColumn.objects.get(column_id=column_id, board=board)
 
         column.delete()
 
-        return JsonResponse({"message": "Kanban Column deleted successfully"}, status=200)
+        return JsonResponse(
+            {"message": "Kolumna Kanban została pomyślnie usunięta"}, status=200
+        )
     except Organization.DoesNotExist:
-        return JsonResponse({"error": "Organization not found"}, status=404)
+        return JsonResponse({"error": "Organizacja nie znaleziona"}, status=404)
     except KanbanBoard.DoesNotExist:
-        return JsonResponse({"error": "Kanban Board not found"}, status=404)
+        return JsonResponse({"error": "Tablica Kanban nie znaleziona"}, status=404)
     except KanbanColumn.DoesNotExist:
-        return JsonResponse({"error": "Kanban Column not found"}, status=404)
+        return JsonResponse({"error": "Kolumna Kanban nie znaleziona"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
@@ -239,15 +286,22 @@ def delete_column(request, organization_id, board_id, column_id):
 def get_column(request, organization_id, board_id, column_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User not authenticated"}, status=401)
+            return JsonResponse(
+                {"error": "Użytkownik nie jest uwierzytelniony"}, status=401
+            )
 
         username = request.user.username
-        membership = Membership.objects.get(user__username=username, organization__id=organization_id)
+        membership = Membership.objects.get(
+            user__username=username, organization__id=organization_id
+        )
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
 
-        if membership.role != 'admin' and board.project.tag not in membership.permissions:
-            return JsonResponse({"error": "Permission denied"}, status=403)
+        if (
+            membership.role != "admin"
+            and board.project.tag not in membership.permissions
+        ):
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         column = KanbanColumn.objects.get(column_id=column_id, board=board)
 
@@ -260,11 +314,11 @@ def get_column(request, organization_id, board_id, column_id):
 
         return JsonResponse(column_data, status=200)
     except Organization.DoesNotExist:
-        return JsonResponse({"error": "Organization not found"}, status=404)
+        return JsonResponse({"error": "Organizacja nie znaleziona"}, status=404)
     except KanbanBoard.DoesNotExist:
-        return JsonResponse({"error": "Kanban Board not found"}, status=404)
+        return JsonResponse({"error": "Tablica Kanban nie znaleziona"}, status=404)
     except KanbanColumn.DoesNotExist:
-        return JsonResponse({"error": "Kanban Column not found"}, status=404)
+        return JsonResponse({"error": "Kolumna Kanban nie znaleziona"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
@@ -274,15 +328,22 @@ def get_column(request, organization_id, board_id, column_id):
 def add_task(request, organization_id, board_id, column_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User not authenticated"}, status=401)
+            return JsonResponse(
+                {"error": "Użytkownik nie jest uwierzytelniony"}, status=401
+            )
 
         username = request.user.username
-        membership = Membership.objects.get(user__username=username, organization__id=organization_id)
+        membership = Membership.objects.get(
+            user__username=username, organization__id=organization_id
+        )
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
 
-        if membership.role != 'admin' and board.project.tag not in membership.permissions:
-            return JsonResponse({"error": "Permission denied"}, status=403)
+        if (
+            membership.role != "admin"
+            and board.project.tag not in membership.permissions
+        ):
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         column = KanbanColumn.objects.get(column_id=column_id, board=board)
 
@@ -294,7 +355,7 @@ def add_task(request, organization_id, board_id, column_id):
         status = request.POST.get("status")
 
         if not title:
-            return JsonResponse({"error": "Title not found"}, status=404)
+            return JsonResponse({"error": "Tytuł nie znaleziony"}, status=404)
         if not position:
             position = 0
         if not status:
@@ -323,11 +384,11 @@ def add_task(request, organization_id, board_id, column_id):
 
         return JsonResponse(task_data, status=201)
     except Organization.DoesNotExist:
-        return JsonResponse({"error": "Organization not found"}, status=404)
+        return JsonResponse({"error": "Organizacja nie znaleziona"}, status=404)
     except KanbanBoard.DoesNotExist:
-        return JsonResponse({"error": "Kanban Board not found"}, status=404)
+        return JsonResponse({"error": "Tablica Kanban nie znaleziona"}, status=404)
     except KanbanColumn.DoesNotExist:
-        return JsonResponse({"error": "Kanban Column not found"}, status=404)
+        return JsonResponse({"error": "Kolumna Kanban nie znaleziona"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
@@ -337,17 +398,24 @@ def add_task(request, organization_id, board_id, column_id):
 def update_task(request, organization_id, board_id, column_id, task_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User not authenticated"}, status=401)
+            return JsonResponse(
+                {"error": "Użytkownik nie jest uwierzytelniony"}, status=401
+            )
 
         data = json.loads(request.body)
         username = request.user.username
 
-        membership = Membership.objects.get(user__username=username, organization__id=organization_id)
+        membership = Membership.objects.get(
+            user__username=username, organization__id=organization_id
+        )
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
 
-        if membership.role != 'admin' and board.project.tag not in membership.permissions:
-            return JsonResponse({"error": "Permission denied"}, status=403)
+        if (
+            membership.role != "admin"
+            and board.project.tag not in membership.permissions
+        ):
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         column = KanbanColumn.objects.get(column_id=column_id, board=board)
         task = Task.objects.get(task_id=task_id, column=column)
@@ -396,13 +464,13 @@ def update_task(request, organization_id, board_id, column_id, task_id):
 
         return JsonResponse(task_data, status=200)
     except Organization.DoesNotExist:
-        return JsonResponse({"error": "Organization not found"}, status=404)
+        return JsonResponse({"error": "Organizacja nie znaleziona"}, status=404)
     except KanbanBoard.DoesNotExist:
-        return JsonResponse({"error": "Kanban Board not found"}, status=404)
+        return JsonResponse({"error": "Tablica Kanban nie znaleziona"}, status=404)
     except KanbanColumn.DoesNotExist:
-        return JsonResponse({"error": "Kanban Column not found"}, status=404)
+        return JsonResponse({"error": "Kolumna Kanban nie znaleziona"}, status=404)
     except Task.DoesNotExist:
-        return JsonResponse({"error": "Task not found"}, status=404)
+        return JsonResponse({"error": "Zadanie nie znalezione"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
@@ -412,34 +480,42 @@ def update_task(request, organization_id, board_id, column_id, task_id):
 def delete_task(request, organization_id, board_id, column_id, task_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User not authenticated"}, status=401)
+            return JsonResponse(
+                {"error": "Użytkownik nie jest uwierzytelniony"}, status=401
+            )
 
         data = json.loads(request.body)
         username = request.user.username
-        membership = Membership.objects.get(user__username=username, organization__id=organization_id)
+        membership = Membership.objects.get(
+            user__username=username, organization__id=organization_id
+        )
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
 
-        if membership.role == 'member' or (membership.role == 'coordinator' and board.project.tag not in membership.permissions):
-            return JsonResponse({"error": "Permission denied"}, status=403)
+        if membership.role == "member" or (
+            membership.role == "coordinator"
+            and board.project.tag not in membership.permissions
+        ):
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         column = KanbanColumn.objects.get(column_id=column_id, board=board)
         task = Task.objects.get(task_id=task_id, column=column)
 
         task.delete()
 
-        return JsonResponse({"message": "Task deleted successfully"}, status=200)
+        return JsonResponse(
+            {"message": "Zadanie zostało pomyślnie usunięte"}, status=200
+        )
     except Organization.DoesNotExist:
-        return JsonResponse({"error": "Organization not found"}, status=404)
+        return JsonResponse({"error": "Organizacja nie znaleziona"}, status=404)
     except KanbanBoard.DoesNotExist:
-        return JsonResponse({"error": "Kanban Board not found"}, status=404)
+        return JsonResponse({"error": "Tablica Kanban nie znaleziona"}, status=404)
     except KanbanColumn.DoesNotExist:
-        return JsonResponse({"error": "Kanban Column not found"}, status=404)
+        return JsonResponse({"error": "Kolumna Kanban nie znaleziona"}, status=404)
     except Task.DoesNotExist:
-        return JsonResponse({"error": "Task not found"}, status=404)
+        return JsonResponse({"error": "Zadanie nie znalezione"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
-
 
 
 @require_http_methods(["GET"])
@@ -447,15 +523,22 @@ def delete_task(request, organization_id, board_id, column_id, task_id):
 def get_task(request, organization_id, board_id, column_id, task_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User not authenticated"}, status=401)
+            return JsonResponse(
+                {"error": "Użytkownik nie jest uwierzytelniony"}, status=401
+            )
 
         username = request.user.username
-        membership = Membership.objects.get(user__username=username, organization__id=organization_id)
+        membership = Membership.objects.get(
+            user__username=username, organization__id=organization_id
+        )
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
 
-        if membership.role != 'admin' and board.project.tag not in membership.permissions:
-            return JsonResponse({"error": "Permission denied"}, status=403)
+        if (
+            membership.role != "admin"
+            and board.project.tag not in membership.permissions
+        ):
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         column = KanbanColumn.objects.get(column_id=column_id, board=board)
         task = Task.objects.get(task_id=task_id, column=column)
@@ -473,12 +556,12 @@ def get_task(request, organization_id, board_id, column_id, task_id):
 
         return JsonResponse(task_data, status=200)
     except Organization.DoesNotExist:
-        return JsonResponse({"error": "Organization not found"}, status=404)
+        return JsonResponse({"error": "Organizacja nie znaleziona"}, status=404)
     except KanbanBoard.DoesNotExist:
-        return JsonResponse({"error": "Kanban Board not found"}, status=404)
+        return JsonResponse({"error": "Tablica Kanban nie znaleziona"}, status=404)
     except KanbanColumn.DoesNotExist:
-        return JsonResponse({"error": "Kanban Column not found"}, status=404)
+        return JsonResponse({"error": "Kolumna Kanban nie znaleziona"}, status=404)
     except Task.DoesNotExist:
-        return JsonResponse({"error": "Task not found"}, status=404)
+        return JsonResponse({"error": "Zadanie nie znalezione"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
