@@ -399,6 +399,7 @@ export function ProjectsProvider({
       userTags: state.userMember?.permissions || state.userMember?.tags || [],
 
       projects: filteredProjects,
+      allProjects: state.projects,
       projectsLoading: state.projectsLoading,
       projectsInitialized: state.projectsInitialized,
       projectsError: state.projectsError,

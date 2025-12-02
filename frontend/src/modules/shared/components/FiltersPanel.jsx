@@ -16,7 +16,7 @@ export default function FiltersPanel({
 }) {
   const tagListRootRef = useRef(null);
   const navigate = useNavigate();
-  const { projects, projectsVersion } = useProjects();
+  const { allProjects, projectsVersion } = useProjects();
   const { organization, user } = useAuth();
   const [allTags, setAllTags] = useState([]);
   const [tagsLoading, setTagsLoading] = useState(false);
@@ -52,7 +52,7 @@ export default function FiltersPanel({
   };
 
   // Zbierz wszystkie nazwy projektów
-  const projectNamesRaw = useMemo(() => projects.map((p) => p.name).filter(Boolean), [projects]);
+  const projectNamesRaw = useMemo(() => allProjects.map((p) => p.name).filter(Boolean), [allProjects]);
   // Rozbij projekty na składniki
   const projectNames = useMemo(() => splitNames(projectNamesRaw), [projectNamesRaw]);
 
@@ -151,7 +151,7 @@ export default function FiltersPanel({
           ) : (
             <TagList
               tags={allFilterItems}
-              projects={projects}
+              projects={allProjects}
               selectedTags={selectedTags}
               logic={logic}
               setLogic={setLogic}

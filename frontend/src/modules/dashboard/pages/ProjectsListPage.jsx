@@ -7,10 +7,10 @@ import { Settings, FolderOpen, Calendar, Users } from "lucide-react";
 export default function ProjectsListPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { projects, projectsLoading, projectsInitialized, projectsError } = useProjects();
+  const { allProjects, projectsLoading, projectsInitialized, projectsError } = useProjects();
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredProjects = projects.filter((p) => {
+  const filteredProjects = allProjects.filter((p) => {
     const query = searchQuery.toLowerCase().trim();
     if (!query) return true;
     return (
@@ -119,35 +119,18 @@ export default function ProjectsListPage() {
                   )}
 
                   {/* Meta Information */}
-                  <div className="space-y-2">
-                    {/* Coordinator */}
-                    {project.coordinator_username && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Users className="w-4 h-4 text-slate-500 flex-shrink-0" />
-                        <span className="text-slate-400">Koordynator:</span>
-                        <span className={`font-medium truncate ${
-                          isCoordinator ? "text-violet-400" : "text-slate-300"
-                        }`}>
-                          {project.coordinator_username}
-                          {isCoordinator && " (Ty)"}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Dates */}
-                    {(project.start_dte || project.end_dte) && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Calendar className="w-4 h-4 text-slate-500 flex-shrink-0" />
-                        <span className="text-slate-400">
-                          {project.start_dte && project.end_dte
-                            ? `${project.start_dte} - ${project.end_dte}`
-                            : project.start_dte
-                            ? `Od ${project.start_dte}`
-                            : `Do ${project.end_dte}`}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+                  {project.coordinator_username && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Users className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                      <span className="text-slate-400">Koordynator:</span>
+                      <span className={`font-medium truncate ${
+                        isCoordinator ? "text-violet-400" : "text-slate-300"
+                      }`}>
+                        {project.coordinator_username}
+                        {isCoordinator && " (Ty)"}
+                      </span>
+                    </div>
+                  )}
 
                   {/* Tags/Labels and Coordinator Badge */}
                   <div className="mt-4 flex flex-wrap gap-2">
