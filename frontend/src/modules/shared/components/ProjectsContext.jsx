@@ -33,6 +33,7 @@ export function ProjectsProvider({
     projectsLoading: true,
     projectsError: null,
     projectsInitialized: false,
+    projectsVersion: 0,
 
     allEvents: [],
     eventsByProject: {},
@@ -321,8 +322,10 @@ export function ProjectsProvider({
   const filteredProjects = useMemo(() => {
     const sel = Array.isArray(state.selectedTags) ? state.selectedTags : [];
     if (!sel.length) return state.projects;
+    // Rozbij tagi/projekty na składniki
+    const splitTags = (arr) => arr.flatMap(t => t.split(/[+,]/).map(s => s.trim())).filter(Boolean);
     return state.projects.filter((p) => {
-      const tags = p.tags || p.permissions || [];
+      const tags = splitTags(p.tags || p.permissions || []);
       return sel.some((tag) => tags.includes(tag));
     });
   }, [state.projects, state.selectedTags]);
@@ -331,11 +334,13 @@ export function ProjectsProvider({
   const filteredChats = useMemo(() => {
     const sel = Array.isArray(state.selectedTags) ? state.selectedTags : [];
     if (!sel.length) return state.chats;
+    const splitTags = (arr) => arr.flatMap(t => t.split(/[+,]/).map(s => s.trim())).filter(Boolean);
     return state.chats.filter((c) => {
+      const tags = splitTags(c.tags || []);
       if (state.logic === "AND") {
-        return sel.every((tag) => c.tags?.includes(tag));
+        return sel.every((tag) => tags.includes(tag));
       } else {
-        return sel.some((tag) => c.tags?.includes(tag));
+        return sel.some((tag) => tags.includes(tag));
       }
     });
   }, [state.chats, state.selectedTags, state.logic]);
@@ -344,6 +349,7 @@ export function ProjectsProvider({
   const filteredEventsByProject = useMemo(() => {
     const result = {};
     const sel = Array.isArray(state.selectedTags) ? state.selectedTags : [];
+    const splitTags = (arr) => arr.flatMap(t => t.split(/[+,]/).map(s => s.trim())).filter(Boolean);
     const entries =
       state.eventsByProject && typeof state.eventsByProject === "object"
         ? Object.entries(state.eventsByProject)
@@ -353,7 +359,7 @@ export function ProjectsProvider({
       result[pid] = !sel.length
         ? events
         : events.filter((ev) => {
-            const tags = ev.permissions || ev.tags || [];
+            const tags = splitTags(ev.permissions || ev.tags || []);
             if (state.logic === "AND") {
               return sel.every((tag) => tags.includes(tag));
             } else {
@@ -393,11 +399,17 @@ export function ProjectsProvider({
       userTags: state.userMember?.permissions || state.userMember?.tags || [],
 
       projects: filteredProjects,
+      allProjects: state.projects,
       projectsLoading: state.projectsLoading,
       projectsInitialized: state.projectsInitialized,
       projectsError: state.projectsError,
-      refreshProjects: () => state.userMember && loadProjects(state.userMember),
+      refreshProjects: async () => {
+        if (!state.userMember) return;
+        await loadProjects(state.userMember);
+        setState((s) => ({ ...s, projectsVersion: s.projectsVersion + 1 }));
+      },
       projectTags,
+      projectsVersion: state.projectsVersion,
 
       allEvents: state.allEvents,
       eventsByProject: filteredEventsByProject,

@@ -6,7 +6,7 @@ from organizations.views import (
     register_organization, get_user_organization, edit_organization, invite_member, get_organization_users,
     remove_organization_member, change_member_role, update_member_profile, edit_permissions, get_all_tags, get_tags,
     create_tag, delete_tag,
-    create_project, update_project, get_projects, get_user_projects, get_user_membership, get_project_members,
+    create_project, update_project, delete_project, get_projects, get_user_projects, get_user_membership, get_project_members,
 )
 
 from .views import login_view, logout_view, change_password_view, login_status_view
@@ -38,9 +38,10 @@ urlpatterns += [
     path('tags/all/<int:organization_id>/', get_all_tags, name='get_all_tags'),
     path('tags/my/<int:organization_id>/', get_tags, name='get_tags'),
     path('tags/create/<int:organization_id>/', create_tag, name='create_tag'),
-    path('tags/delete/<int:tag_id>/', delete_tag, name='delete_tag'),
+    path('tags/delete/<int:organization_id>/<str:tag_name>/', delete_tag, name='delete_tag'),
     path('project/create/<int:organization_id>/', create_project, name='create_project'),
     path('project/update/<int:organization_id>/<int:project_id>/', update_project, name='update_project'),
+    path('project/delete/<int:organization_id>/<int:project_id>/', delete_project, name='delete_project'),
     path('projects/all/<int:organization_id>/', get_projects, name='get_all_projects'),
     path('projects/my/<int:organization_id>/', get_user_projects, name='get_my_projects'),
 ]

@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { TAGS, renameTag, deleteTag } from "../../../api/fakeData.js";
+import { TAGS, renameTag } from "../../../api/fakeData.js";
 import useAuth from "../../../auth/useAuth.js";
-import { getOrganizationMembers, createTag } from "../../../api/organizations.js";
+import { useProjects } from "../../shared/components/ProjectsContext.jsx";
+import { getOrganizationMembers, createTag, deleteTag, updateMemberPermissions } from "../../../api/organizations.js";
 import Autocomplete from "../../shared/components/Autocomplete.jsx";
 
 export default function TagEditPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, organization } = useAuth();
+  const { refreshProjects } = useProjects();
   const editingTagRaw = location.state?.tag || null;              // <-- NEW
   const editingTagName = typeof editingTagRaw === 'string'
     ? editingTagRaw
@@ -72,11 +74,7 @@ export default function TagEditPage() {
       (m.first_name + " " + m.last_name + " " + m.username + " " + m.email)
         .toLowerCase()
         .includes(memberInput.toLowerCase())
-    )
-    .filter(m => {
-      if (!editingTagName) return true;                            // nowy tag -> wszyscy
-      return (m.permissions || []).includes(editingTagName);       // istniejący tag -> tylko z permission
-    });
+    );
 
   const handleMemberSelect = (m) => {
     setMembers((prev) => [...prev, m]);
@@ -90,40 +88,118 @@ export default function TagEditPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name.trim()) return;
+    if (!organization?.id || !user?.username) {
+      setError("Brak danych organizacji lub użytkownika.");
+      return;
+    }
 
-    if (editingTagName) {                                          // CHANGED (was editingTag)
-      if (name !== editingTagName) {
-        renameTag(editingTagName, name);
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      let tagName = name.trim();
+
+      if (editingTagName) {
+        // Edycja istniejącego tagu
+        if (name !== editingTagName) {
+          renameTag(editingTagName, name);
+        }
+        tagName = editingTagName; // używamy starej nazwy do aktualizacji permissions
+      } else {
+        // Tworzenie nowego tagu
+        const created = await createTag(organization.id, user.username, tagName);
+        TAGS.push(created.name || tagName);
+        tagName = created.name || tagName;
       }
-      // TODO: wysłanie aktualizacji członków na backend gdy będzie endpoint
-    } else {
-      // Dodaj nowy tag
-      if (!organization?.id || !user?.username) {
-        setError("Brak danych organizacji lub użytkownika.");
-        return;
-      }
-      setSubmitting(true);
-      setError(null);
-      try {
-        const created = await createTag(organization.id, user.username, name.trim());
-        TAGS.push(created.name || name.trim());
-        navigate("/dashboard", { state: { tagJustCreated: created } });
-      } catch (err) {
-        setError(
-          err.response?.data?.error ??
-          err.response?.data?.detail ??
-          "Nie udało się utworzyć tagu."
+
+      // Aktualizuj permissions dla wybranych członków
+      // Dla każdego wybranego członka - dodaj tag do jego permissions
+      await Promise.all(
+        members.map((m) => {
+          const currentTags = Array.isArray(m.permissions) ? m.permissions : [];
+          const uniqueTags = Array.from(new Set([...currentTags, tagName]));
+          return updateMemberPermissions(
+            organization.id,
+            m.username,
+            user.username,
+            uniqueTags
+          );
+        })
+      );
+
+      // Dla członków którzy mieli ten tag ale zostali usunięci z listy - usuń tag
+      if (editingTagName) {
+        const removedMembers = availableMembers.filter(
+          (am) =>
+            (am.permissions || []).includes(editingTagName) &&
+            !members.some((m) => m.id === am.id)
         );
-      } finally {
-        setSubmitting(false);
+        await Promise.all(
+          removedMembers.map((m) => {
+            const currentTags = Array.isArray(m.permissions) ? m.permissions : [];
+            const newTags = currentTags.filter((t) => t !== editingTagName);
+            return updateMemberPermissions(
+              organization.id,
+              m.username,
+              user.username,
+              newTags
+            );
+          })
+        );
       }
+
+      // Odśwież projekty żeby zaktualizować cache
+      await refreshProjects();
+
+      navigate("/dashboard", {
+        state: {
+          message: editingTagName
+            ? `Tag "${tagName}" został zaktualizowany.`
+            : `Tag "${tagName}" został utworzony.`,
+        },
+      });
+    } catch (err) {
+      setError(
+        err.response?.data?.error ??
+          err.response?.data?.detail ??
+          "Nie udało się zapisać tagu."
+      );
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleDelete = () => {
-    if (!editingTagName) return;                                   // CHANGED
-    deleteTag(editingTagName);
-    navigate("/dashboard");
+  const handleDelete = async () => {
+    if (!editingTagName || !organization?.id || !user?.username) return;
+    if (!window.confirm(`Czy na pewno chcesz usunąć tag "${editingTagName}"? Ta operacja jest nieodwracalna.`)) {
+      return;
+    }
+    
+    setSubmitting(true);
+    setError(null);
+    
+    try {
+      await deleteTag(organization.id, editingTagName, user.username);
+      // Remove from local TAGS array
+      const idx = TAGS.indexOf(editingTagName);
+      if (idx !== -1) TAGS.splice(idx, 1);
+      // Refresh projects to update cache
+      await refreshProjects();
+      navigate("/dashboard", {
+        state: {
+          message: `Tag "${editingTagName}" został usunięty.`,
+          tagDeleted: true
+        }
+      });
+    } catch (err) {
+      setError(
+        err?.response?.data?.error ??
+        err?.response?.data?.detail ??
+        "Nie udało się usunąć tagu."
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -204,7 +280,7 @@ export default function TagEditPage() {
         <div className="flex flex-col md:flex-row gap-4 justify-between items-center mt-8">
           <button
             type="submit"
-            className="bg-gradient-to-r from-indigo-500 to-violet-500 text-white px-10 py-3 rounded-xl text-lg font-semibold shadow hover:brightness-110 transition w-full md:w-auto"
+            className="bg-gradient-to-r from-indigo-500 to-violet-500 text-white px-10 py-3 rounded-xl text-lg font-semibold shadow hover:brightness-110 transition w-full md:w-auto disabled:opacity-50"
             disabled={!name.trim() || submitting}
           >
             {submitting ? "Zapisywanie..." : editingTagName ? "Zaktualizuj tag" : "Stwórz tag"}
@@ -212,10 +288,11 @@ export default function TagEditPage() {
          {editingTagName && (
             <button
               type="button"
-              className="border border-red-500 px-8 py-3 rounded-xl text-lg text-red-400 bg-transparent hover:bg-red-500/10 transition w-full md:w-auto"
+              className="border border-red-500 px-8 py-3 rounded-xl text-lg text-red-400 bg-transparent hover:bg-red-500/10 transition w-full md:w-auto disabled:opacity-50"
               onClick={handleDelete}
+              disabled={submitting}
             >
-              Usuń tag
+              {submitting ? "Usuwanie..." : "Usuń tag"}
             </button>
          )}
         </div>

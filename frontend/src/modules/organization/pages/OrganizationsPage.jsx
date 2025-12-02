@@ -10,6 +10,11 @@ import {
   getTags,
 } from "../../../api/organizations.js";
 import useAuth from "../../../auth/useAuth.js";
+import {
+  sanitizeUsername,
+  sanitizeEmail,
+  sanitizePassword,
+} from "../../shared/utils/sanitize.js";
 import { useProjects } from "../../shared/components/ProjectsContext.jsx"; // <-- KONTEKST PROJEKTÓW
 
 const emptyMemberForm = {
@@ -300,6 +305,8 @@ function OrganizationsPage() {
 
   const handleRoleChange = async (memberId, newRole) => {
     if (!selectedOrgId || !user?.username) return;
+    // Prevent changing own role (even if admin) for safety
+    if (memberId === user.username) return;
     try {
       await updateOrganizationMember(selectedOrgId, memberId, user.username, {
         role: newRole,
@@ -386,9 +393,10 @@ function OrganizationsPage() {
     [projects]
   );
   const orgTagNames = useMemo(
-    () => (orgTags || [])
-      .map((t) => t.name)
-      .filter((name) => !!name && !name.includes("+")),
+    () =>
+      (orgTags || [])
+        .map((t) => t.name)
+        .filter((name) => !!name && !name.includes("+")),
     [orgTags]
   );
   const memberDerivedTags = useMemo(() => {
@@ -415,9 +423,43 @@ function OrganizationsPage() {
   };
 
   const toggleExistingTag = (tag) => {
-    setEditTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
+    setEditTags((prev) => {
+      const isRemoving = prev.includes(tag);
+
+      if (isRemoving) {
+        // Check if this user is a coordinator of a project with this tag
+        const editingMemberData = members.find(
+          (m) => m.username === editingTagsUser
+        );
+
+        // Backend returns coordinator_username and coordinator_id as flat fields
+        const coordinatedProjects = projects.filter(
+          (p) =>
+            p.coordinator_username === editingTagsUser ||
+            p.coordinator_id === editingMemberData?.id
+        );
+
+        const isCoordinatorTag = coordinatedProjects.some(
+          (p) => p.name === tag || (p.tags && p.tags.includes(tag))
+        );
+
+        if (isCoordinatorTag) {
+          const project = coordinatedProjects.find(
+            (p) => p.name === tag || (p.tags && p.tags.includes(tag))
+          );
+          setMemberError(
+            `Nie można usunąć tagu "${tag}" - użytkownik jest koordynatorem projektu "${
+              project?.name || tag
+            }". Najpierw zmień koordynatora projektu lub usuń projekt.`
+          );
+          return prev; // Don't remove the tag
+        }
+      }
+
+      return prev.includes(tag)
+        ? prev.filter((t) => t !== tag)
+        : [...prev, tag];
+    });
   };
 
   const saveTags = () => {
@@ -462,6 +504,8 @@ function OrganizationsPage() {
 
   // Inline removal handlers
   const askRemoveMember = (username) => {
+    // Prevent asking to remove self
+    if (username === user?.username) return;
     setDeletingUsername(username);
   };
   const cancelRemoveMember = () => {
@@ -469,6 +513,11 @@ function OrganizationsPage() {
   };
   const confirmRemoveMember = async (memberId) => {
     if (!selectedOrgId || !user?.username) return;
+    // Extra guard: never remove self
+    if (memberId === user.username) {
+      setDeletingUsername(null);
+      return;
+    }
     try {
       await removeOrganizationMember(selectedOrgId, memberId, user.username);
       await loadMembers(selectedOrgId);
@@ -717,20 +766,28 @@ function OrganizationsPage() {
                     </td>
                     <td className="py-2 px-4">
                       {isAdmin ? (
-                        <select
-                          value={member.role}
-                          onChange={(e) =>
-                            handleRoleChange(member.username, e.target.value)
-                          }
-                          disabled={member.user === user?.id}
-                          className="rounded px-2 py-1 border border-slate-600 bg-slate-900 text-slate-100"
-                        >
-                          {Object.entries(ROLE_LABELS).map(([value, label]) => (
-                            <option key={value} value={value}>
-                              {label}
-                            </option>
-                          ))}
-                        </select>
+                        member.username === user?.username ? (
+                          // Own role: show non-interactive badge instead of select
+                          <span className="inline-flex items-center px-2 py-1 rounded border border-slate-600 bg-slate-800 text-slate-400 text-xs pointer-events-none select-none">
+                            {ROLE_LABELS[member.role] ?? member.role}
+                          </span>
+                        ) : (
+                          <select
+                            value={member.role}
+                            onChange={(e) =>
+                              handleRoleChange(member.username, e.target.value)
+                            }
+                            className="rounded px-2 py-1 border border-slate-600 bg-slate-900 text-slate-100"
+                          >
+                            {Object.entries(ROLE_LABELS).map(
+                              ([value, label]) => (
+                                <option key={value} value={value}>
+                                  {label}
+                                </option>
+                              )
+                            )}
+                          </select>
+                        )
                       ) : (
                         <span className="text-slate-200">
                           {ROLE_LABELS[member.role] ?? member.role}
@@ -743,23 +800,56 @@ function OrganizationsPage() {
                           {allTagSuggestions.length > 0 ? (
                             allTagSuggestions.map((tag) => {
                               const active = editTags.includes(tag);
+                              // Check if this user is coordinator of a project with this tag
+                              const editingMemberData = members.find(
+                                (m) => m.username === editingTagsUser
+                              );
+                              // Backend returns coordinator_username and coordinator_id as flat fields
+                              const coordinatedProjects = projects.filter(
+                                (p) =>
+                                  p.coordinator_username === editingTagsUser ||
+                                  p.coordinator_id === editingMemberData?.id
+                              );
+                              const isCoordinatorTag = coordinatedProjects.some(
+                                (p) =>
+                                  p.name === tag ||
+                                  (p.tags && p.tags.includes(tag))
+                              );
+                              const coordinatorProject =
+                                coordinatedProjects.find(
+                                  (p) =>
+                                    p.name === tag ||
+                                    (p.tags && p.tags.includes(tag))
+                                );
+                              const isProtected = active && isCoordinatorTag;
+
                               return (
                                 <button
                                   key={tag}
                                   type="button"
                                   onClick={() => toggleExistingTag(tag)}
+                                  disabled={isProtected}
                                   className={`px-3 py-1 rounded-full text-xs font-medium border transition ${
-                                    active
-                                      ? "bg-indigo-600 border-indigo-500 text-white shadow-sm hover:bg-indigo-500"
+                                    isProtected
+                                      ? "bg-indigo-600/70 border-indigo-500/70 text-indigo-200 cursor-not-allowed opacity-75"
+                                      : active
+                                      ? "bg-violet-600/90 border-violet-500 text-white shadow-sm hover:bg-violet-500"
                                       : "bg-slate-700/70 border-slate-600 text-slate-300 hover:bg-slate-600/70 hover:text-white"
                                   }`}
                                   title={
-                                    active
+                                    isProtected
+                                      ? `Koordynator projektu "${
+                                          coordinatorProject?.name || tag
+                                        }" - nie można usunąć`
+                                      : active
                                       ? "Usuń z wybranych"
                                       : "Dodaj do wybranych"
                                   }
                                 >
                                   {tag}
+                                  {isProtected && (
+                                    <span className="ml-1">🔒</span>
+                                  )}
                                 </button>
                               );
                             })
@@ -848,17 +938,18 @@ function OrganizationsPage() {
                               >
                                 Edytuj dane
                               </button>
-                              {member.user !== user?.id && (
-                                <button
-                                  type="button"
-                                  className="text-red-400 hover:underline"
-                                  onClick={() =>
-                                    askRemoveMember(member.username)
-                                  }
-                                >
-                                  Usuń członka
-                                </button>
-                              )}
+                              {member.user !== user?.id &&
+                                member.username !== user?.username && (
+                                  <button
+                                    type="button"
+                                    className="text-red-400 hover:underline"
+                                    onClick={() =>
+                                      askRemoveMember(member.username)
+                                    }
+                                  >
+                                    Usuń członka
+                                  </button>
+                                )}
                             </>
                           )}
                         </div>
@@ -895,7 +986,15 @@ function OrganizationsPage() {
                 <input
                   name="first_name"
                   value={memberEditForm.first_name}
-                  onChange={handleEditMemberFormChange}
+                  onChange={(e) => {
+                    const cleaned = sanitizeUsername(e.target.value).slice(
+                      0,
+                      50
+                    );
+                    handleEditMemberFormChange({
+                      target: { name: "first_name", value: cleaned },
+                    });
+                  }}
                   className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500"
                 />
               </label>
@@ -904,7 +1003,15 @@ function OrganizationsPage() {
                 <input
                   name="last_name"
                   value={memberEditForm.last_name}
-                  onChange={handleEditMemberFormChange}
+                  onChange={(e) => {
+                    const cleaned = sanitizeUsername(e.target.value).slice(
+                      0,
+                      50
+                    );
+                    handleEditMemberFormChange({
+                      target: { name: "last_name", value: cleaned },
+                    });
+                  }}
                   className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500"
                 />
               </label>
@@ -914,7 +1021,12 @@ function OrganizationsPage() {
                   name="email"
                   type="email"
                   value={memberEditForm.email}
-                  onChange={handleEditMemberFormChange}
+                  onChange={(e) => {
+                    const cleaned = sanitizeEmail(e.target.value).slice(0, 100);
+                    handleEditMemberFormChange({
+                      target: { name: "email", value: cleaned },
+                    });
+                  }}
                   className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500"
                 />
               </label>
@@ -957,10 +1069,13 @@ function OrganizationsPage() {
                     name="first_name"
                     value={memberForm.first_name}
                     onChange={(e) => {
-                      const val = e.target.value;
-                      if (val.length <= 50) {
-                        handleMemberFormChange(e);
-                      }
+                      const cleaned = sanitizeUsername(e.target.value).slice(
+                        0,
+                        50
+                      );
+                      handleMemberFormChange({
+                        target: { name: "first_name", value: cleaned },
+                      });
                     }}
                     maxLength={50}
                     className="w-full rounded px-3 py-2 pr-16 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
@@ -985,10 +1100,13 @@ function OrganizationsPage() {
                     name="last_name"
                     value={memberForm.last_name}
                     onChange={(e) => {
-                      const val = e.target.value;
-                      if (val.length <= 50) {
-                        handleMemberFormChange(e);
-                      }
+                      const cleaned = sanitizeUsername(e.target.value).slice(
+                        0,
+                        50
+                      );
+                      handleMemberFormChange({
+                        target: { name: "last_name", value: cleaned },
+                      });
                     }}
                     maxLength={50}
                     className="w-full rounded px-3 py-2 pr-16 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
@@ -1018,10 +1136,10 @@ function OrganizationsPage() {
                   type="email"
                   value={memberForm.email}
                   onChange={(e) => {
-                    const val = e.target.value;
-                    if (val.length <= 100) {
-                      handleMemberFormChange(e);
-                    }
+                    const cleaned = sanitizeEmail(e.target.value).slice(0, 100);
+                    handleMemberFormChange({
+                      target: { name: "email", value: cleaned },
+                    });
                   }}
                   maxLength={100}
                   className="w-full rounded px-3 py-2 pr-16 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
@@ -1050,10 +1168,13 @@ function OrganizationsPage() {
                     name="username"
                     value={memberForm.username}
                     onChange={(e) => {
-                      const val = e.target.value;
-                      if (val.length <= 50) {
-                        handleMemberFormChange(e);
-                      }
+                      const cleaned = sanitizeUsername(e.target.value).slice(
+                        0,
+                        50
+                      );
+                      handleMemberFormChange({
+                        target: { name: "username", value: cleaned },
+                      });
                     }}
                     placeholder="np. member-abc123"
                     maxLength={50}
@@ -1081,10 +1202,10 @@ function OrganizationsPage() {
                     type="text"
                     value={memberForm.password}
                     onChange={(e) => {
-                      const val = e.target.value;
-                      if (val.length <= 128) {
-                        handleMemberFormChange(e);
-                      }
+                      const cleaned = sanitizePassword(e.target.value, 128);
+                      handleMemberFormChange({
+                        target: { name: "password", value: cleaned },
+                      });
                     }}
                     placeholder="Wygeneruj bezpieczne hasło"
                     maxLength={128}

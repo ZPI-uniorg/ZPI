@@ -1,17 +1,20 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import useAuth from "../../../auth/useAuth.js";
-import { createProject, updateProject } from "../../../api/projects.js";
+import { useProjects } from "../../shared/components/ProjectsContext.jsx";
+import { createProject, updateProject, deleteProject } from "../../../api/projects.js";
 import {
   getOrganizationMembers,
   updateMemberPermissions,
 } from "../../../api/organizations.js";
 import Autocomplete from "../../shared/components/Autocomplete.jsx";
+import { sanitizeWithPolicy, EURO_ALNUM_PATTERN } from "../../shared/utils/sanitize.js";
 
 export default function ProjectEditPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, organization } = useAuth();
+  const { refreshProjects } = useProjects();
   const editingProject = location.state?.project || null;
 
   const [name, setName] = useState(editingProject?.name || "");
@@ -24,6 +27,7 @@ export default function ProjectEditPage() {
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const isEditing = Boolean(editingProject?.id);
 
   useEffect(() => {
@@ -195,6 +199,9 @@ export default function ProjectEditPage() {
         })
       );
 
+      // Refresh projects to update cache
+      await refreshProjects();
+
       // Navigate after successful persistence
       if (editingProject?.id) {
         navigate("/dashboard", {
@@ -217,9 +224,35 @@ export default function ProjectEditPage() {
   };
 
   const handleCancel = () => navigate("/dashboard");
-  const handleDelete = () => {
-    // TODO: wywołanie API usuwania projektu gdy będzie dostępne
-    navigate("/dashboard");
+  
+  const handleDelete = async () => {
+    if (!editingProject?.id || !organization?.id || !user?.username) return;
+    if (!window.confirm(`Czy na pewno chcesz usunąć projekt "${editingProject.name}"? Ta operacja jest nieodwracalna.`)) {
+      return;
+    }
+    
+    setDeleting(true);
+    setError(null);
+    
+    try {
+      await deleteProject(organization.id, editingProject.id, user.username);
+      // Refresh projects to remove deleted project from cache
+      await refreshProjects();
+      navigate("/dashboard", { 
+        state: { 
+          message: `Projekt "${editingProject.name}" został usunięty.`,
+          projectDeleted: true 
+        } 
+      });
+    } catch (err) {
+      setError(
+        err?.response?.data?.error ??
+        err?.response?.data?.detail ??
+        "Nie udało się usunąć projektu."
+      );
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -257,14 +290,16 @@ export default function ProjectEditPage() {
                 <input
                   className="border border-slate-600 w-full rounded-lg px-3 py-2 pr-16 bg-slate-800 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
                   value={name}
+                  maxLength={50}
                   onChange={(e) => {
-                    const val = e.target.value;
-                    if (val.length <= 50) {
-                      setName(val);
+                    const raw = e.target.value;
+                    // Apply generic sanitizer with explicit limit 50
+                    const cleaned = sanitizeWithPolicy(raw, { maxLength: 50, pattern: EURO_ALNUM_PATTERN });
+                    if (cleaned !== name || raw === cleaned) {
+                      setName(cleaned);
                     }
                   }}
                   placeholder="Nazwa projektu"
-                  maxLength={50}
                   required
                 />
                 <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium pointer-events-none ${
@@ -364,7 +399,7 @@ export default function ProjectEditPage() {
             type="submit"
             className="bg-gradient-to-r from-indigo-500 to-violet-500 text-white px-10 py-3 rounded-xl text-lg font-semibold shadow hover:brightness-110 transition w-full md:w-auto disabled:opacity-50"
             disabled={
-              !name.trim() || !coordinator || members.length === 0 || submitting
+              !name.trim() || !coordinator || members.length === 0 || submitting || deleting
             }
           >
             {isEditing ? "Zapisz zmiany" : "Stwórz projekt"}
@@ -372,10 +407,11 @@ export default function ProjectEditPage() {
           {isEditing && (
             <button
               type="button"
-              className="border border-red-500 px-8 py-3 rounded-xl text-lg text-red-400 bg-transparent hover:bg-red-500/10 transition w-full md:w-auto"
+              className="border border-red-500 px-8 py-3 rounded-xl text-lg text-red-400 bg-transparent hover:bg-red-500/10 transition w-full md:w-auto disabled:opacity-50"
               onClick={handleDelete}
+              disabled={deleting || submitting}
             >
-              Usuń projekt
+              {deleting ? "Usuwanie..." : "Usuń projekt"}
             </button>
           )}
         </div>

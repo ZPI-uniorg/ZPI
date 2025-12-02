@@ -7,6 +7,7 @@ import MessageList from "../../chats/MessageList.jsx";
 import { useChat } from "../../chats/useChat.js";
 import useAuth from "../../../auth/useAuth.js";
 import { useProjects } from "../../shared/components/ProjectsContext.jsx";
+import { sanitizeChatMessage } from "../../shared/utils/sanitize.js";
 
 export default function ChatPage() {
   const { user } = useAuth() || {};
@@ -91,7 +92,11 @@ export default function ChatPage() {
                     rows={2}
                     placeholder={`Napisz wiadomość`}
                     value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      const cleaned = sanitizeChatMessage(raw, 1000);
+                      setDraft(cleaned);
+                    }}
                     maxLength="1000"
                     onKeyDown={(e) => {
                       if (
