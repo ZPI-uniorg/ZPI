@@ -115,11 +115,7 @@ export default function ProjectEditPage() {
       (m.first_name + " " + m.last_name + " " + m.username + " " + m.email)
         .toLowerCase()
         .includes(memberInput.toLowerCase())
-    )
-    .filter((m) => {
-      if (!editingProject?.id || !projectTagName) return true;
-      return (m.permissions || []).includes(projectTagName);
-    });
+    );
 
   const memberOptions = (
     filteredMembers.length > 0
