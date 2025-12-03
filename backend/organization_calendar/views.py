@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -79,15 +80,13 @@ def get_user_events(request, organization_id, username):
         organization = Organization.objects.get(id=organization_id)
         user_permissions = membership.permissions.all()
 
-        # Apply date filtering if provided
         all_events = Event.objects.filter(organization=organization)
+
         start_date = request.GET.get("start_date")
         end_date = request.GET.get("end_date")
         if start_date:
-            # Events that end on or after the start date
             all_events = all_events.filter(end_time__date__gte=start_date)
         if end_date:
-            # Events that start on or before the end date
             all_events = all_events.filter(start_time__date__lte=end_date)
 
         events = []
@@ -274,34 +273,27 @@ def create_event(request, organization_id):
                                 status=403,
                             )
 
-                    # Try to find existing combined tag; create if it doesn't exist
-                    combinedTag = Tag.objects.filter(
-                        name=permission, organization__id=organization_id, combined=True
-                    ).first()
 
-                    if combinedTag is None:
-                        print("creating new combined tag")
-                        print(
-                            f"DEBUG: Creating new combined tag '{permission}' from {temp}"
-                        )
-
-                        new_combined_tag = Tag.objects.create(
-                            name=permission,
-                            organization=Organization.objects.get(id=organization_id),
-                            combined=True,
-                        )
-
-                        for tag_name in temp:
-                            basic_tag = Tag.objects.get(
-                                name=tag_name, organization__id=organization_id
+                    if not Tag.objects.filter(name=permission, organization__id=organization_id, combined=True).exists():
+                        with transaction.atomic():
+                            new_combined_tag = Tag.objects.create(
+                                name=permission,
+                                organization=Organization.objects.get(id=organization_id),
+                                combined=True,
                             )
-                            CombinedTag.objects.create(
-                                combined_tag_id=new_combined_tag, basic_tag_id=basic_tag
-                            )
+
+                            for tag_name in temp:
+                                basic_tag = Tag.objects.get(
+                                    name=tag_name, organization__id=organization_id
+                                )
+                                CombinedTag.objects.create(
+                                    combined_tag_id=new_combined_tag, basic_tag_id=basic_tag
+                                )
 
                         permissions_ids.append(new_combined_tag.id)
                     else:
-                        permissions_ids.append(combinedTag.id)
+                        combined_tag = Tag.objects.get(name=permission, organization__id=organization_id)
+                        permissions_ids.append(combined_tag.id)
 
         if not all([name, start_time, end_time]):
             return JsonResponse({"error": "Missing required fields"}, status=400)
@@ -346,7 +338,6 @@ def delete_event(request, organization_id, event_id):
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User not authenticated"}, status=401)
 
-        data = json.loads(request.body)
         username = request.user.username
         membership = Membership.objects.get(
             user__username=username, organization__id=organization_id
@@ -397,9 +388,6 @@ def update_event(request, organization_id, event_id):
         end_time = data.get("end_time")
         permissions_str = data.get("permissions")
 
-        print(f"DEBUG update_event: permissions_str = '{permissions_str}'")
-        print(f"DEBUG update_event: data = {data}")
-
         if start_time >= end_time:
             return JsonResponse({"error": "Nieprawidłowy zakres czasu"}, status=400)
 
@@ -437,36 +425,29 @@ def update_event(request, organization_id, event_id):
                                 status=403,
                             )
 
-                    # Try to find existing combined tag; create if it doesn't exist
-                    combinedTag = Tag.objects.filter(
-                        name=permission, organization__id=organization_id, combined=True
-                    ).first()
-
-                    if combinedTag is None:
-                        new_combined_tag = Tag.objects.create(
-                            name=permission,
-                            organization=Organization.objects.get(id=organization_id),
-                            combined=True,
-                        )
-
-                        for tag_name in temp:
-                            basic_tag = Tag.objects.get(
-                                name=tag_name, organization__id=organization_id
+                    if not Tag.objects.filter(name=permission, organization__id=organization_id, combined=True).exists():
+                        with transaction.atomic():
+                            new_combined_tag = Tag.objects.create(
+                                name=permission,
+                                organization=Organization.objects.get(id=organization_id),
+                                combined=True,
                             )
-                            CombinedTag.objects.create(
-                                combined_tag_id=new_combined_tag, basic_tag_id=basic_tag
-                            )
-                        permissions_ids.append(new_combined_tag.id)
+
+                            for tag_name in temp:
+                                basic_tag = Tag.objects.get(
+                                    name=tag_name, organization__id=organization_id
+                                )
+                                CombinedTag.objects.create(
+                                    combined_tag_id=new_combined_tag, basic_tag_id=basic_tag
+                                )
+                            permissions_ids.append(new_combined_tag.id)
                     else:
-                        permissions_ids.append(combinedTag.id)
+                        combined_tag = Tag.objects.get(name=permission, organization__id=organization_id)
+                        permissions_ids.append(combined_tag.id)
 
-            print(f"DEBUG: About to set permissions_ids = {permissions_ids}")
             tags_to_set = Tag.objects.filter(id__in=permissions_ids)
-            print(f"DEBUG: Tags to set = {list(tags_to_set.values_list('id', 'name'))}")
             event.permissions.set(tags_to_set)
-            print(
-                f"DEBUG: After set, event.permissions.all() = {list(event.permissions.values_list('id', 'name'))}"
-            )
+
         if name:
             event.name = name
         if description:
@@ -478,9 +459,6 @@ def update_event(request, organization_id, event_id):
 
         event.save()
 
-        print(
-            f"DEBUG: After save, event.permissions.all() = {list(event.permissions.values_list('id', 'name'))}"
-        )
 
         event_data = {
             "event_id": event.event_id,
@@ -492,9 +470,6 @@ def update_event(request, organization_id, event_id):
             "permissions": list(event.permissions.values_list("name", flat=True)),
         }
 
-        print(
-            f"DEBUG: Returning event_data with permissions = {event_data['permissions']}"
-        )
 
         return JsonResponse(event_data, status=200)
     except Event.DoesNotExist:
