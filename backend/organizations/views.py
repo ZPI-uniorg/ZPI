@@ -290,18 +290,19 @@ def invite_member(request, organization_id):
         if User.objects.filter(identifier=identifier).exists():
             return JsonResponse({"error": "User already exists"}, status=400)
 
-        invitee = User.objects.create_user(
-            username=invitee_username,
-            email=invitee_email,
-            password=generated_password,
-            first_name=first_name,
-            last_name=last_name,
-            identifier=identifier,
-        )
+        with transaction.atomic():
+            invitee = User.objects.create_user(
+                username=invitee_username,
+                email=invitee_email,
+                password=generated_password,
+                first_name=first_name,
+                last_name=last_name,
+                identifier=identifier,
+            )
 
-        Membership.objects.create(
-            organization=organization, user=invitee, role=role, invited_by=invited_by
-        )
+            Membership.objects.create(
+                organization=organization, user=invitee, role=role, invited_by=invited_by
+            )
 
         send_new_user_credentials_email(
             recipient_email=invitee_email,
@@ -347,7 +348,9 @@ def get_organization_users(request, organization_id):
             organization__id=organization_id, user__username=username
         )
 
-        # All organization members can see the user list
+        if membership.role not in ["admin", "coordinator"]:
+            return JsonResponse({"error": "Permission denied"}, status=403)
+
         memberships = Membership.objects.filter(organization__id=organization_id)
         users = [
             {
@@ -374,13 +377,6 @@ def get_organization_users(request, organization_id):
 @require_http_methods(["GET"])
 @csrf_exempt
 def get_project_members(request, organization_id, project_id):
-    """Return members of the given project within an organization.
-
-    Rules based on existing endpoints:
-    - Require authenticated user and membership in org.
-    - Allow if requester is admin/coordinator, or a member who has the project's tag permission.
-    - Members of the project are org memberships that include the project's tag.
-    """
     try:
         if not request.user.is_authenticated:
             return JsonResponse({"error": "User is not authenticated"}, status=401)
@@ -393,16 +389,15 @@ def get_project_members(request, organization_id, project_id):
         project = Project.objects.get(id=project_id, organization__id=organization_id)
         project_tag = project.tag
 
-        # Permission check: members must have the project tag; admins/coordinators are allowed
         if (
-            requester_membership.role == "member"
+            requester_membership.role != "admin"
             and not requester_membership.permissions.filter(id=project_tag.id).exists()
         ):
             return JsonResponse({"error": "Permission denied"}, status=403)
 
         memberships = Membership.objects.filter(
             organization__id=organization_id, permissions__id=project_tag.id
-        ).distinct()
+        )
 
         users = [
             {
@@ -507,9 +502,6 @@ def update_member_profile(request, organization_id, username):
             return JsonResponse({"error": "Invalid JSON payload"}, status=400)
 
         admin_username = request.user.username
-
-        if not admin_username:
-            return JsonResponse({"error": "Missing field: admin_username"}, status=400)
 
         admin_membership = Membership.objects.get(
             organization__id=organization_id,
@@ -844,21 +836,22 @@ def create_project(request, organization_id):
                 {"error": "Selected user must have coordinator role"}, status=400
             )
 
-        project = Project.objects.create(
-            title=name,
-            description=description,
-            start_dte=start_dte,
-            end_dte=end_dte,
-            organization=organization,
-            tag=tag,
-            coordinator=coordinator_membership.user if coordinator_membership else None,
-        )
+        with transaction.atomic():
+            project = Project.objects.create(
+                title=name,
+                description=description,
+                start_dte=start_dte,
+                end_dte=end_dte,
+                organization=organization,
+                tag=tag,
+                coordinator=coordinator_membership.user if coordinator_membership else None,
+            )
 
-        KanbanBoard.objects.create(
-            project=project,
-            title=f"{project.title} Kanban Board",
-            organization=organization,
-        )
+            KanbanBoard.objects.create(
+                project=project,
+                title=f"{project.title} Kanban Board",
+                organization=organization,
+            )
 
         if coordinator_membership:
             coordinator_membership.permissions.add(tag)
@@ -1047,7 +1040,6 @@ def delete_project(request, organization_id, project_id):
             organization__id=organization_id, user__username=username
         )
 
-        # Only admin or project coordinator can delete project
         project = Project.objects.get(id=project_id, organization__id=organization_id)
         
         if membership.role != "admin" and (
@@ -1055,13 +1047,8 @@ def delete_project(request, organization_id, project_id):
         ):
             return JsonResponse({"error": "Permission denied"}, status=403)
 
-        # Store tag reference before deleting project
         project_tag = project.tag
-        
-        # Delete project (cascade will delete related KanbanBoard)
         project.delete()
-        
-        # Delete the associated tag
         project_tag.delete()
 
         return JsonResponse({"message": "Project deleted successfully"}, status=200)

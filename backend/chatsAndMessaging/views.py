@@ -3,7 +3,7 @@ import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 
 from azure.messaging.webpubsubservice import WebPubSubServiceClient
 
@@ -299,10 +299,7 @@ def create_chat(request, organization_id):
 
         # Parse JSON body if content-type is application/json
         if request.content_type and 'application/json' in request.content_type:
-            try:
-                data = json.loads(request.body)
-            except json.JSONDecodeError:
-                return JsonResponse({"error": "Invalid JSON"}, status=400)
+            data = json.loads(request.body)
         else:
             data = request.POST
 
@@ -316,10 +313,7 @@ def create_chat(request, organization_id):
         if not name or not organization_id:
             return JsonResponse({"error": "name and organization required"}, status=400)
 
-        try:
-            organization = Organization.objects.get(id=organization_id)
-        except Organization.DoesNotExist:
-            return JsonResponse({"error": "Organization not found"}, status=404)
+        organization = Organization.objects.get(id=organization_id)
 
         permissions_ids = []
 
@@ -342,25 +336,24 @@ def create_chat(request, organization_id):
                         if not allowed_permissions.filter(name=tag_name).exists():
                             return JsonResponse({"error": "Unauthorized permission assignment"}, status=403)
 
-                    combinedTag = Tag.objects.get(name=permission, organization__id=organization_id, combined=True)
-
-                    if combinedTag:
-                        permissions_ids.append(combinedTag.id)
-                    else:
-                        new_combined_tag = Tag.objects.create(
-                            name=permission,
-                            organization=Organization.objects.get(id=organization_id),
-                            combined=True
-                        )
-
-                        for tag_name in temp:
-                            basic_tag = Tag.objects.get(name=tag_name, organization__id=organization_id)
-                            CombinedTag.objects.create(
-                                combined_tag_id=new_combined_tag,
-                                basic_tag_id=basic_tag
+                    if not Tag.objects.filter(name=permission, organization__id=organization_id, combined=True).exists():
+                        with transaction.atomic():
+                            new_combined_tag = Tag.objects.create(
+                                name=permission,
+                                organization=organization,
+                                combined=True
                             )
 
-                        permissions_ids.append(new_combined_tag.id)
+                            for tag_name in temp:
+                                basic_tag = Tag.objects.get(name=tag_name, organization__id=organization_id)
+                                CombinedTag.objects.create(
+                                    combined_tag=new_combined_tag,
+                                    basic_tag=basic_tag
+                                )
+                            permissions_ids.append(new_combined_tag.id)
+                    else:
+                        existing_combined_tag = Tag.objects.get(name=permission, organization__id=organization_id, combined=True)
+                        permissions_ids.append(existing_combined_tag.id)
 
         chat = Chat.objects.create(
             name=name,
@@ -370,9 +363,12 @@ def create_chat(request, organization_id):
         chat.permissions.set(Tag.objects.filter(id__in=permissions_ids))
         chat.save()
 
-        # Response payload
         serializer = ChatSerializer(chat)
         return JsonResponse(serializer.data, status=201)
 
+    except Organization.DoesNotExist:
+        return JsonResponse({"error": "Organization not found"}, status=404)
+    except Tag.DoesNotExist:
+        return JsonResponse({"error": "Tag not found"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
