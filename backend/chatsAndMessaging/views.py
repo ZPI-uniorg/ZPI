@@ -347,8 +347,8 @@ def create_chat(request, organization_id):
                             for tag_name in temp:
                                 basic_tag = Tag.objects.get(name=tag_name, organization__id=organization_id)
                                 CombinedTag.objects.create(
-                                    combined_tag=new_combined_tag,
-                                    basic_tag=basic_tag
+                                    combined_tag_id=new_combined_tag,
+                                    basic_tag_id=basic_tag
                                 )
                             permissions_ids.append(new_combined_tag.id)
                     else:
