@@ -77,10 +77,6 @@ def get_messages(request, organization_id):
         limit = int(request.GET.get("limit", 10))
         offset = int(request.GET.get("offset", 0))
 
-        if not chat_id and not channel_name:
-            return JsonResponse({"error": "chat_id or channel required"}, status=400)
-
-        # Try to find by chat_id first (preferred), then by channel name
         if not chat_id:
            return JsonResponse({"error": "chat_id required"}, status=400)
 
