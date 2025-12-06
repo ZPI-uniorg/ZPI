@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSearchParams } from "react-router-dom";
 import { CHATS } from "../../../api/fakeData.js"; // retained for compatibility
@@ -6,17 +6,42 @@ import apiClient from "../../../api/client.js";
 import useAuth from "../../../auth/useAuth.js";
 import TagCombinationsPicker from "../../shared/components/TagCombinationsPicker.jsx";
 import { useProjects } from "../../shared/components/ProjectsContext.jsx";
+import { getTags } from "../../../api/organizations.js";
 
 export default function ChatCreatePage() {
   const navigate = useNavigate();
-  const { organization } = useAuth();
+  const { organization, user } = useAuth();
   const [searchParams] = useSearchParams();
   const organizationId = searchParams.get("org") || null;
   const { projects, refreshChats } = useProjects();
   const [title, setTitle] = useState("");
   const [combinations, setCombinations] = useState([]);
+  const [allTagsFromOrg, setAllTagsFromOrg] = useState([]);
 
-  const allSuggestions = projects.map((p) => p.name).filter(Boolean);
+  // Fetch organization tags and combine with projects
+  useEffect(() => {
+    const finalOrgId = organizationId || organization?.id;
+    if (!finalOrgId || !user?.username) return;
+    
+    getTags(finalOrgId, user.username)
+      .then((data) => {
+        const tagNames = (data || [])
+          .map((t) => t.name)
+          .filter(Boolean);
+        setAllTagsFromOrg(tagNames);
+      })
+      .catch((err) => {
+        console.error("Failed to load organization tags:", err);
+        setAllTagsFromOrg([]);
+      });
+  }, [organizationId, organization?.id, user?.username]);
+
+  const allSuggestions = Array.from(
+    new Set([
+      ...projects.map((p) => p.name).filter(Boolean),
+      ...allTagsFromOrg,
+    ])
+  ).sort();
 
   const handleSubmit = (e) => {
     e.preventDefault();

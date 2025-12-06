@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { TAGS } from "../../../api/fakeData.js";
 import useAuth from "../../../auth/useAuth.js";
 import { useProjects } from "../../shared/components/ProjectsContext.jsx";
+import { getTags } from "../../../api/organizations.js";
 import { Edit2, Eye } from "lucide-react";
 import TagCombinationsPicker from "../../shared/components/TagCombinationsPicker.jsx";
 import { createEvent, updateEvent, deleteEvent } from "../../../api/events.js";
@@ -140,6 +140,24 @@ export default function EventEditPage() {
   const [isEditing, setIsEditing] = useState(!editingEvent);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [allTagsFromOrg, setAllTagsFromOrg] = useState([]);
+
+  // Fetch organization tags
+  useEffect(() => {
+    if (!organization?.id || !user?.username) return;
+    
+    getTags(organization.id, user.username)
+      .then((data) => {
+        const tagNames = (data || [])
+          .map((t) => t.name)
+          .filter(Boolean);
+        setAllTagsFromOrg(tagNames);
+      })
+      .catch((err) => {
+        console.error("Failed to load organization tags:", err);
+        setAllTagsFromOrg([]);
+      });
+  }, [organization?.id, user?.username]);
 
   const [combinations, setCombinations] = useState(() => {
     if (editingEvent?.tagCombinations?.length)
@@ -155,7 +173,7 @@ export default function EventEditPage() {
   });
 
   const allSuggestions = Array.from(
-    new Set([...projects.map((p) => p.name).filter(Boolean), ...TAGS])
+    new Set([...projects.map((p) => p.name).filter(Boolean), ...allTagsFromOrg])
   );
 
   const handleSubmit = async (e) => {
@@ -194,7 +212,7 @@ export default function EventEditPage() {
     setError(null);
     try {
       if (editingEvent?.event_id || editingEvent?.id) {
-        const updated = await updateEvent(
+        await updateEvent(
           organization.id,
           editingEvent.event_id || editingEvent.id,
           user.username,
@@ -209,11 +227,8 @@ export default function EventEditPage() {
             isAllDay,
           }
         );
-        (updated.permissions || []).forEach((tag) => {
-          if (!TAGS.includes(tag)) TAGS.push(tag);
-        });
       } else {
-        const created = await createEvent(organization.id, user.username, {
+        await createEvent(organization.id, user.username, {
           name: title.trim(),
           description: description.trim(),
           date,
@@ -222,9 +237,6 @@ export default function EventEditPage() {
           end_time: submitEndTime,
           combinations,
           isAllDay,
-        });
-        (created.permissions || []).forEach((tag) => {
-          if (!TAGS.includes(tag)) TAGS.push(tag);
         });
       }
       navigate("/calendar");

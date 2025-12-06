@@ -132,9 +132,9 @@ export default function FiltersPanel({
           filtersOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex items-center justify-between px-5 py-4">
+        <div className="flex items-center justify-between px-5 pt-3 gap-3">
           <div className="flex items-center gap-3">
-            <h2 className="m-0 text-base font-semibold text-slate-200">
+            <h2 className="m-0 text-base font-semibold text-slate-200 whitespace-nowrap">
               Filtry
             </h2>
             <div className="inline-flex items-center gap-2 rounded-full bg-slate-800/60 p-1">
@@ -147,7 +147,7 @@ export default function FiltersPanel({
                     : "text-slate-300 hover:text-white hover:bg-slate-700/60"
                 }`}
               >
-                OR
+                DOWOLNY
               </button>
               <button
                 type="button"
@@ -158,7 +158,7 @@ export default function FiltersPanel({
                     : "text-slate-300 hover:text-white hover:bg-slate-700/60"
                 }`}
               >
-                AND
+                KAŻDY WYBRANY
               </button>
             </div>
           </div>
@@ -173,7 +173,7 @@ export default function FiltersPanel({
 
         <div
           ref={tagListRootRef}
-          className="flex h-[calc(100%-64px-72px)] flex-col overflow-hidden px-5 py-4"
+          className="flex h-[calc(100%-60px-72px)] flex-col overflow-hidden px-5 py-3"
         >
           {tagsLoading || projectsLoading ? (
             <div className="flex flex-col gap-3">

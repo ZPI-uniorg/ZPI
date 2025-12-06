@@ -252,11 +252,11 @@ export default function CalendarWeekView({ weekDays, events }) {
                 return (
                   <div
                     key={ev.id}
-                    className={`text-[9px] px-2 py-1 ${roundedClass} cursor-pointer hover:shadow-lg transition flex items-center gap-1 overflow-hidden bg-indigo-600 text-white border border-white/15 border-l-4 border-indigo-800 shadow-md`}
+                    className={`text-sm px-2 py-1 ${roundedClass} cursor-pointer hover:shadow-lg transition flex flex-col gap-1 overflow-hidden bg-indigo-600 text-white border border-white/15 border-l-4 border-indigo-800 shadow-md`}
                     title={`${ev.title} - ${ev.start_time} - ${ev.end_time}`}
                     onClick={(e) => handleEventClick(e, ev)}
                   >
-                    <span className="truncate flex-shrink">
+                    <span className="truncate flex-shrink font-semibold">
                       {ev.start_time === "00:00" && ev.end_time === "00:00"
                         ? ev.title
                         : `${ev.start_time}-${ev.end_time} ${ev.title}`}
@@ -268,27 +268,27 @@ export default function CalendarWeekView({ weekDays, events }) {
                           combo.join(" + ")
                         ),
                       ];
-                      const maxVisible = 1;
+                      const maxVisible = 2;
                       const visible = allTags.slice(0, maxVisible);
                       const hiddenCount = allTags.length - maxVisible;
 
                       return (
-                        <>
+                        <div className="flex items-center gap-1 flex-wrap">
                           {visible.map((tag, idx) => (
                             <span
                               key={idx}
-                              className="bg-fuchsia-700/80 px-1 rounded text-[7px] truncate max-w-[50px] flex-shrink-0"
+                              className="bg-fuchsia-700/80 px-1 rounded text-xs truncate max-w-[120px] flex-shrink-0"
                               title={tag}
                             >
                               {tag}
                             </span>
                           ))}
                           {hiddenCount > 0 && (
-                            <span className="bg-fuchsia-700/80 px-1 rounded text-[7px] flex-shrink-0">
+                            <span className="bg-fuchsia-700/80 px-1 rounded text-xs flex-shrink-0">
                               +{hiddenCount}
                             </span>
                           )}
-                        </>
+                        </div>
                       );
                     })()}
                   </div>
@@ -364,7 +364,7 @@ export default function CalendarWeekView({ weekDays, events }) {
                           style={{
                             top: position.top,
                             height: position.height,
-                            minHeight: "24px",
+                            minHeight: "36px",
                             left: leftOffset,
                             width: actualWidth,
                             zIndex: zIndex,
@@ -372,51 +372,49 @@ export default function CalendarWeekView({ weekDays, events }) {
                           title={`${ev.title} - ${ev.start_time} - ${ev.end_time}`}
                           onClick={(e) => handleEventClick(e, ev)}
                         >
-                          <div className="font-semibold text-[9px] flex items-center gap-0.5 overflow-hidden">
-                            <span className="truncate flex-shrink">
-                              {ev.start_time}-{ev.end_time} {ev.title}
-                            </span>
-                            {columnInfo.totalColumns === 1 &&
-                              (() => {
-                                const allTags = [
-                                  ...ev.tags.map((tag) => ({
-                                    type: "single",
-                                    value: tag,
-                                  })),
-                                  ...(ev.tagCombinations || []).map(
-                                    (combo) => ({ type: "combo", value: combo })
-                                  ),
-                                ];
-                                const maxVisible = 2;
-                                const visible = allTags.slice(0, maxVisible);
-                                const hiddenCount = allTags.length - maxVisible;
-
-                                return (
-                                  <>
-                                    {visible.map((tag, idx) => (
-                                      <span
-                                        key={idx}
-                                        className="bg-fuchsia-700/80 px-1 rounded text-[7px] truncate max-w-[50px] flex-shrink-0"
-                                        title={
-                                          tag.type === "combo"
-                                            ? tag.value.join(" + ")
-                                            : tag.value
-                                        }
-                                      >
-                                        {tag.type === "combo"
-                                          ? tag.value.join(" + ")
-                                          : tag.value}
-                                      </span>
-                                    ))}
-                                    {hiddenCount > 0 && (
-                                      <span className="bg-fuchsia-700/80 px-1 rounded text-[7px] flex-shrink-0">
-                                        +{hiddenCount}
-                                      </span>
-                                    )}
-                                  </>
-                                );
-                              })()}
+                          <div className="font-semibold text-sm truncate">
+                            {ev.start_time}-{ev.end_time} {ev.title}
                           </div>
+                          {columnInfo.totalColumns === 1 &&
+                            (() => {
+                              const allTags = [
+                                ...ev.tags.map((tag) => ({
+                                  type: "single",
+                                  value: tag,
+                                })),
+                                ...(ev.tagCombinations || []).map(
+                                  (combo) => ({ type: "combo", value: combo })
+                                ),
+                              ];
+                              const maxVisible = 2;
+                              const visible = allTags.slice(0, maxVisible);
+                              const hiddenCount = allTags.length - maxVisible;
+
+                              return (
+                                <div className="flex items-center gap-1 flex-wrap mt-1">
+                                  {visible.map((tag, idx) => (
+                                    <span
+                                      key={idx}
+                                      className="bg-fuchsia-700/80 px-1 rounded text-xs truncate max-w-[120px] flex-shrink-0"
+                                      title={
+                                        tag.type === "combo"
+                                          ? tag.value.join(" + ")
+                                          : tag.value
+                                      }
+                                    >
+                                      {tag.type === "combo"
+                                        ? tag.value.join(" + ")
+                                        : tag.value}
+                                    </span>
+                                  ))}
+                                  {hiddenCount > 0 && (
+                                    <span className="bg-fuchsia-700/80 px-1 rounded text-xs flex-shrink-0">
+                                      +{hiddenCount}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })()}
                         </div>
                       );
                     })}

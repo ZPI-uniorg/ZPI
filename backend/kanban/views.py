@@ -150,7 +150,6 @@ def add_column(request, organization_id, board_id):
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
 
-        # Check if user is admin or coordinator of this project
         is_admin = membership.role == "admin"
         is_coordinator = (
             board.project.coordinator and board.project.coordinator.username == username
@@ -209,7 +208,6 @@ def update_column_position(request, organization_id, board_id, column_id):
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
 
-        # Check if user is admin or coordinator of this project
         is_admin = membership.role == "admin"
         is_coordinator = (
             board.project.coordinator and board.project.coordinator.username == username
@@ -264,7 +262,6 @@ def delete_column(request, organization_id, board_id, column_id):
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
 
-        # Check if user is admin or coordinator of this project
         is_admin = membership.role == "admin"
         is_coordinator = (
             board.project.coordinator and board.project.coordinator.username == username
@@ -348,7 +345,6 @@ def add_task(request, organization_id, board_id, column_id):
         organization = Organization.objects.get(id=organization_id)
         board = KanbanBoard.objects.get(board_id=board_id, organization=organization)
 
-        # Check if user is admin, or coordinator of this project, or has project permissions
         is_admin = membership.role == "admin"
         is_coordinator = (
             board.project.coordinator and board.project.coordinator.username == username

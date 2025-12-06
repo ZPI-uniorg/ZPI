@@ -47,7 +47,30 @@ function getEventsForDay(events, year, month, day) {
   const dayStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(
     day
   ).padStart(2, "0")}`;
-  return events.filter((ev) => ev.date === dayStr);
+  return events.filter((ev) => {
+    const startDate = ev.date;
+    if (!startDate) return false;
+    const endDate = ev.endDate || startDate;
+
+    // Normalize times to support all-day and multi-day events
+    const normalizedStart = ev.start_time || "00:00";
+    const normalizedEnd = ev.end_time || "00:00";
+    const isAllDay =
+      (normalizedStart === "00:00" || normalizedStart === "") &&
+      (normalizedEnd === "00:00" || normalizedEnd === "23:59" || normalizedEnd === "");
+
+    // If it is a single-day all-day event, only show on the start date
+    if (
+      isAllDay &&
+      new Date(endDate).getTime() - new Date(startDate).getTime() ===
+        24 * 60 * 60 * 1000
+    ) {
+      return dayStr === startDate;
+    }
+
+    // Otherwise show event on every day it spans
+    return dayStr >= startDate && dayStr <= endDate;
+  });
 }
 
 export default function MiniCalendar() {
@@ -116,20 +139,37 @@ export default function MiniCalendar() {
       if (!seenIds.has(ev.event_id)) {
         seenIds.add(ev.event_id);
         const rawStart = ev.start_time ? String(ev.start_time) : "";
+        const rawEnd = ev.end_time ? String(ev.end_time) : "";
+
         const splitStart = rawStart.includes("T")
           ? rawStart.replace("T", " ").split(" ")
           : rawStart.split(" ");
-        const datePart = splitStart[0] || "";
+        const splitEnd = rawEnd.includes("T")
+          ? rawEnd.replace("T", " ").split(" ")
+          : rawEnd.split(" ");
+
+        const startDatePart = splitStart[0] || "";
+        const endDatePart = splitEnd[0] || startDatePart;
+
         const startTimePart = (splitStart[1] || "")
           .replace("+00:00", "")
           .slice(0, 5);
+        const endTimePart = (splitEnd[1] || "")
+          .replace("+00:00", "")
+          .slice(0, 5);
+
+        const isAllDay =
+          (startTimePart === "00:00" || startTimePart === "") &&
+          (endTimePart === "23:59" || endTimePart === "00:00" || endTimePart === "");
 
         uniqueEvents.push({
           id: ev.event_id,
           event_id: ev.event_id,
           title: ev.name,
-          date: datePart,
-          start_time: startTimePart,
+          date: startDatePart,
+          endDate: endDatePart,
+          start_time: isAllDay ? "" : startTimePart,
+          end_time: isAllDay ? "" : endTimePart,
         });
       }
     });
@@ -262,7 +302,7 @@ export default function MiniCalendar() {
                     {dayEvents.slice(0, 2).map((ev) => (
                       <div
                         key={ev.id}
-                        className="w-full truncate text-[9px] bg-indigo-600/80 text-white px-0.5 rounded leading-tight h-[12px] flex-shrink-0 hover:bg-indigo-700 transition"
+                        className="w-full truncate text-xs bg-indigo-600/80 text-white px-0.5 rounded leading-tight h-[14px] flex-shrink-0 hover:bg-indigo-700 transition"
                         title={ev.title}
                         onClick={(e) => handleEventClick(e, ev)}
                       >
@@ -270,7 +310,7 @@ export default function MiniCalendar() {
                       </div>
                     ))}
                     {dayEvents.length > 2 && (
-                      <div className="text-[8px] text-slate-400 px-0.5 h-[10px] flex-shrink-0">
+                      <div className="text-[9px] text-slate-400 px-0.5 h-[10px] flex-shrink-0">
                         +{dayEvents.length - 2}
                       </div>
                     )}
