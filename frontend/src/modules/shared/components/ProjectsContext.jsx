@@ -165,6 +165,12 @@ export function ProjectsProvider({
   const loadEvents = useCallback(
     async (userMember, projects, startDate = null, endDate = null) => {
       if (!userMember || !projects || projects.length === 0) {
+        setState((s) => ({
+          ...s,
+          eventsLoading: false,
+          allEvents: [],
+          eventsByProject: {},
+        }));
         return;
       }
 
@@ -309,7 +315,7 @@ export function ProjectsProvider({
 
   // Baseline events fetch for the current month once user and projects are ready
   useEffect(() => {
-    if (!state.userMember || state.projects.length === 0) return;
+    if (!state.userMember || !state.projectsInitialized) return;
     const today = new Date();
     const year = today.getFullYear();
     const month = today.getMonth();
@@ -319,7 +325,7 @@ export function ProjectsProvider({
       lastDay.getDate()
     ).padStart(2, "0")}`;
     loadEvents(state.userMember, state.projects, startDate, endDate);
-  }, [state.userMember, state.projects, loadEvents]);
+  }, [state.userMember, state.projectsInitialized, loadEvents]);
 
   const filterByProjects = useCallback((items, selectedProjectIds) => {
     if (!Array.isArray(items)) return [];
