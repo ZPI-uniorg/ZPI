@@ -164,7 +164,7 @@ export function ProjectsProvider({
 
   const loadEvents = useCallback(
     async (userMember, projects, startDate = null, endDate = null) => {
-      if (!userMember || !projects || projects.length === 0) {
+      if (!userMember) {
         setState((s) => ({
           ...s,
           eventsLoading: false,
@@ -211,23 +211,24 @@ export function ProjectsProvider({
             }
           });
 
-          // If event has no tags, add to all projects
-          if (allEventTags.size === 0) {
-            projects.forEach((p) => {
+          // Try to match event to projects
+          let addedToProject = false;
+          projects.forEach((p) => {
+            const tags = p.tags || p.permissions || [];
+            if (
+              tags.some((t) => allEventTags.has(t)) ||
+              (p.name && allEventTags.has(p.name))
+            ) {
               grouped[p.id] = grouped[p.id] || [];
               grouped[p.id].push(ev);
-            });
-          } else {
-            projects.forEach((p) => {
-              const tags = p.tags || p.permissions || [];
-              if (
-                tags.some((t) => allEventTags.has(t)) ||
-                (p.name && allEventTags.has(p.name))
-              ) {
-                grouped[p.id] = grouped[p.id] || [];
-                grouped[p.id].push(ev);
-              }
-            });
+              addedToProject = true;
+            }
+          });
+
+          // If event didn't match any project, add to "__unassigned__" (visible in all views)
+          if (!addedToProject) {
+            grouped["__unassigned__"] = grouped["__unassigned__"] || [];
+            grouped["__unassigned__"].push(ev);
           }
         });
 
@@ -385,6 +386,13 @@ export function ProjectsProvider({
         : [];
     entries.forEach(([pid, events]) => {
       if (!Array.isArray(events)) return;
+      
+      // Always show unassigned events (project-less events with no tags)
+      if (pid === "__unassigned__") {
+        result[pid] = events;
+        return;
+      }
+      
       result[pid] = !sel.length
         ? events
         : events.filter((ev) => {
