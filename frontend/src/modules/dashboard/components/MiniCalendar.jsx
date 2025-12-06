@@ -57,7 +57,9 @@ function getEventsForDay(events, year, month, day) {
     const normalizedEnd = ev.end_time || "00:00";
     const isAllDay =
       (normalizedStart === "00:00" || normalizedStart === "") &&
-      (normalizedEnd === "00:00" || normalizedEnd === "23:59" || normalizedEnd === "");
+      (normalizedEnd === "00:00" ||
+        normalizedEnd === "23:59" ||
+        normalizedEnd === "");
 
     // If it is a single-day all-day event, only show on the start date
     if (
@@ -92,6 +94,8 @@ export default function MiniCalendar() {
   loadEventsRef.current = loadEventsForDateRange;
 
   useEffect(() => {
+    if (!loadEventsForDateRange || !userMember) return;
+
     const { year, month } = date;
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
@@ -106,29 +110,9 @@ export default function MiniCalendar() {
       lastFetchRef.current.endDate !== endDate
     ) {
       lastFetchRef.current = { startDate, endDate };
-      if (loadEventsRef.current) {
-        loadEventsRef.current(startDate, endDate);
-      }
+      loadEventsForDateRange(startDate, endDate);
     }
-  }, [date, projects.length, userMember, loadEventsForDateRange]);
-
-  // Ensure initial fetch when context becomes ready
-  useEffect(() => {
-    if (!loadEventsForDateRange || !userMember || projects.length === 0) return;
-    const { year, month } = date;
-    const lastDay = new Date(year, month + 1, 0);
-    const startDate = `${year}-${String(month + 1).padStart(2, "0")}-01`;
-    const endDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(
-      lastDay.getDate()
-    ).padStart(2, "0")}`;
-    if (
-      lastFetchRef.current.startDate === startDate &&
-      lastFetchRef.current.endDate === endDate
-    )
-      return;
-    lastFetchRef.current = { startDate, endDate };
-    loadEventsForDateRange(startDate, endDate);
-  }, [loadEventsForDateRange, userMember, projects.length]);
+  }, [date, userMember, loadEventsForDateRange]);
 
   const events = React.useMemo(() => {
     const allProjectEvents = Object.values(eventsByProject || {}).flat();
@@ -160,7 +144,9 @@ export default function MiniCalendar() {
 
         const isAllDay =
           (startTimePart === "00:00" || startTimePart === "") &&
-          (endTimePart === "23:59" || endTimePart === "00:00" || endTimePart === "");
+          (endTimePart === "23:59" ||
+            endTimePart === "00:00" ||
+            endTimePart === "");
 
         uniqueEvents.push({
           id: ev.event_id,

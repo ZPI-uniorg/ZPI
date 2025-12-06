@@ -16,8 +16,9 @@ export default function FiltersPanel({
 }) {
   const tagListRootRef = useRef(null);
   const navigate = useNavigate();
-  const { allProjects, projectsVersion } = useProjects();
+  const { allProjects, projectsVersion, projectsLoading } = useProjects();
   const { organization, user } = useAuth();
+  const isAdmin = organization?.role === "admin";
   const [allTags, setAllTags] = useState([]);
   const [tagsLoading, setTagsLoading] = useState(false);
 
@@ -174,8 +175,21 @@ export default function FiltersPanel({
           ref={tagListRootRef}
           className="flex h-[calc(100%-60px-72px)] flex-col overflow-hidden px-5 py-3"
         >
-          {tagsLoading ? (
-            <p className="text-slate-400 text-sm">Ładowanie filtrów…</p>
+          {tagsLoading || projectsLoading ? (
+            <div className="flex flex-col gap-3">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-3 p-3 rounded-xl border border-slate-600/30"
+                >
+                  <div className="w-8 h-8 rounded bg-slate-700 animate-pulse" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-slate-700 rounded animate-pulse w-3/4" />
+                    <div className="h-3 bg-slate-700 rounded animate-pulse w-1/2" />
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : (
             <TagList
               tags={allFilterItems}
@@ -190,14 +204,26 @@ export default function FiltersPanel({
 
         <div className="flex gap-2 border-t border-[rgba(148,163,184,0.2)] px-5 py-4">
           <button
-            onClick={() => navigate("/organization/project/new")}
-            className="flex-1 rounded-[14px] bg-indigo-600 py-3 text-sm font-semibold text-white shadow-md hover:brightness-110 transition"
+            onClick={() => isAdmin && navigate("/organization/project/new")}
+            disabled={!isAdmin}
+            className="flex-1 rounded-[14px] bg-indigo-600 py-3 text-sm font-semibold text-white shadow-md hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:brightness-100"
+            title={
+              isAdmin
+                ? "Utwórz nowy projekt"
+                : "Tylko administratorzy mogą tworzyć projekty"
+            }
           >
             nowy projekt
           </button>
           <button
-            onClick={() => navigate("/organization/tag/new")}
-            className="flex-1 rounded-[14px] bg-indigo-600 py-3 text-sm font-semibold text-white shadow-md hover:brightness-110 transition"
+            onClick={() => isAdmin && navigate("/organization/tag/new")}
+            disabled={!isAdmin}
+            className="flex-1 rounded-[14px] bg-indigo-600 py-3 text-sm font-semibold text-white shadow-md hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:brightness-100"
+            title={
+              isAdmin
+                ? "Utwórz nowy tag"
+                : "Tylko administratorzy mogą tworzyć tagi"
+            }
           >
             nowy tag
           </button>
