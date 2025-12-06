@@ -26,8 +26,6 @@ class Message(models.Model):
         Chat,
         related_name="messages",
         on_delete=models.CASCADE,
-        null=True,
-        blank=True,  # Allow null for general chat
     )
     channel = models.CharField(
         max_length=100, default="general", db_index=True
