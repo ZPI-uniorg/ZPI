@@ -6,9 +6,10 @@ import { Settings, FolderOpen, Calendar, Users } from "lucide-react";
 
 export default function ProjectsListPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, organization } = useAuth();
   const { allProjects, projectsLoading, projectsInitialized, projectsError } =
     useProjects();
+  const isAdmin = organization?.role === "admin";
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredProjects = allProjects.filter((p) => {
@@ -42,8 +43,14 @@ export default function ProjectsListPage() {
             </p>
           </div>
           <button
-            onClick={() => navigate("/organization/project/new")}
-            className="px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:brightness-110 transition"
+            onClick={() => isAdmin && navigate("/organization/project/new")}
+            disabled={!isAdmin}
+            className="px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:brightness-100"
+            title={
+              isAdmin
+                ? "Utwórz nowy projekt"
+                : "Tylko administratorzy mogą tworzyć projekty"
+            }
           >
             + Nowy projekt
           </button>
@@ -85,6 +92,7 @@ export default function ProjectsListPage() {
             {filteredProjects.map((project) => {
               const isCoordinator =
                 project.coordinator_username === user?.username;
+              const canEdit = isAdmin || isCoordinator;
 
               return (
                 <div
@@ -105,9 +113,14 @@ export default function ProjectsListPage() {
                       </div>
                     </div>
                     <button
-                      onClick={(e) => handleEditProject(project, e)}
-                      className="flex-shrink-0 p-2 rounded-lg hover:bg-slate-800/60 transition opacity-0 group-hover:opacity-100"
-                      title="Edytuj projekt"
+                      onClick={(e) => canEdit && handleEditProject(project, e)}
+                      disabled={!canEdit}
+                      className="flex-shrink-0 p-2 rounded-lg hover:bg-slate-800/60 transition opacity-0 group-hover:opacity-100 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                      title={
+                        canEdit
+                          ? "Edytuj projekt"
+                          : "Tylko koordynator i administrator mogą edytować projekt"
+                      }
                     >
                       <Settings className="w-4 h-4 text-slate-400" />
                     </button>
