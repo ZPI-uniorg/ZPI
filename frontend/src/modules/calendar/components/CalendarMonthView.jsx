@@ -131,15 +131,17 @@ export default function CalendarMonthView({
                 return (
                   <div
                     key={`${weekIdx}-${dayIdx}`}
-                    className={`bg-slate-900/95 p-1 flex flex-col overflow-hidden min-h-0 transition-colors ${
-                      isTodayDay ? "bg-indigo-900/20" : ""
+                    className={`p-1 flex flex-col overflow-hidden min-h-0 transition-colors ${
+                      isTodayDay 
+                        ? "bg-indigo-600/20 border border-indigo-500/40" 
+                        : "bg-slate-900/95"
                     } ${day ? "hover:bg-slate-800/70 cursor-pointer" : ""}`}
                     onClick={() => handleDayClick(day)}
                   >
                     <div
                       className={`text-xs font-bold mb-1 ${
                         isTodayDay
-                          ? "bg-indigo-600 text-white w-6 h-6 rounded-full flex items-center justify-center"
+                          ? "text-indigo-300"
                           : day
                           ? "text-slate-200"
                           : "text-slate-600"
@@ -160,7 +162,7 @@ export default function CalendarMonthView({
                         return (
                           <div
                             key={ev.id}
-                            className={`text-[9px] px-2 py-1 ${
+                            className={`text-sm px-2 py-1 ${
                               isMultiDay
                                 ? isStart
                                   ? "rounded-l"
@@ -190,14 +192,14 @@ export default function CalendarMonthView({
                                   {visible.map((tag, idx) => (
                                     <span
                                       key={idx}
-                                      className="bg-fuchsia-700/80 px-1 rounded text-[7px] truncate max-w-[50px] flex-shrink-0"
+                                      className="bg-fuchsia-700/80 px-1 rounded text-xs truncate max-w-[80px] flex-shrink-0"
                                       title={tag}
                                     >
                                       {tag}
                                     </span>
                                   ))}
                                   {hiddenCount > 0 && (
-                                    <span className="bg-fuchsia-700/80 px-1 rounded text-[7px] flex-shrink-0">
+                                    <span className="bg-fuchsia-700/80 px-1 rounded text-xs flex-shrink-0">
                                       +{hiddenCount}
                                     </span>
                                   )}

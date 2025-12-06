@@ -212,7 +212,7 @@ export default function EventEditPage() {
     setError(null);
     try {
       if (editingEvent?.event_id || editingEvent?.id) {
-        const updated = await updateEvent(
+        await updateEvent(
           organization.id,
           editingEvent.event_id || editingEvent.id,
           user.username,
@@ -227,11 +227,8 @@ export default function EventEditPage() {
             isAllDay,
           }
         );
-        (updated.permissions || []).forEach((tag) => {
-          if (!TAGS.includes(tag)) TAGS.push(tag);
-        });
       } else {
-        const created = await createEvent(organization.id, user.username, {
+        await createEvent(organization.id, user.username, {
           name: title.trim(),
           description: description.trim(),
           date,
@@ -240,9 +237,6 @@ export default function EventEditPage() {
           end_time: submitEndTime,
           combinations,
           isAllDay,
-        });
-        (created.permissions || []).forEach((tag) => {
-          if (!TAGS.includes(tag)) TAGS.push(tag);
         });
       }
       navigate("/calendar");
