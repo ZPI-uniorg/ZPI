@@ -63,13 +63,16 @@ export function useChat(
           throw new Error(`Failed chats load: ${res.status}`);
         }
         const data = await res.json();
+        console.log("✅ Fetched data:", data);
         const chats = data.chats || [];
         const filtered = chats.filter((c) => !!c.name);
+        console.log("Filtered chats:", filtered);
         setChannels(filtered);
         const mapping = Object.fromEntries(
           filtered.map((c) => [c.name, c.chat_id])
         );
         setChatMap(mapping);
+        console.log("Chat map:", mapping);
       } catch (e) {
         if (e.name !== "AbortError") {
           console.error("❌ Chats fetch error", e);
@@ -106,13 +109,23 @@ export function useChat(
         console.log("🔌 Getting access token...");
         // Load message history for the selected channel (initial load with pagination)
         try {
-          const queryParam = chatMap[channel]
-            ? `chat_id=${chatMap[channel]}`
-            : `channel=${encodeURIComponent(channel)}`;
+          console.log("chatMap");
+          for (const [name, id] of Object.entries(chatMap)) {
+            console.log(` - ${name}: ${id}`);
+          }
+          const chat_id = chatMap[channel];
+          console.log("chat_id", chat_id);
+          if (!chat_id) {
+            console.warn(`⚠️ No chat_id found for channel: ${channel}`);
+            setMessages([]);
+            setOffset(0);
+            setHasMore(false);
+            throw new Error("Chat ID not found");
+          }
           const headers = { Accept: "application/json" };
           if (tokens?.access) headers.Authorization = `Bearer ${tokens.access}`;
           const historyRes = await fetch(
-            `${BACKEND_BASE}/api/messages/${organizationId}/?${queryParam}&limit=10&offset=0`,
+            `${BACKEND_BASE}/api/messages/${organizationId}/?chat_id=${chat_id}&limit=10&offset=0`,
             { credentials: "include", headers }
           );
           if (historyRes.ok) {
@@ -312,15 +325,18 @@ export function useChat(
   const loadMoreMessages = useCallback(async () => {
     if (!channel || loadingMore || !hasMore) return;
 
+    const chat_id = chatMap[channel];
+    if (!chat_id) {
+      console.warn(`⚠️ No chat_id found for channel: ${channel}`);
+      return;
+    }
+
     setLoadingMore(true);
     try {
-      const queryParam = chatMap[channel]
-        ? `chat_id=${chatMap[channel]}`
-        : `channel=${encodeURIComponent(channel)}`;
       const headers = { Accept: "application/json" };
       if (tokens?.access) headers.Authorization = `Bearer ${tokens.access}`;
       const historyRes = await fetch(
-        `${BACKEND_BASE}/api/messages/${organizationId}/?${queryParam}&limit=10&offset=${offset}`,
+        `${BACKEND_BASE}/api/messages/${organizationId}/?chat_id=${chat_id}&limit=10&offset=${offset}`,
         { credentials: "include", headers }
       );
 

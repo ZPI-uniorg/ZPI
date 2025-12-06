@@ -147,9 +147,7 @@ export async function createTag(organizationId, actorUsername, tagName) {
 }
 
 export async function getTags(organizationId, actorUsername) {
-  const response = await apiClient.get(`tags/all/${organizationId}/`, {
-    params: { username: actorUsername },
-  });
+  const response = await apiClient.get(`tags/all/${organizationId}/`);
   return response.data;
 }
 

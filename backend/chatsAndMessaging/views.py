@@ -174,8 +174,20 @@ def save_message(request, organization_id):
                 author_username=author_username,
                 content=content,
             )
-        except IntegrityError:
-            return JsonResponse({"status": "duplicate"}, status=200)
+        except IntegrityError as e:
+            # Check if message with this UUID already exists
+            existing = Message.objects.filter(message_uuid=message_uuid).first()
+            if existing:
+                print(f"⚠️ Duplicate message_uuid: {message_uuid}")
+                print(f"   Existing: chat={existing.chat_id}, sender={existing.sender_id}, content={existing.content[:50]}")
+                print(f"   New attempt: chat={chat_id}, sender={sender_id}, content={content[:50]}")
+                # Return the existing message instead of error
+                serializer = MessageSerializer(existing)
+                return JsonResponse(serializer.data, status=200)
+            else:
+                # Some other integrity error
+                print(f"❌ IntegrityError but no existing message found: {str(e)}")
+                return JsonResponse({"error": f"Database integrity error: {str(e)}"}, status=400)
 
         serializer = MessageSerializer(message)
         return JsonResponse(serializer.data, status=201)
