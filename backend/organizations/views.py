@@ -344,14 +344,27 @@ def get_organization_users(request, organization_id):
             return JsonResponse({"error": "User is not authenticated"}, status=401)
 
         username = request.user.username
-        membership = Membership.objects.get(
+        requester_membership = Membership.objects.get(
             organization__id=organization_id, user__username=username
         )
 
-        if membership.role not in ["admin", "coordinator"]:
-            return JsonResponse({"error": "Permission denied"}, status=403)
-
-        memberships = Membership.objects.filter(organization__id=organization_id)
+        # Get all memberships in organization
+        all_memberships = Membership.objects.filter(organization__id=organization_id)
+        
+        # If admin, show all users. Otherwise filter by shared tags
+        if requester_membership.role == "admin":
+            memberships = all_memberships
+        else:
+            # Get requester's permissions (tags)
+            requester_perms = set(requester_membership.permissions.values_list("name", flat=True))
+            
+            # Filter memberships that share at least one tag with requester
+            memberships = []
+            for m in all_memberships:
+                member_perms = set(m.permissions.values_list("name", flat=True))
+                if requester_perms & member_perms or m.user.username == username:  # Show if shared tags or self
+                    memberships.append(m)
+        
         users = [
             {
                 "user_id": membership.user.id,
@@ -634,10 +647,18 @@ def get_all_tags(request, organization_id):
             organization__id=organization_id, user__username=username
         )
 
-        if membership.role != "admin":
-            return JsonResponse({"error": "Permission denied"}, status=403)
-
-        tags = Tag.objects.filter(organization__id=organization_id)
+        # Get user's permissions (tags)
+        user_permissions = list(membership.permissions.values_list("name", flat=True))
+        
+        # If admin, show all tags. Otherwise show only user's tags
+        if membership.role == "admin":
+            tags = Tag.objects.filter(organization__id=organization_id)
+        else:
+            tags = Tag.objects.filter(
+                organization__id=organization_id,
+                name__in=user_permissions
+            )
+        
         tag_list = [
             {
                 "id": tag.id,
