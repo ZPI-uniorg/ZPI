@@ -36,6 +36,7 @@ A full-stack application with Django backend and React frontend.
 
 4. Run database migrations:
    ```bash
+   python manage.py makemigrations
    python manage.py migrate
    ```
 
