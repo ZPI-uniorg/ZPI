@@ -547,7 +547,7 @@ def get_task(request, organization_id, board_id, column_id, task_id):
 
         if (
             membership.role != "admin"
-            and board.project.tag not in membership.permissions
+            and board.project.tag not in membership.permissions.all()
         ):
             return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
@@ -575,4 +575,5 @@ def get_task(request, organization_id, board_id, column_id, task_id):
     except Task.DoesNotExist:
         return JsonResponse({"error": "Zadanie nie znalezione"}, status=404)
     except Exception as e:
+        print(e)
         return JsonResponse({"error": str(e)}, status=400)
