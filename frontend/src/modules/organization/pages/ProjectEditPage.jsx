@@ -263,10 +263,10 @@ export default function ProjectEditPage() {
   };
 
   return (
-    <div className="h-full overflow-auto bg-[linear-gradient(145deg,#0f172a,#1e293b)] px-6 py-8">
+    <div className="h-full bg-[linear-gradient(145deg,#0f172a,#1e293b)] px-6 py-8 flex flex-col">
       <form
         onSubmit={handleSubmit}
-        className="mx-auto bg-slate-900/95 rounded-3xl shadow-[0_30px_60px_rgba(15,23,42,0.45)] w-full max-w-6xl p-8 md:p-10 flex flex-col gap-10 border border-slate-700"
+        className="mx-auto bg-slate-900/95 rounded-3xl shadow-[0_30px_60px_rgba(15,23,42,0.45)] w-full max-w-6xl p-8 md:p-10 flex flex-col gap-10 border border-slate-700 h-full"
       >
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-2">
           <h1 className="text-lg font-semibold text-slate-200">
@@ -287,7 +287,7 @@ export default function ProjectEditPage() {
           </p>
         )}
 
-        <div className="flex flex-col lg:flex-row gap-10">
+        <div className="flex flex-col lg:flex-row gap-10 flex-1 min-h-0">
           <div className="flex-1 flex flex-col gap-6 min-w-[320px]">
             <div>
               <label className="block mb-1 font-medium text-slate-200">
@@ -350,11 +350,11 @@ export default function ProjectEditPage() {
             </div>
           </div>
 
-          <div className="flex-[2] flex flex-col min-w-[400px]">
+          <div className="flex-[2] flex flex-col min-w-[400px] min-h-0">
             <label className="block mb-1 font-medium text-slate-200">
               Lista członków
             </label>
-            <div className="border border-slate-700 rounded-xl p-4 min-h-[320px] flex flex-col gap-2 bg-slate-800 h-[420px]">
+            <div className="border border-slate-700 rounded-xl p-4 flex flex-col gap-2 bg-slate-800 flex-1 min-h-0">
               <div className="flex gap-2 mb-2 relative">
                 <Autocomplete
                   value={memberInput}

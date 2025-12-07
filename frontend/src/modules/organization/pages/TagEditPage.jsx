@@ -203,10 +203,10 @@ export default function TagEditPage() {
   };
 
   return (
-    <div className="h-full overflow-auto bg-[linear-gradient(145deg,#0f172a,#1e293b)] px-6 py-8">
+    <div className="h-full bg-[linear-gradient(145deg,#0f172a,#1e293b)] px-6 py-8 flex flex-col">
       <form
         onSubmit={handleSubmit}
-        className="mx-auto bg-slate-900/95 rounded-3xl shadow-[0_30px_60px_rgba(15,23,42,0.45)] w-full max-w-6xl p-8 md:p-10 flex flex-col gap-10 border border-slate-700"
+        className="mx-auto bg-slate-900/95 rounded-3xl shadow-[0_30px_60px_rgba(15,23,42,0.45)] w-full max-w-6xl p-8 md:p-10 flex flex-col gap-10 border border-slate-700 h-full"
       >
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-2">
           <h1 className="text-lg font-semibold text-slate-200">
@@ -225,7 +225,7 @@ export default function TagEditPage() {
             {error}
           </p>
         )}
-        <div className="flex flex-col lg:flex-row gap-10">
+        <div className="flex flex-col lg:flex-row gap-10 flex-1 min-h-0">
           <div className="flex-1 flex flex-col gap-6 min-w-[320px]">
             <div>
               <label className="block mb-1 font-medium text-slate-200">Nazwa tagu</label>
@@ -238,16 +238,16 @@ export default function TagEditPage() {
               />
             </div>
           </div>
-          <div className="flex-[2] flex flex-col min-w-[400px]">
+          <div className="flex-[2] flex flex-col min-w-[400px] min-h-0">
             <label className="block mb-1 font-medium text-slate-200">Lista członków</label>
-            <div className="border border-slate-700 rounded-xl p-4 min-h-[320px] flex flex-col gap-2 bg-slate-800 h-[420px]">
+            <div className="border border-slate-700 rounded-xl p-4 flex flex-col gap-2 bg-slate-800 flex-1 min-h-0">
               <div className="flex gap-2 mb-2 relative">
                 <Autocomplete
                   value={memberInput}
                   onChange={(v) => setMemberInput(v)}
                   options={filteredMembers}
                   onSelect={handleMemberSelect}
-                  placeholder="Dodaj członka (autocomplete)"
+                  placeholder="Dodaj członka"
                   inputClassName="border border-slate-600 rounded-lg px-3 py-2 w-full bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
                   getOptionLabel={(m) => `${m.first_name} ${m.last_name} (${m.username})`}
                 />
@@ -283,7 +283,7 @@ export default function TagEditPage() {
             className="bg-gradient-to-r from-indigo-500 to-violet-500 text-white px-10 py-3 rounded-xl text-lg font-semibold shadow hover:brightness-110 transition w-full md:w-auto disabled:opacity-50"
             disabled={!name.trim() || submitting}
           >
-            {submitting ? "Zapisywanie..." : editingTagName ? "Zaktualizuj tag" : "Stwórz tag"}
+            {submitting ? "Zapisywanie..." : editingTagName ? "Zapisz zmiany" : "Stwórz tag"}
           </button>
          {editingTagName && (
             <button
