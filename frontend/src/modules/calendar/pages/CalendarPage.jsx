@@ -44,11 +44,13 @@ function getWeekDays(year, month, day) {
 export default function CalendarPage() {
   const navigate = useNavigate();
   const {
-    eventsByProject,
+    allEvents,
     eventsLoading,
     loadEventsForDateRange,
     allProjects,
     userMember,
+    selectedTags,
+    logic,
   } = useProjects();
   const today = new Date();
   const [date, setDate] = useState({
@@ -116,7 +118,7 @@ export default function CalendarPage() {
 
   const events = useMemo(() => {
     console.log("=== CALENDAR EVENTS PARSING START ===");
-    console.log("eventsByProject:", eventsByProject);
+    console.log("allEvents:", allEvents);
 
     const parseEventRow = (ev) => {
       const rawStart = ev.start_time ? String(ev.start_time) : "";
@@ -171,8 +173,9 @@ export default function CalendarPage() {
       return parsed;
     };
 
-    const allProjectEvents = Object.values(eventsByProject || {}).flat();
-    console.log("Raw events from eventsByProject:", allProjectEvents);
+    const allProjectEvents = Array.isArray(allEvents) ? allEvents : [];
+    console.log("Raw events from allEvents:", allProjectEvents);
+    console.log("Total events count:", allProjectEvents.length);
 
     // Deduplicate events by event_id to prevent multiple renders
     const uniqueEvents = Array.from(
@@ -182,12 +185,30 @@ export default function CalendarPage() {
 
     const parsed = uniqueEvents.map(parseEventRow);
     console.log("ALL Parsed events for calendar:", parsed);
+    
+    // Apply client-side filtering based on selectedTags
+    const sel = Array.isArray(selectedTags) ? selectedTags : [];
+    let filtered = parsed;
+    
+    if (sel.length > 0) {
+      const splitTags = (arr) =>
+        arr.flatMap((t) => t.split(/[+,]/).map((s) => s.trim())).filter(Boolean);
+      
+      filtered = parsed.filter((ev) => {
+        const eventTags = splitTags(ev.permissions || []);
+        if (logic === "AND") {
+          return sel.every((tag) => eventTags.includes(tag));
+        } else {
+          return sel.some((tag) => eventTags.includes(tag));
+        }
+      });
+      console.log(`Filtered events (${logic}):`, filtered.length, "of", parsed.length);
+    }
+    
     console.log("=== CALENDAR EVENTS PARSING END ===");
 
-    // Don't filter - just return all parsed events
-    // The backend already filters by date range when fetching
-    return parsed;
-  }, [eventsByProject]);
+    return filtered;
+  }, [allEvents, selectedTags, logic]);
 
   const handlePrev = () => {
     if (view === "month") {
