@@ -1103,6 +1103,8 @@ def add_tag_to_user(request, organization_id, username):
         return JsonResponse({"error": str(e)}, status=400)
 
 
+@require_http_methods(["PUT"])
+@csrf_exempt
 def remove_tag_from_user(request, organization_id, username):
     try:
         if not request.user.is_authenticated:

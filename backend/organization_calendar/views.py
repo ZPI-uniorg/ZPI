@@ -253,7 +253,6 @@ def create_event(request, organization_id):
                 temp = permission.split("+")
 
                 if len(temp) == 1:
-                    print("hello")
                     tag = Tag.objects.get(
                         name=temp[0], organization__id=organization_id
                     )
@@ -387,9 +386,12 @@ def update_event(request, organization_id, event_id):
         start_time = data.get("start_time")
         end_time = data.get("end_time")
         permissions_str = data.get("permissions")
+        both_dates_provided = start_time and end_time
 
-        if start_time >= end_time:
-            return JsonResponse({"error": "Nieprawidłowy zakres czasu"}, status=400)
+        if start_time and end_time:
+            if start_time >= end_time:
+                return JsonResponse({"error": "Nieprawidłowy zakres czasu"}, status=400)
+
 
         if permissions_str:
             if membership.role != "admin":
@@ -453,8 +455,14 @@ def update_event(request, organization_id, event_id):
         if description:
             event.description = description
         if start_time:
+            if not both_dates_provided:
+                    if start_time >= event.end_time:
+                        return JsonResponse({"error": "Nieprawidłowy zakres czasu"}, status=400)
             event.start_time = start_time
         if end_time:
+            if not both_dates_provided:
+                    if event.start_time >= end_time:
+                        return JsonResponse({"error": "Nieprawidłowy zakres czasu"}, status=400)
             event.end_time = end_time
 
         event.save()

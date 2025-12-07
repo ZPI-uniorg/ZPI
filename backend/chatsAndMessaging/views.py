@@ -204,7 +204,7 @@ def list_chats(request, organization_id):
         for chat in Chat.objects.filter(organization=organization):
             chat_permissions = chat.permissions.all()
 
-            if len(user_permissions) == 0:
+            if len(chat_permissions) == 0:
                 chats.append(chat)
             elif permission_to_access(user_permissions, chat_permissions):
                 chats.append(chat)

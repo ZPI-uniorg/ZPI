@@ -78,11 +78,13 @@ function getEventsForDay(events, year, month, day) {
 export default function MiniCalendar() {
   const navigate = useNavigate();
   const {
-    eventsByProject,
+    allEvents,
     eventsLoading,
     loadEventsForDateRange,
-    projects,
+    allProjects,
     userMember,
+    selectedTags,
+    logic,
   } = useProjects();
   const today = new Date();
   const [date, setDate] = useState({
@@ -115,11 +117,11 @@ export default function MiniCalendar() {
   }, [date, userMember, loadEventsForDateRange]);
 
   const events = React.useMemo(() => {
-    const allProjectEvents = Object.values(eventsByProject || {}).flat();
+    const allEventsList = Array.isArray(allEvents) ? allEvents : [];
     const seenIds = new Set();
     const uniqueEvents = [];
 
-    allProjectEvents.forEach((ev) => {
+    allEventsList.forEach((ev) => {
       if (!seenIds.has(ev.event_id)) {
         seenIds.add(ev.event_id);
         const rawStart = ev.start_time ? String(ev.start_time) : "";
@@ -156,12 +158,31 @@ export default function MiniCalendar() {
           endDate: endDatePart,
           start_time: isAllDay ? "" : startTimePart,
           end_time: isAllDay ? "" : endTimePart,
+          permissions: ev.permissions || ev.tags || [],
         });
       }
     });
 
-    return uniqueEvents;
-  }, [eventsByProject]);
+    // Apply client-side filtering based on selectedTags
+    const sel = Array.isArray(selectedTags) ? selectedTags : [];
+    let filtered = uniqueEvents;
+    
+    if (sel.length > 0) {
+      const splitTags = (arr) =>
+        arr.flatMap((t) => t.split(/[+,]/).map((s) => s.trim())).filter(Boolean);
+      
+      filtered = uniqueEvents.filter((ev) => {
+        const eventTags = splitTags(ev.permissions || []);
+        if (logic === "AND") {
+          return sel.every((tag) => eventTags.includes(tag));
+        } else {
+          return sel.some((tag) => eventTags.includes(tag));
+        }
+      });
+    }
+
+    return filtered;
+  }, [allEvents, selectedTags, logic]);
   const handlePrev = () => {
     setDate(({ year, month }) => {
       if (month === 0) return { year: year - 1, month: 11 };

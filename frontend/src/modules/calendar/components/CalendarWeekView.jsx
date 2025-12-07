@@ -57,9 +57,9 @@ function getAllDayEvents(events, dateStr) {
     const startDate = ev.date;
     const endDate = ev.endDate || ev.date;
 
-    // Only show true all-day events (00:00 to 00:00) on startDate
+    // Show all-day events (00:00 to 00:00) on every day they span
     if (ev.start_time === "00:00" && ev.end_time === "00:00") {
-      return dateStr === startDate;
+      return dateStr >= startDate && dateStr <= endDate;
     }
 
     // All other multi-day events (with specific times) should not appear here
