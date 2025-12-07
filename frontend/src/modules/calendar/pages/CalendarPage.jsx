@@ -47,7 +47,7 @@ export default function CalendarPage() {
     eventsByProject,
     eventsLoading,
     loadEventsForDateRange,
-    projects,
+    allProjects,
     userMember,
   } = useProjects();
   const today = new Date();
@@ -59,7 +59,7 @@ export default function CalendarPage() {
   const [view, setView] = useState("month");
 
   useEffect(() => {
-    if (!loadEventsForDateRange || !userMember || projects.length === 0) return;
+    if (!loadEventsForDateRange || !userMember || allProjects.length === 0) return;
     const { year, month, day } = date;
 
     if (view === "month") {
@@ -112,7 +112,7 @@ export default function CalendarPage() {
         loadEventsForDateRange(secondMonthStart, secondMonthEnd);
       }
     }
-  }, [date, view, loadEventsForDateRange, userMember, projects.length]);
+  }, [date, view, loadEventsForDateRange, userMember, allProjects.length]);
 
   const events = useMemo(() => {
     console.log("=== CALENDAR EVENTS PARSING START ===");

@@ -96,6 +96,14 @@ export function useChat(
         return;
       }
 
+      // Wait for chatMap to be populated with the current channel
+      const chat_id = chatMap[channel];
+      if (!chat_id) {
+        console.warn(`⚠️ Waiting for chatMap to be populated for channel: ${channel}`);
+        setStatus("offline");
+        return;
+      }
+
       setStatus("connecting");
       setMessages([]);
 
@@ -113,15 +121,7 @@ export function useChat(
           for (const [name, id] of Object.entries(chatMap)) {
             console.log(` - ${name}: ${id}`);
           }
-          const chat_id = chatMap[channel];
-          console.log("chat_id", chat_id);
-          if (!chat_id) {
-            console.warn(`⚠️ No chat_id found for channel: ${channel}`);
-            setMessages([]);
-            setOffset(0);
-            setHasMore(false);
-            throw new Error("Chat ID not found");
-          }
+          // We already checked chat_id exists above, so we can use it directly
           const headers = { Accept: "application/json" };
           if (tokens?.access) headers.Authorization = `Bearer ${tokens.access}`;
           const historyRes = await fetch(
@@ -402,8 +402,15 @@ export function useChat(
 
       const messageId = crypto.randomUUID();
       const timestamp = Date.now();
-      const chat_id = chatMap[currentChannelRef.current] || null;
+      const chat_id = chatMap[currentChannelRef.current];
       const sender_id = user?.id || null;
+
+      // Validate that we have a chat_id before sending
+      if (!chat_id) {
+        console.error(`❌ Cannot send message: no chat_id found for channel "${currentChannelRef.current}"`);
+        console.error("Available channels in chatMap:", Object.keys(chatMap));
+        return;
+      }
 
       const outbound = {
         message_uuid: messageId,
@@ -434,7 +441,14 @@ export function useChat(
         credentials: "include",
         headers: saveHeaders,
         body: JSON.stringify(outbound),
-      }).catch((err) => console.error("❌ Failed to save message:", err));
+      })
+        .then(async (response) => {
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.error("❌ Failed to save message:", errorData);
+          }
+        })
+        .catch((err) => console.error("❌ Failed to save message:", err));
 
       // Don't add optimistic UI update - wait for broadcast from server
       // This prevents duplicate messages
