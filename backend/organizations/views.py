@@ -150,7 +150,7 @@ def register_organization(request):
 def get_user_organization(request, username):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User is not authenticated"}, status=401)
+            return JsonResponse({"error": "Użytkownik nie jest uwierzytelniony"}, status=401)
 
         username = request.user.username
         memberships = Membership.objects.filter(user__username=username)
@@ -179,7 +179,7 @@ def get_user_organization(request, username):
 def get_user_membership(request, organization_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User is not authenticated"}, status=401)
+            return JsonResponse({"error": "Użytkownik nie jest uwierzytelniony"}, status=401)
 
         username = request.user.username
         membership = Membership.objects.get(
@@ -194,7 +194,7 @@ def get_user_membership(request, organization_id):
         }
         return JsonResponse(membership_data, status=200)
     except Membership.DoesNotExist:
-        return JsonResponse({"error": "Membership not found"}, status=404)
+        return JsonResponse({"error": "Nie znaleziono członkostwa"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
@@ -204,7 +204,7 @@ def get_user_membership(request, organization_id):
 def edit_organization(request, organization_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User is not authenticated"}, status=401)
+            return JsonResponse({"error": "Użytkownik nie jest uwierzytelniony"}, status=401)
 
         data = json.loads(request.body)
         name = data.get("name")
@@ -216,7 +216,7 @@ def edit_organization(request, organization_id):
         )
 
         if membership.role != "admin":
-            return JsonResponse({"error": "Permission denied"}, status=403)
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         org = Organization.objects.get(id=organization_id)
 
@@ -228,18 +228,18 @@ def edit_organization(request, organization_id):
         org.save()
 
         return JsonResponse(
-            {"message": "Organization updated successfully"}, status=200
+            {"message": "Organizacja została pomyślnie zaktualizowana"}, status=200
         )
     except Membership.DoesNotExist:
-        return JsonResponse({"error": "Membership not found"}, status=404)
+        return JsonResponse({"error": "Nie znaleziono członkostwa"}, status=404)
     except Organization.DoesNotExist:
-        return JsonResponse({"error": "Organization not found"}, status=404)
+        return JsonResponse({"error": "Nie znaleziono organizacji"}, status=404)
     except KeyError as e:
-        return JsonResponse({"error": f"Missing field: {str(e)}"}, status=400)
+        return JsonResponse({"error": f"Brakujące pole: {str(e)}"}, status=400)
     except ValueError as e:
-        return JsonResponse({"error": f"Invalid value: {str(e)}"}, status=400)
+        return JsonResponse({"error": f"Nieprawidłowa wartość: {str(e)}"}, status=400)
     except TypeError as e:
-        return JsonResponse({"error": f"Type error: {str(e)}"}, status=400)
+        return JsonResponse({"error": f"Błąd typu: {str(e)}"}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
@@ -249,7 +249,7 @@ def edit_organization(request, organization_id):
 def invite_member(request, organization_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User is not authenticated"}, status=401)
+            return JsonResponse({"error": "Użytkownik nie jest uwierzytelniony"}, status=401)
 
         if request.content_type == "application/json":
             data = json.loads(request.body or "{}")
@@ -259,7 +259,7 @@ def invite_member(request, organization_id):
         username = request.user.username
 
         if not username:
-            return JsonResponse({"error": "Missing field: username"}, status=400)
+            return JsonResponse({"error": "Brakujące pole: username"}, status=400)
 
         membership = Membership.objects.get(
             organization__id=organization_id,
@@ -267,7 +267,7 @@ def invite_member(request, organization_id):
         )
 
         if membership.role != "admin":
-            return JsonResponse({"error": "Permission denied"}, status=403)
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         invitee_username = data.get("invitee_username")
         invitee_email = data.get("invitee_email", "")
@@ -288,7 +288,7 @@ def invite_member(request, organization_id):
         identifier = invitee_username + "_" + organization.name
 
         if User.objects.filter(identifier=identifier).exists():
-            return JsonResponse({"error": "User already exists"}, status=400)
+            return JsonResponse({"error": "Użytkownik już istnieje"}, status=400)
 
         with transaction.atomic():
             invitee = User.objects.create_user(
@@ -312,7 +312,7 @@ def invite_member(request, organization_id):
         )
 
         response_payload = {
-            "message": "Member invited successfully",
+            "message": "Członek został pomyślnie zaproszony",
             "invitee_username": invitee_username,
             "invitee_email": invitee_email,
             "role": role,
@@ -323,15 +323,15 @@ def invite_member(request, organization_id):
 
         return JsonResponse(response_payload, status=201)
     except Membership.DoesNotExist:
-        return JsonResponse({"error": "Membership not found"}, status=404)
+        return JsonResponse({"error": "Nie znaleziono członkostwa"}, status=404)
     except Organization.DoesNotExist:
-        return JsonResponse({"error": "Organization not found"}, status=404)
+        return JsonResponse({"error": "Nie znaleziono organizacji"}, status=404)
     except KeyError as e:
-        return JsonResponse({"error": f"Missing field: {str(e)}"}, status=400)
+        return JsonResponse({"error": f"Brakujące pole: {str(e)}"}, status=400)
     except ValueError as e:
-        return JsonResponse({"error": f"Invalid value: {str(e)}"}, status=400)
+        return JsonResponse({"error": f"Nieprawidłowa wartość: {str(e)}"}, status=400)
     except TypeError as e:
-        return JsonResponse({"error": f"Type error: {str(e)}"}, status=400)
+        return JsonResponse({"error": f"Błąd typu: {str(e)}"}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
@@ -341,7 +341,7 @@ def invite_member(request, organization_id):
 def get_organization_users(request, organization_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User is not authenticated"}, status=401)
+            return JsonResponse({"error": "Użytkownik nie jest uwierzytelniony"}, status=401)
 
         username = request.user.username
         membership = Membership.objects.get(
@@ -349,7 +349,7 @@ def get_organization_users(request, organization_id):
         )
 
         if membership.role not in ["admin", "coordinator"]:
-            return JsonResponse({"error": "Permission denied"}, status=403)
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         memberships = Membership.objects.filter(organization__id=organization_id)
         users = [
@@ -369,7 +369,7 @@ def get_organization_users(request, organization_id):
 
         return JsonResponse(users, safe=False, status=200)
     except Membership.DoesNotExist:
-        return JsonResponse({"error": "Membership not found"}, status=404)
+        return JsonResponse({"error": "Nie znaleziono członkostwa"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
@@ -379,7 +379,7 @@ def get_organization_users(request, organization_id):
 def get_project_members(request, organization_id, project_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User is not authenticated"}, status=401)
+            return JsonResponse({"error": "Użytkownik nie jest uwierzytelniony"}, status=401)
 
         username = request.user.username
         requester_membership = Membership.objects.get(
@@ -393,7 +393,7 @@ def get_project_members(request, organization_id, project_id):
             requester_membership.role != "admin"
             and not requester_membership.permissions.filter(id=project_tag.id).exists()
         ):
-            return JsonResponse({"error": "Permission denied"}, status=403)
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         memberships = Membership.objects.filter(
             organization__id=organization_id, permissions__id=project_tag.id
@@ -414,9 +414,9 @@ def get_project_members(request, organization_id, project_id):
 
         return JsonResponse(users, safe=False, status=200)
     except Project.DoesNotExist:
-        return JsonResponse({"error": "Project not found"}, status=404)
+        return JsonResponse({"error": "Nie znaleziono projektu"}, status=404)
     except Membership.DoesNotExist:
-        return JsonResponse({"error": "Membership not found"}, status=404)
+        return JsonResponse({"error": "Nie znaleziono członkostwa"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
@@ -426,7 +426,7 @@ def get_project_members(request, organization_id, project_id):
 def remove_organization_member(request, organization_id, username):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User is not authenticated"}, status=401)
+            return JsonResponse({"error": "Użytkownik nie jest uwierzytelniony"}, status=401)
 
         admin_username = request.user.username
 
@@ -435,16 +435,16 @@ def remove_organization_member(request, organization_id, username):
         )
 
         if membership.role != "admin":
-            return JsonResponse({"error": "Permission denied"}, status=403)
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         member_membership = Membership.objects.get(
             organization__id=organization_id, user__username=username
         )
         member_membership.delete()
 
-        return JsonResponse({"message": "Member removed successfully"}, status=200)
+        return JsonResponse({"message": "Członek został pomyślnie usunięty"}, status=200)
     except Membership.DoesNotExist:
-        return JsonResponse({"error": "Membership not found"}, status=404)
+        return JsonResponse({"error": "Nie znaleziono członkostwa"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
@@ -454,7 +454,7 @@ def remove_organization_member(request, organization_id, username):
 def change_member_role(request, organization_id, username):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User is not authenticated"}, status=401)
+            return JsonResponse({"error": "Użytkownik nie jest uwierzytelniony"}, status=401)
 
         data = json.loads(request.body)
         admin_username = request.user.username
@@ -465,10 +465,10 @@ def change_member_role(request, organization_id, username):
         )
 
         if membership.role != "admin":
-            return JsonResponse({"error": "Permission denied"}, status=403)
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         if not new_role:
-            return JsonResponse({"error": "Missing role field"}, status=400)
+            return JsonResponse({"error": "Brak pola roli"}, status=400)
 
         member_membership = Membership.objects.get(
             organization__id=organization_id, user__username=username
@@ -476,15 +476,15 @@ def change_member_role(request, organization_id, username):
         member_membership.role = new_role
         member_membership.save()
 
-        return JsonResponse({"message": "Member role updated successfully"}, status=200)
+        return JsonResponse({"message": "Rola członka została pomyślnie zaktualizowana"}, status=200)
     except Membership.DoesNotExist:
-        return JsonResponse({"error": "Membership not found"}, status=404)
+        return JsonResponse({"error": "Nie znaleziono członkostwa"}, status=404)
     except KeyError as e:
-        return JsonResponse({"error": f"Missing field: {str(e)}"}, status=400)
+        return JsonResponse({"error": f"Brak pola: {str(e)}"}, status=400)
     except ValueError as e:
-        return JsonResponse({"error": f"Invalid value: {str(e)}"}, status=400)
+        return JsonResponse({"error": f"Nieprawidłowa wartość: {str(e)}"}, status=400)
     except TypeError as e:
-        return JsonResponse({"error": f"Type error: {str(e)}"}, status=400)
+        return JsonResponse({"error": f"Błąd typu: {str(e)}"}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
@@ -494,12 +494,12 @@ def change_member_role(request, organization_id, username):
 def update_member_profile(request, organization_id, username):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User is not authenticated"}, status=401)
+            return JsonResponse({"error": "Użytkownik nie jest uwierzytelniony"}, status=401)
 
         try:
             data = json.loads(request.body)
         except json.JSONDecodeError:
-            return JsonResponse({"error": "Invalid JSON payload"}, status=400)
+            return JsonResponse({"error": "Nieprawidłowy format JSON"}, status=400)
 
         admin_username = request.user.username
 
@@ -509,7 +509,7 @@ def update_member_profile(request, organization_id, username):
         )
 
         if admin_membership.role != "admin":
-            return JsonResponse({"error": "Permission denied"}, status=403)
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         member_membership = Membership.objects.get(
             organization__id=organization_id,
@@ -545,13 +545,13 @@ def update_member_profile(request, organization_id, username):
 
         return JsonResponse(
             {
-                "message": "Member updated successfully",
+                "message": "Członek został pomyślnie zaktualizowany",
                 "member": member_payload,
             },
             status=200,
         )
     except Membership.DoesNotExist:
-        return JsonResponse({"error": "Membership not found"}, status=404)
+        return JsonResponse({"error": "Nie znaleziono członkostwa"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
@@ -561,7 +561,7 @@ def update_member_profile(request, organization_id, username):
 def edit_permissions(request, organization_id, username):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User is not authenticated"}, status=401)
+            return JsonResponse({"error": "Użytkownik nie jest uwierzytelniony"}, status=401)
 
         data = json.loads(request.body)
         admin_username = request.user.username
@@ -572,7 +572,7 @@ def edit_permissions(request, organization_id, username):
         )
 
         if membership.role == "member":
-            return JsonResponse({"error": "Permission denied"}, status=403)
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         if membership.role == "coordinator":
             allowed_tags = list(membership.permissions.values_list("name", flat=True))
@@ -580,7 +580,7 @@ def edit_permissions(request, organization_id, username):
             for tag in tags_names:
                 if tag not in allowed_tags:
                     return JsonResponse(
-                        {"error": "Permission denied for some tags"}, status=403
+                        {"error": "Brak uprawnień do niektórych tagów"}, status=403
                     )
 
         for tag in tags_names:
@@ -588,13 +588,13 @@ def edit_permissions(request, organization_id, username):
                 name=tag, organization__id=organization_id
             ).exists():
                 return JsonResponse(
-                    {"error": f"Tag '{tag}' does not exist"}, status=404
+                    {"error": f"Tag '{tag}' nie istnieje"}, status=404
                 )
 
             if Tag.objects.get(name=tag, organization__id=organization_id).combined:
                 return JsonResponse(
                     {
-                        "error": f"Tag '{tag}' is a combined tag and cannot be assigned directly"
+                        "error": f"Tag '{tag}' jest tagiem złożonym i nie może być przypisany bezpośrednio"
                     },
                     status=400,
                 )
@@ -608,16 +608,16 @@ def edit_permissions(request, organization_id, username):
         member_membership.save()
 
         return JsonResponse(
-            {"message": "Member permissions updated successfully"}, status=200
+            {"message": "Uprawnienia członka zostały pomyślnie zaktualizowane"}, status=200
         )
     except Membership.DoesNotExist:
-        return JsonResponse({"error": "Membership not found"}, status=404)
+        return JsonResponse({"error": "Nie znaleziono członkostwa"}, status=404)
     except KeyError as e:
-        return JsonResponse({"error": f"Missing field: {str(e)}"}, status=400)
+        return JsonResponse({"error": f"Brakujące pole: {str(e)}"}, status=400)
     except ValueError as e:
-        return JsonResponse({"error": f"Invalid value: {str(e)}"}, status=400)
+        return JsonResponse({"error": f"Nieprawidłowa wartość: {str(e)}"}, status=400)
     except TypeError as e:
-        return JsonResponse({"error": f"Type error: {str(e)}"}, status=400)
+        return JsonResponse({"error": f"Błąd typu: {str(e)}"}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
@@ -627,7 +627,7 @@ def edit_permissions(request, organization_id, username):
 def get_all_tags(request, organization_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User is not authenticated"}, status=401)
+            return JsonResponse({"error": "Użytkownik nie jest uwierzytelniony"}, status=401)
 
         username = request.user.username
         membership = Membership.objects.get(
@@ -635,7 +635,7 @@ def get_all_tags(request, organization_id):
         )
 
         if membership.role != "admin":
-            return JsonResponse({"error": "Permission denied"}, status=403)
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         tags = Tag.objects.filter(organization__id=organization_id)
         tag_list = [
@@ -656,7 +656,7 @@ def get_all_tags(request, organization_id):
 def get_tags(request, organization_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User is not authenticated"}, status=401)
+            return JsonResponse({"error": "Użytkownik nie jest uwierzytelniony"}, status=401)
 
         username = request.user.username
         membership = Membership.objects.get(
@@ -684,7 +684,7 @@ def get_tags(request, organization_id):
 def create_tag(request, organization_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User is not authenticated"}, status=401)
+            return JsonResponse({"error": "Użytkownik nie jest uwierzytelniony"}, status=401)
 
         username = request.user.username
         membership = Membership.objects.get(
@@ -692,23 +692,22 @@ def create_tag(request, organization_id):
         )
 
         if membership.role != "admin":
-            return JsonResponse({"error": "Permission denied"}, status=403)
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         name = request.POST.get("name")
 
         if "+" in name:
             return JsonResponse(
-                {"error": "Combined tags cannot be created directly"}, status=400
+                {"error": "Tagi złożone nie mogą być tworzone bezpośrednio"}, status=400
             )
 
         if not name:
-            return JsonResponse({"error": "Missing name field"}, status=400)
-
+            return JsonResponse({"error": "Brak pola nazwy"}, status=400)
         organization = Organization.objects.get(id=organization_id)
 
         if Tag.objects.filter(name=name, organization=organization).exists():
             return JsonResponse(
-                {"error": "Tag with this name already exists in the organization"},
+                {"error": "Tag o takiej nazwie już istnieje w organizacji"},
                 status=400,
             )
 
@@ -722,13 +721,13 @@ def create_tag(request, organization_id):
 
         return JsonResponse(tag_data, status=201)
     except Organization.DoesNotExist:
-        return JsonResponse({"error": "Organization not found"}, status=404)
+        return JsonResponse({"error": "Organizacja nie znaleziona"}, status=404)
     except KeyError as e:
-        return JsonResponse({"error": f"Missing field: {str(e)}"}, status=400)
+        return JsonResponse({"error": f"Brakujące pole: {str(e)}"}, status=400)
     except ValueError as e:
-        return JsonResponse({"error": f"Invalid value: {str(e)}"}, status=400)
+        return JsonResponse({"error": f"Nieprawidłowa wartość: {str(e)}"}, status=400)
     except TypeError as e:
-        return JsonResponse({"error": f"Type error: {str(e)}"}, status=400)
+        return JsonResponse({"error": f"Błąd typu: {str(e)}"}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
@@ -738,7 +737,7 @@ def create_tag(request, organization_id):
 def delete_tag(request, organization_id, tag_name):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User is not authenticated"}, status=401)
+            return JsonResponse({"error": "Użytkownik nie jest uwierzytelniony"}, status=401)
 
         username = request.user.username
         membership = Membership.objects.get(
@@ -746,16 +745,16 @@ def delete_tag(request, organization_id, tag_name):
         )
 
         if membership.role != "admin":
-            return JsonResponse({"error": "Permission denied"}, status=403)
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         tag = Tag.objects.get(name=tag_name, organization__id=organization_id)
         tag.delete()
 
-        return JsonResponse({"message": "Tag deleted successfully"}, status=200)
+        return JsonResponse({"message": "Tag usunięty pomyślnie"}, status=200)
     except Membership.DoesNotExist:
-        return JsonResponse({"error": "Membership not found"}, status=404)
+        return JsonResponse({"error": "Członkostwo nie znalezione"}, status=404)
     except Tag.DoesNotExist:
-        return JsonResponse({"error": "Tag not found"}, status=404)
+        return JsonResponse({"error": "Tag nie znaleziony"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
@@ -765,7 +764,7 @@ def delete_tag(request, organization_id, tag_name):
 def create_project(request, organization_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User is not authenticated"}, status=401)
+            return JsonResponse({"error": "Użytkownik nie jest uwierzytelniony"}, status=401)
 
         username = request.user.username
         membership = Membership.objects.get(
@@ -773,7 +772,7 @@ def create_project(request, organization_id):
         )
 
         if membership.role not in ["admin", "coordinator"]:
-            return JsonResponse({"error": "Permission denied"}, status=403)
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         name = request.POST.get("name")
         description = request.POST.get("description", "")
@@ -795,22 +794,21 @@ def create_project(request, organization_id):
             end_dte = parse_to_date(end_dte_raw)
         except Exception:
             return JsonResponse(
-                {"error": "Invalid date format, expected YYYY-MM-DD or ISO"}, status=400
+                {"error": "Nieprawidłowy format daty, oczekiwano RRRR-MM-DD lub ISO"}, status=400
             )
 
         if start_dte > end_dte:
             return JsonResponse(
-                {"error": "start_dte must be before or equal to end_dte"}, status=400
+                {"error": "start_dte musi być wcześniejsza lub równa end_dte"}, status=400
             )
 
         if not all([name, start_dte, end_dte, tag_name]):
-            return JsonResponse({"error": "Missing fields"}, status=400)
-
+            return JsonResponse({"error": "Brakujące pola"}, status=400)
         organization = Organization.objects.get(id=organization_id)
 
         if Tag.objects.filter(name=tag_name, organization=organization).exists():
             return JsonResponse(
-                {"error": "Tag with this name already exists in the organization"},
+                {"error": "Tag o takiej nazwie już istnieje w organizacji"},
                 status=400,
             )
 
@@ -828,12 +826,12 @@ def create_project(request, organization_id):
 
             if not coordinator_membership:
                 return JsonResponse(
-                    {"error": "Coordinator not found in organization"}, status=404
+                    {"error": "Koordynator nie znaleziony w organizacji"}, status=404
                 )
 
         if coordinator_membership and coordinator_membership.role == "member":
             return JsonResponse(
-                {"error": "Selected user must have coordinator role"}, status=400
+                {"error": "Wybrany użytkownik musi mieć rolę koordynatora"}, status=400
             )
 
         with transaction.atomic():
@@ -860,15 +858,15 @@ def create_project(request, organization_id):
 
         return JsonResponse(project_data, status=201)
     except Membership.DoesNotExist:
-        return JsonResponse({"error": "Membership not found"}, status=404)
+        return JsonResponse({"error": "Członkostwo nie znalezione"}, status=404)
     except Organization.DoesNotExist:
-        return JsonResponse({"error": "Organization not found"}, status=404)
+        return JsonResponse({"error": "Organizacja nie znaleziona"}, status=404)
     except KeyError as e:
-        return JsonResponse({"error": f"Missing field: {str(e)}"}, status=400)
+        return JsonResponse({"error": f"Brakujące pole: {str(e)}"}, status=400)
     except ValueError as e:
-        return JsonResponse({"error": f"Invalid value: {str(e)}"}, status=400)
+        return JsonResponse({"error": f"Nieprawidłowa wartość: {str(e)}"}, status=400)
     except TypeError as e:
-        return JsonResponse({"error": f"Type error: {str(e)}"}, status=400)
+        return JsonResponse({"error": f"Błąd typu: {str(e)}"}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
@@ -878,7 +876,7 @@ def create_project(request, organization_id):
 def update_project(request, organization_id, project_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User is not authenticated"}, status=401)
+            return JsonResponse({"error": "Użytkownik nie jest uwierzytelniony"}, status=401)
 
         username = request.user.username
         membership = Membership.objects.get(
@@ -886,7 +884,7 @@ def update_project(request, organization_id, project_id):
         )
 
         if membership.role not in ["admin", "coordinator"]:
-            return JsonResponse({"error": "Permission denied"}, status=403)
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         data = json.loads(request.body)
         name = data.get("name")
@@ -898,7 +896,7 @@ def update_project(request, organization_id, project_id):
         project = Project.objects.get(id=project_id)
 
         if membership.role == "coordinator" and project.coordinator != membership.user:
-            return JsonResponse({"error": "Permission denied"}, status=403)
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         try:
 
@@ -911,12 +909,12 @@ def update_project(request, organization_id, project_id):
             end_dte = parse_to_date(end_dte_raw)
         except Exception:
             return JsonResponse(
-                {"error": "Invalid date format, expected YYYY-MM-DD or ISO"}, status=400
+                {"error": "Nieprawidłowy format daty, oczekiwano YYYY-MM-DD lub ISO"}, status=400
             )
 
         if start_dte > end_dte:
             return JsonResponse(
-                {"error": "start_dte must be before or equal to end_dte"}, status=400
+                {"error": "start_dte musi być wcześniejsza lub równa end_dte"}, status=400
             )
 
         if name:
@@ -944,11 +942,11 @@ def update_project(request, organization_id, project_id):
 
                 if not coordinator_membership:
                     return JsonResponse(
-                        {"error": "Coordinator not found in organization"}, status=404
+                        {"error": "Koordynator nie znaleziony w organizacji"}, status=404
                     )
                 if coordinator_membership.role == "member":
                     return JsonResponse(
-                        {"error": "Selected user must have coordinator role"},
+                        {"error": "Wybrany użytkownik musi mieć rolę koordynatora"},
                         status=400,
                     )
 
@@ -961,17 +959,17 @@ def update_project(request, organization_id, project_id):
 
         return JsonResponse(project_data, status=200)
     except Project.DoesNotExist:
-        return JsonResponse({"error": "Project not found"}, status=404)
+        return JsonResponse({"error": "Projekt nie znaleziony"}, status=404)
     except Membership.DoesNotExist:
-        return JsonResponse({"error": "Membership not found"}, status=404)
+        return JsonResponse({"error": "Członkostwo nie znalezione"}, status=404)
     except User.DoesNotExist:
-        return JsonResponse({"error": "Coordinator user not found"}, status=404)
+        return JsonResponse({"error": "Użytkownik koordynatora nie znaleziony"}, status=404)
     except KeyError as e:
-        return JsonResponse({"error": f"Missing field: {str(e)}"}, status=400)
+        return JsonResponse({"error": f"Brakujące pole: {str(e)}"}, status=400)
     except ValueError as e:
-        return JsonResponse({"error": f"Invalid value: {str(e)}"}, status=400)
+        return JsonResponse({"error": f"Nieprawidłowa wartość: {str(e)}"}, status=400)
     except TypeError as e:
-        return JsonResponse({"error": f"Type error: {str(e)}"}, status=400)
+        return JsonResponse({"error": f"Błąd typu: {str(e)}"}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
@@ -981,7 +979,7 @@ def update_project(request, organization_id, project_id):
 def get_projects(request, organization_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User is not authenticated"}, status=401)
+            return JsonResponse({"error": "Użytkownik nie jest uwierzytelniony"}, status=401)
 
         username = request.user.username
 
@@ -991,14 +989,14 @@ def get_projects(request, organization_id):
         )
 
         if membership.role != "admin":
-            return JsonResponse({"error": "Permission denied"}, status=403)
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         projects = Project.objects.filter(organization__id=organization_id)
         project_list = [_project_to_dict(project) for project in projects]
 
         return JsonResponse(project_list, safe=False, status=200)
     except Membership.DoesNotExist:
-        return JsonResponse({"error": "Membership not found"}, status=404)
+        return JsonResponse({"error": "Członkostwo nie znalezione"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
@@ -1008,7 +1006,7 @@ def get_projects(request, organization_id):
 def get_user_projects(request, organization_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User is not authenticated"}, status=401)
+            return JsonResponse({"error": "Użytkownik nie jest uwierzytelniony"}, status=401)
 
         username = request.user.username
         membership = Membership.objects.get(
@@ -1033,7 +1031,7 @@ def get_user_projects(request, organization_id):
 def delete_project(request, organization_id, project_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User is not authenticated"}, status=401)
+            return JsonResponse({"error": "Użytkownik nie jest uwierzytelniony"}, status=401)
 
         username = request.user.username
         membership = Membership.objects.get(
@@ -1045,17 +1043,17 @@ def delete_project(request, organization_id, project_id):
         if membership.role != "admin" and (
             membership.role != "coordinator" or project.coordinator != membership.user
         ):
-            return JsonResponse({"error": "Permission denied"}, status=403)
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         project_tag = project.tag
         project.delete()
         project_tag.delete()
 
-        return JsonResponse({"message": "Project deleted successfully"}, status=200)
+        return JsonResponse({"message": "Projekt został pomyślnie usunięty"}, status=200)
     except Project.DoesNotExist:
-        return JsonResponse({"error": "Project not found"}, status=404)
+        return JsonResponse({"error": "Projekt nie znaleziony"}, status=404)
     except Membership.DoesNotExist:
-        return JsonResponse({"error": "Membership not found"}, status=404)
+        return JsonResponse({"error": "Członkostwo nie znalezione"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
@@ -1065,7 +1063,7 @@ def delete_project(request, organization_id, project_id):
 def add_tag_to_user(request, organization_id, username):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User is not authenticated"}, status=401)
+            return JsonResponse({"error": "Użytkownik nie jest uwierzytelniony"}, status=401)
 
         data = json.loads(request.body)
         admin_username = request.user.username
@@ -1079,7 +1077,7 @@ def add_tag_to_user(request, organization_id, username):
             membership.role == "coordinator"
             and tag_name not in membership.permissions.values_list("name", flat=True)
         ):
-            return JsonResponse({"error": "Permission denied"}, status=403)
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         member_membership = Membership.objects.get(
             organization__id=organization_id, user__username=username
@@ -1088,17 +1086,17 @@ def add_tag_to_user(request, organization_id, username):
         member_membership.permissions.add(tag)
         member_membership.save()
 
-        return JsonResponse({"message": "Tag added to member successfully"}, status=200)
+        return JsonResponse({"message": "Tag został pomyślnie dodany do członka"}, status=200)
     except Membership.DoesNotExist:
-        return JsonResponse({"error": "Membership not found"}, status=404)
+        return JsonResponse({"error": "Członkostwo nie znalezione"}, status=404)
     except Tag.DoesNotExist:
-        return JsonResponse({"error": "Tag not found"}, status=404)
+        return JsonResponse({"error": "Tag nie znaleziony"}, status=404)
     except KeyError as e:
-        return JsonResponse({"error": f"Missing field: {str(e)}"}, status=400)
+        return JsonResponse({"error": f"Brakujące pole: {str(e)}"}, status=400)
     except ValueError as e:
-        return JsonResponse({"error": f"Invalid value: {str(e)}"}, status=400)
+        return JsonResponse({"error": f"Błąd wartości: {str(e)}"}, status=400)
     except TypeError as e:
-        return JsonResponse({"error": f"Type error: {str(e)}"}, status=400)
+        return JsonResponse({"error": f"Błąd typu: {str(e)}"}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
@@ -1108,7 +1106,7 @@ def add_tag_to_user(request, organization_id, username):
 def remove_tag_from_user(request, organization_id, username):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User is not authenticated"}, status=401)
+            return JsonResponse({"error": "Użytkownik nie jest uwierzytelniony"}, status=401)
 
         data = json.loads(request.body)
         admin_username = request.user.username
@@ -1122,7 +1120,7 @@ def remove_tag_from_user(request, organization_id, username):
             membership.role == "coordinator"
             and tag_name not in membership.permissions.values_list("name", flat=True)
         ):
-            return JsonResponse({"error": "Permission denied"}, status=403)
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
 
         member_membership = Membership.objects.get(
             organization__id=organization_id, user__username=username
@@ -1132,17 +1130,17 @@ def remove_tag_from_user(request, organization_id, username):
         member_membership.save()
 
         return JsonResponse(
-            {"message": "Tag removed from member successfully"}, status=200
+            {"message": "Poprawnie usunięto tag"}, status=200
         )
     except Membership.DoesNotExist:
-        return JsonResponse({"error": "Membership not found"}, status=404)
+        return JsonResponse({"error": "Nie znaleziono członkostwa"}, status=404)
     except Tag.DoesNotExist:
-        return JsonResponse({"error": "Tag not found"}, status=404)
+        return JsonResponse({"error": "Nie znaleziono taga"}, status=404)
     except KeyError as e:
-        return JsonResponse({"error": f"Missing field: {str(e)}"}, status=400)
+        return JsonResponse({"error": f"Brakujące pole: {str(e)}"}, status=400)
     except ValueError as e:
-        return JsonResponse({"error": f"Invalid value: {str(e)}"}, status=400)
+        return JsonResponse({"error": f"Błąd wartości: {str(e)}"}, status=400)
     except TypeError as e:
-        return JsonResponse({"error": f"Type error: {str(e)}"}, status=400)
+        return JsonResponse({"error": f"Błąd typu: {str(e)}"}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
