@@ -1,169 +1,152 @@
-from django.test import TestCase, Client
+# python
 from django.urls import reverse
-from django.contrib.auth import get_user_model
-from organizations.models import Organization
-from ..models import KanbanBoard, KanbanColumn, Task
+from rest_framework import status
+from rest_framework.test import APITestCase
 
-User = get_user_model()
+from core.models import User
+from organizations.models import Membership, Organization, Project, Tag
+from kanban.models import KanbanBoard, KanbanColumn, Task
 
 
-class KanbanBoardAPITests(TestCase):
+class ComprehensiveKanbanAPITests(APITestCase):
+    def _login(self, username, password, organization_name):
+        url = reverse("login", args=[organization_name])
+        response = self.client.post(url, {"username": username, "password": password})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
     def setUp(self):
-        self.client = Client()
-        self.user = User.objects.create_user(username='user1', password='password')
+        # Users / Organization / Project
+        self.admin_user = User.objects.create_user(
+            username="admin",
+            password="password123",
+            identifier="admin_TestOrg",
+        )
+        self.org = Organization.objects.create(
+            name="TestOrg", created_by=self.admin_user, slug="TestOrg"
+        )
+        Membership.objects.create(organization=self.org, user=self.admin_user, role="admin")
 
-        # Założenie, że model Organization ma pole created_by
-        self.organization = Organization.objects.create(name='Test Organization', created_by=self.user)
-        self.board = KanbanBoard.objects.create(
-            title='Test Board',
-            organization=self.organization
+        self.coordinator_user = User.objects.create_user(
+            username="coordinator", password="password123", identifier="coordinator_TestOrg"
+        )
+        Membership.objects.create(organization=self.org, user=self.coordinator_user, role="coordinator")
+
+        self.member_user = User.objects.create_user(
+            username="member", password="password123", identifier="member_TestOrg"
+        )
+        self.member_membership = Membership.objects.create(
+            organization=self.org, user=self.member_user, role="member"
+        )
+        self.other_user = User.objects.create_user(
+            username="other", password="password123", identifier="other_TestOrg"
+        )
+        Membership.objects.create(organization=self.org, user=self.other_user, role="member")
+
+        # Tag / Projects
+        self.tag = Tag.objects.create(name="ProjTag", organization=self.org)
+        self.project = Project.objects.create(
+            title="Project 1",
+            organization=self.org,
+            tag=self.tag,
+            coordinator=self.coordinator_user,
+            start_dte="2023-01-01",
+            end_dte="2023-12-31",
         )
 
-    def test_create_kanban_board(self):
-        url = reverse('create_kanban_board')
-        data = {'title': 'New Board', 'organization_id': self.organization.id}
-        response = self.client.post(url, data)
-        self.assertEqual(response.status_code, 201)
-        self.assertEqual(KanbanBoard.objects.count(), 2)
-        self.assertEqual(response.json()['title'], 'New Board')
-
-    def test_get_kanban_board(self):
-        url = reverse('get_kanban_board', kwargs={'board_id': self.board.board_id})
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()['title'], self.board.title)
-
-    def test_update_kanban_board(self):
-        url = reverse('update_kanban_board', kwargs={'board_id': self.board.board_id})
-        data = {'title': 'Updated Board Title'}
-        response = self.client.put(url, data=data, content_type='application/json')
-        print(response.content)
-        self.assertEqual(response.status_code, 200)
-        self.board.refresh_from_db()
-        self.assertEqual(self.board.title, 'Updated Board Title')
-
-    def test_delete_kanban_board(self):
-        url = reverse('delete_kanban_board', kwargs={'board_id': self.board.board_id})
-        response = self.client.delete(url)
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(KanbanBoard.objects.filter(pk=self.board.board_id).exists())
-
-
-class KanbanColumnAPITests(TestCase):
-    def setUp(self):
-        self.client = Client()
-        self.user = User.objects.create_user(username='user1', password='password')
-
-
-        self.organization = Organization.objects.create(name='Test Organization', created_by=self.user)
-        self.board = KanbanBoard.objects.create(
-            title='Test Board',
-            organization=self.organization
-        )
-        self.column = KanbanColumn.objects.create(
-            title='To Do',
-            board=self.board,
-            position=1
-        )
-
-    def test_create_column(self):
-        url = reverse('create_column')
-        data = {'title': 'In Progress', 'board_id': self.board.board_id, 'position': 2}
-        response = self.client.post(url, data)
-        self.assertEqual(response.status_code, 201)
-        self.assertEqual(KanbanColumn.objects.count(), 2)
-        self.assertEqual(response.json()['title'], 'In Progress')
-
-    def test_get_board_columns(self):
-        url = reverse('get_board_columns', kwargs={'board_id': self.board.board_id})
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.json()), 1)
-        self.assertEqual(response.json()['columns'][0]['title'], self.column.title)
-
-    def test_get_column(self):
-        url = reverse('get_column', kwargs={'column_id': self.column.column_id})
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()['title'], self.column.title)
-
-    def test_update_column(self):
-        url = reverse('update_column', kwargs={'column_id': self.column.column_id})
-        data = {'title': 'Updated Column Title'}
-        response = self.client.put(url, data=data, content_type='application/json')
-        self.assertEqual(response.status_code, 200)
-        self.column.refresh_from_db()
-        self.assertEqual(self.column.title, 'Updated Column Title')
-
-    def test_delete_column(self):
-        url = reverse('delete_column', kwargs={'column_id': self.column.column_id})
-        response = self.client.delete(url)
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(KanbanColumn.objects.filter(pk=self.column.column_id).exists())
-
-
-class TaskAPITests(TestCase):
-    def setUp(self):
-        self.client = Client()
-        self.user = User.objects.create_user(username='user1', password='password')
-
-
-        self.organization = Organization.objects.create(name='Test Organization', created_by=self.user)
-        self.board = KanbanBoard.objects.create(
-            title='Test Board',
-            organization=self.organization
-        )
-        self.column = KanbanColumn.objects.create(
-            title='To Do',
-            board=self.board,
-            position=1
-        )
+        # Kanban board, column, task
+        self.board = KanbanBoard.objects.create(title="Board 1", organization=self.org, project=self.project)
+        self.column = KanbanColumn.objects.create(title="To Do", board=self.board, position=0)
+        self.other_column = KanbanColumn.objects.create(title="Done", board=self.board, position=1)
         self.task = Task.objects.create(
-            title='Test Task',
-            description='A test task description.',
+            title="Task 1",
+            description="Desc",
             column=self.column,
-            position=1,
-            assigned_to=self.user,
-            status=Task.Status.TODO
+            position=0,
+            status=Task.Status.TODO,
         )
 
-    def test_create_task(self):
-        url = reverse('create_task')
-        data = {
-            'title': 'New Task',
-            'column_id': self.column.column_id,
-            'position': 2,
-            'status': Task.Status.TODO
-        }
-        response = self.client.post(url, data=data)
-        self.assertEqual(response.status_code, 201)
-        self.assertEqual(Task.objects.count(), 2)
-        self.assertEqual(response.json()['title'], 'New Task')
+        # Login as admin by default
+        self._login("admin", "password123", self.org.slug)
 
-    def test_get_column_tasks(self):
-        url = reverse('get_column_tasks', kwargs={'column_id': self.column.column_id})
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.json()), 1)
-        self.assertEqual(response.json()['tasks'][0]['title'], self.task.title)
+    def test_get_board_basic(self):
+        url = reverse("get_kanban_board", args=[self.org.pk, self.project.pk])
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.json()
+        self.assertIn("board_id", data)
+        self.assertEqual(data["project_id"], self.project.id)
 
-    def test_get_task(self):
-        url = reverse('get_task', kwargs={'task_id': self.task.task_id})
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()['title'], self.task.title)
+    def test_get_board_with_content(self):
+        url = reverse("get_kanban_boards_with_content", args=[self.org.pk, self.project.pk])
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.json()
+        self.assertIn("columns", data)
+        self.assertTrue(any(col["column_id"] == self.column.column_id for col in data["columns"]))
+        # check that task is present
+        found = False
+        for col in data["columns"]:
+            for t in col["tasks"]:
+                if t["task_id"] == self.task.task_id:
+                    found = True
+        self.assertTrue(found)
 
-    def test_update_task(self):
-        url = reverse('update_task', kwargs={'task_id': self.task.task_id})
-        data = {'title': 'Updated Task Title', 'status': Task.Status.IN_PROGRESS}
-        response = self.client.put(url, data=data, content_type='application/json')
-        self.assertEqual(response.status_code, 200)
+    def test_create_column_by_admin(self):
+        url = reverse("create_column", args=[self.org.pk, self.board.board_id])
+        payload = {"title": "New Column", "position": 2}
+        resp = self.client.post(url, payload)
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(KanbanColumn.objects.filter(title="New Column", board=self.board).exists())
+
+    def test_member_without_coordination_cannot_create_column(self):
+        # login as plain member (not coordinator)
+        self._login("member", "password123", self.org.slug)
+        url = reverse("create_column", args=[self.org.pk, self.board.board_id])
+        payload = {"title": "Forbidden Column"}
+        resp = self.client.post(url, payload)
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_update_column_position_by_coordinator(self):
+        # login as coordinator
+        self._login("coordinator", "password123", self.org.slug)
+        url = reverse("update_column", args=[self.org.pk, self.board.board_id, self.column.column_id])
+        payload = {"position": 5, "title": "Renamed"}
+        resp = self.client.put(url, payload, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.column.refresh_from_db()
+        self.assertEqual(self.column.position, 5)
+        self.assertEqual(self.column.title, "Renamed")
+
+    def test_add_task_with_permission(self):
+        # give member permission to project tag and login as member
+        self.member_membership.permissions.add(self.tag)
+        self._login("member", "password123", self.org.slug)
+
+        url = reverse("create_task", args=[self.org.pk, self.board.board_id, self.column.column_id])
+        payload = {"title": "Member Task", "description": "x", "position": 0}
+        resp = self.client.post(url, payload)
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(Task.objects.filter(title="Member Task", column=self.column).exists())
+
+    def test_move_task_to_other_column(self):
+        # login as admin
+        url = reverse("update_task", args=[self.org.pk, self.board.board_id, self.column.column_id, self.task.task_id])
+        payload = {"new_column_id": self.other_column.column_id}
+        resp = self.client.put(url, payload, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.task.refresh_from_db()
-        self.assertEqual(self.task.title, 'Updated Task Title')
-        self.assertEqual(self.task.status, Task.Status.IN_PROGRESS)
+        self.assertEqual(self.task.column.column_id, self.other_column.column_id)
 
-    def test_delete_task(self):
-        url = reverse('delete_task', kwargs={'task_id': self.task.task_id})
-        response = self.client.delete(url)
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(Task.objects.filter(pk=self.task.task_id).exists())
+    def test_delete_task_by_coordinator(self):
+        # login as coordinator (coordinator of project)
+        self._login("coordinator", "password123", self.org.slug)
+        url = reverse("delete_task", args=[self.org.pk, self.board.board_id, self.task.column.column_id, self.task.task_id])
+        resp = self.client.delete(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertFalse(Task.objects.filter(pk=self.task.pk).exists())
+
+    def test_get_task_forbidden_without_permission(self):
+        self._login("other", "password123", self.org.slug)
+        url = reverse("get_task", args=[self.org.pk, self.board.board_id, self.column.column_id, self.task.task_id])
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)

@@ -220,7 +220,6 @@ def list_chats(request, organization_id):
 
         organization = Organization.objects.get(id=organization_id)
         
-        # Administrators see all chats
         if membership.role == 'admin':
             chats = list(Chat.objects.filter(organization=organization))
         else:
@@ -230,11 +229,9 @@ def list_chats(request, organization_id):
             for chat in Chat.objects.filter(organization=organization):
                 chat_permissions = chat.permissions.all()
 
-                # Chats without permissions/tags are visible to everyone
                 if not chat_permissions.exists():
                     chats.append(chat)
                 elif len(user_permissions) == 0:
-                    # User has no permissions, can't access chats with permissions
                     continue
                 elif permission_to_access(user_permissions, chat_permissions):
                     chats.append(chat)
