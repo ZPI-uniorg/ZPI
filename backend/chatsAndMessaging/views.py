@@ -59,7 +59,7 @@ def negotiate(request):
         )
 
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        return JsonResponse({"error": f"Błąd: {str(e)}"}, status=400)
 
 
 # -----------------------------
@@ -70,7 +70,7 @@ def negotiate(request):
 def get_messages(request, organization_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User not authenticated"}, status=401)
+            return JsonResponse({"error": "Użytkownik nie jest uwierzytelniony"}, status=401)
 
         chat_id = request.GET.get("chat_id")
         channel_name = request.GET.get("channel")
@@ -78,11 +78,11 @@ def get_messages(request, organization_id):
         offset = int(request.GET.get("offset", 0))
 
         if not chat_id and not channel_name:
-            return JsonResponse({"error": "chat_id or channel required"}, status=400)
+            return JsonResponse({"error": "Wymagane chat_id lub channel"}, status=400)
 
         # Try to find by chat_id first (preferred), then by channel name
         if not chat_id:
-           return JsonResponse({"error": "chat_id required"}, status=400)
+           return JsonResponse({"error": "Wymagane chat_id"}, status=400)
 
         try:
             chat = Chat.objects.get(chat_id=chat_id, organization_id=organization_id)
@@ -97,14 +97,14 @@ def get_messages(request, organization_id):
                 if chat_permissions.exists():
                     user_permissions = user_membership.permissions.all()
                     if not permission_to_access(user_permissions, chat_permissions):
-                        return JsonResponse({"error": "Access denied to this chat"}, status=403)
+                        return JsonResponse({"error": "Brak dostępu do tego czatu"}, status=403)
 
             total_count = Message.objects.filter(chat=chat).count()
             messages = Message.objects.filter(chat=chat).order_by("-timestamp")[offset:offset+limit]
             # Reverse to get chronological order (oldest first in result)
             messages = list(reversed(messages))
         except Chat.DoesNotExist:
-            return JsonResponse({"error": "Chat not found"}, status=404)
+            return JsonResponse({"error": "Nie znaleziono czatu"}, status=404)
 
         serializer = MessageSerializer(messages, many=True)
         return JsonResponse({
@@ -116,7 +116,7 @@ def get_messages(request, organization_id):
         }, status=200)
 
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        return JsonResponse({"error": f"Błąd: {str(e)}"}, status=400)
 
 
 # -----------------------------
@@ -127,14 +127,14 @@ def get_messages(request, organization_id):
 def save_message(request, organization_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User not authenticated"}, status=401)
+            return JsonResponse({"error": "Użytkownik nie jest uwierzytelniony"}, status=401)
 
         # Parse JSON body if content-type is application/json
         if request.content_type and 'application/json' in request.content_type:
             try:
                 data = json.loads(request.body)
             except json.JSONDecodeError:
-                return JsonResponse({"error": "Invalid JSON"}, status=400)
+                return JsonResponse({"error": "Nieprawidłowy JSON"}, status=400)
         else:
             data = request.POST
 
@@ -145,7 +145,7 @@ def save_message(request, organization_id):
         content = data.get("content")
 
         if not all([message_uuid, content]) or (not author_username and not sender_id):
-            return JsonResponse({"error": "Missing required fields"}, status=400)
+            return JsonResponse({"error": "Brakujące wymagane pola"}, status=400)
 
         # Try to link to Chat if chat_id provided
         chat_obj = None
@@ -155,7 +155,7 @@ def save_message(request, organization_id):
                 chat_obj = Chat.objects.get(chat_id=chat_id, organization_id=organization_id)
                 channel_name = chat_obj.name  # Use chat name as channel
             except Chat.DoesNotExist:
-                return JsonResponse({"error": "Chat not found"}, status=404)
+                return JsonResponse({"error": "Nie znaleziono czatu"}, status=404)
 
         # Resolve sender user & username if sender_id sent
         sender_obj = None
@@ -166,7 +166,7 @@ def save_message(request, organization_id):
                 if not author_username:
                     author_username = sender_obj.username
             except User.DoesNotExist:
-                return JsonResponse({"error": "Sender user not found"}, status=404)
+                return JsonResponse({"error": "Nie znaleziono użytkownika nadawcy"}, status=404)
 
         if not channel_name:
             channel_name = "general"
@@ -193,13 +193,13 @@ def save_message(request, organization_id):
             else:
                 # Some other integrity error
                 print(f"❌ IntegrityError but no existing message found: {str(e)}")
-                return JsonResponse({"error": f"Database integrity error: {str(e)}"}, status=400)
+                return JsonResponse({"error": f"Błąd integralności bazy danych: {str(e)}"}, status=400)
 
         serializer = MessageSerializer(message)
         return JsonResponse(serializer.data, status=201)
 
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        return JsonResponse({"error": f"Błąd: {str(e)}"}, status=400)
 
 
 # -----------------------------
@@ -210,13 +210,13 @@ def save_message(request, organization_id):
 def list_chats(request, organization_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User not authenticated"}, status=401)
+            return JsonResponse({"error": "Użytkownik nie jest uwierzytelniony"}, status=401)
 
         username = request.user.username
         membership = Membership.objects.get(organization__id=organization_id, user__username=username)
 
         if not membership:
-            return JsonResponse({"error": "Unauthorized access"}, status=403)
+            return JsonResponse({"error": "Brak dostępu"}, status=403)
 
         organization = Organization.objects.get(id=organization_id)
         
@@ -241,7 +241,7 @@ def list_chats(request, organization_id):
         return JsonResponse({"chats": serializer.data}, status=200)
 
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        return JsonResponse({"error": f"Błąd: {str(e)}"}, status=400)
 
 
 @require_http_methods(["GET"])
@@ -249,13 +249,13 @@ def list_chats(request, organization_id):
 def list_chats_all(request, organization_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User not authenticated"}, status=401)
+            return JsonResponse({"error": "Użytkownik nie jest uwierzytelniony"}, status=401)
 
         org_id = organization_id or request.GET.get("organization")
         membership = Membership.objects.get(user=request.user, organization_id=org_id)
 
         if membership.role != 'admin':
-            return JsonResponse({"error": "Only admins can access all chats"}, status=403)
+            return JsonResponse({"error": "Tylko administratorzy mogą uzyskać dostęp do wszystkich czatów"}, status=403)
 
         chats = Chat.objects.filter(organization_id=org_id).order_by("name")
 
@@ -264,7 +264,7 @@ def list_chats_all(request, organization_id):
         return JsonResponse({"chats": serializer.data}, status=200)
 
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        return JsonResponse({"error": f"Błąd: {str(e)}"}, status=400)
 
 
 @require_http_methods(["GET"])
@@ -272,13 +272,13 @@ def list_chats_all(request, organization_id):
 def list_chats_by_tag(request, organization_id, tag_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User not authenticated"}, status=401)
+            return JsonResponse({"error": "Użytkownik nie jest uwierzytelniony"}, status=401)
 
         membership = Membership.objects.get(user=request.user, organization_id=organization_id)
 
         if membership.role != 'admin':
             if tag_id not in membership.permissions.values_list('id', flat=True):
-                return JsonResponse({"error": "Insufficient permissions to access chats with this tag"}, status=403)
+                return JsonResponse({"error": "Niewystarczające uprawnienia do dostępu do czatów z tym tagiem"}, status=403)
 
         organization = Organization.objects.get(id=organization_id)
 
@@ -301,7 +301,7 @@ def list_chats_by_tag(request, organization_id, tag_id):
 
         return JsonResponse({"chats": serializer.data}, status=200)
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        return JsonResponse({"error": f"Błąd: {str(e)}"}, status=400)
 
 # -----------------------------
 # CREATE CHAT
@@ -311,7 +311,7 @@ def list_chats_by_tag(request, organization_id, tag_id):
 def create_chat(request, organization_id):
     try:
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "User not authenticated"}, status=401)
+            return JsonResponse({"error": "Użytkownik nie jest uwierzytelniony"}, status=401)
 
         membership = Membership.objects.get(user=request.user, organization_id=organization_id)
 
@@ -334,7 +334,7 @@ def create_chat(request, organization_id):
 
         # Required fields check
         if not name or not organization_id:
-            return JsonResponse({"error": "name and organization required"}, status=400)
+            return JsonResponse({"error": "Wymagane pola: nazwa i organizacja"}, status=400)
 
         organization = Organization.objects.get(id=organization_id)
 
@@ -350,14 +350,14 @@ def create_chat(request, organization_id):
                     tag = Tag.objects.get(name=temp[0], organization__id=organization_id)
 
                     if tag not in allowed_permissions:
-                        return JsonResponse({"error": "Unauthorized permission assignment"}, status=403)
+                        return JsonResponse({"error": "Nieautoryzowane przypisanie uprawnień"}, status=403)
 
                     permissions_ids.append(tag.id)
 
                 else:
                     for tag_name in temp:
                         if not allowed_permissions.filter(name=tag_name).exists():
-                            return JsonResponse({"error": "Unauthorized permission assignment"}, status=403)
+                            return JsonResponse({"error": "Nieautoryzowane przypisanie uprawnień"}, status=403)
 
                     if not Tag.objects.filter(name=permission, organization__id=organization_id, combined=True).exists():
                         with transaction.atomic():
@@ -390,8 +390,8 @@ def create_chat(request, organization_id):
         return JsonResponse(serializer.data, status=201)
 
     except Organization.DoesNotExist:
-        return JsonResponse({"error": "Organization not found"}, status=404)
+        return JsonResponse({"error": "Nie znaleziono organizacji"}, status=404)
     except Tag.DoesNotExist:
-        return JsonResponse({"error": "Tag not found"}, status=404)
+        return JsonResponse({"error": "Nie znaleziono tagu"}, status=404)
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        return JsonResponse({"error": f"Błąd: {str(e)}"}, status=400)
