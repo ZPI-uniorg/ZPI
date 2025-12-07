@@ -59,7 +59,8 @@ export default function CalendarPage() {
   const [view, setView] = useState("month");
 
   useEffect(() => {
-    if (!loadEventsForDateRange || !userMember || allProjects.length === 0) return;
+    if (!loadEventsForDateRange || !userMember || allProjects.length === 0)
+      return;
     const { year, month, day } = date;
 
     if (view === "month") {
