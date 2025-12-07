@@ -70,8 +70,3 @@ The frontend will be available at `http://localhost:5173`
 - Backend runs on port 8000
 - Frontend runs on port 5173
 - Make sure both servers are running for full functionality
-
-## DODAWANIE ADMINA Zepsutym SPOSOBEM BARTKA
-```bash
-python manage.py ensure_dev_admin
-```
