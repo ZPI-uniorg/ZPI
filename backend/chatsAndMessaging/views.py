@@ -77,17 +77,27 @@ def get_messages(request, organization_id):
         limit = int(request.GET.get("limit", 10))
         offset = int(request.GET.get("offset", 0))
 
+        if not chat_id and not channel_name:
+            return JsonResponse({"error": "chat_id or channel required"}, status=400)
+
+        # Try to find by chat_id first (preferred), then by channel name
         if not chat_id:
            return JsonResponse({"error": "chat_id required"}, status=400)
 
         try:
             chat = Chat.objects.get(chat_id=chat_id, organization_id=organization_id)
-            chat_permissions = chat.permissions.all()
             user_membership = Membership.objects.get(user=request.user, organization_id=organization_id)
-            user_permissions = user_membership.permissions.all()
-
-            if chat_permissions and not permission_to_access(user_permissions, chat_permissions):
-                return JsonResponse({"error": "Access denied to this chat"}, status=403)
+            
+            # Administrators have access to all chats
+            # Chats without permissions/tags are visible to everyone
+            if user_membership.role != 'admin':
+                chat_permissions = chat.permissions.all()
+                
+                # If chat has permissions, check if user has access
+                if chat_permissions.exists():
+                    user_permissions = user_membership.permissions.all()
+                    if not permission_to_access(user_permissions, chat_permissions):
+                        return JsonResponse({"error": "Access denied to this chat"}, status=403)
 
             total_count = Message.objects.filter(chat=chat).count()
             messages = Message.objects.filter(chat=chat).order_by("-timestamp")[offset:offset+limit]
@@ -170,8 +180,20 @@ def save_message(request, organization_id):
                 author_username=author_username,
                 content=content,
             )
-        except IntegrityError:
-            return JsonResponse({"status": "duplicate"}, status=200)
+        except IntegrityError as e:
+            # Check if message with this UUID already exists
+            existing = Message.objects.filter(message_uuid=message_uuid).first()
+            if existing:
+                print(f"⚠️ Duplicate message_uuid: {message_uuid}")
+                print(f"   Existing: chat={existing.chat_id}, sender={existing.sender_id}, content={existing.content[:50]}")
+                print(f"   New attempt: chat={chat_id}, sender={sender_id}, content={content[:50]}")
+                # Return the existing message instead of error
+                serializer = MessageSerializer(existing)
+                return JsonResponse(serializer.data, status=200)
+            else:
+                # Some other integrity error
+                print(f"❌ IntegrityError but no existing message found: {str(e)}")
+                return JsonResponse({"error": f"Database integrity error: {str(e)}"}, status=400)
 
         serializer = MessageSerializer(message)
         return JsonResponse(serializer.data, status=201)
@@ -197,17 +219,22 @@ def list_chats(request, organization_id):
             return JsonResponse({"error": "Unauthorized access"}, status=403)
 
         organization = Organization.objects.get(id=organization_id)
-        user_permissions = membership.permissions.all()
+        
+        if membership.role == 'admin':
+            chats = list(Chat.objects.filter(organization=organization))
+        else:
+            user_permissions = membership.permissions.all()
+            chats = []
 
-        chats = []
+            for chat in Chat.objects.filter(organization=organization):
+                chat_permissions = chat.permissions.all()
 
-        for chat in Chat.objects.filter(organization=organization):
-            chat_permissions = chat.permissions.all()
-
-            if len(chat_permissions) == 0:
-                chats.append(chat)
-            elif permission_to_access(user_permissions, chat_permissions):
-                chats.append(chat)
+                if not chat_permissions.exists():
+                    chats.append(chat)
+                elif len(user_permissions) == 0:
+                    continue
+                elif permission_to_access(user_permissions, chat_permissions):
+                    chats.append(chat)
 
         serializer = ChatSerializer(chats, many=True)
 
