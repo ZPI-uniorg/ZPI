@@ -13,16 +13,21 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from datetime import timedelta
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load environment variables from .env file for local development
+#SETTINGS_DIR = Path(__file__).resolve().parent
+#load_dotenv(os.path.join(SETTINGS_DIR, ".env"))
+#SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
+
+#Load env variables from system for production
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-s*(cn4l6w#!$kbqu8%5g0pes87fiemc$(#kmf&m(r-d611p(0u"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -192,10 +197,16 @@ CSRF_COOKIE_SAMESITE = 'None'
 CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_HTTPONLY = False  # Must be False so JavaScript can read it if needed
 
+# Login timeout settings
+SESSION_COOKIE_AGE = 60 * 30  # 30 minutes
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
 # Trusted origins for CSRF validation
 CSRF_TRUSTED_ORIGINS = [
     "https://zealous-pond-01ec7c503-7.westeurope.3.azurestaticapps.net",
     "https://zealous-pond-01ec7c503.3.azurestaticapps.net",
+    "http://localhost:5173",
 ]
 
 # Default primary key field type
