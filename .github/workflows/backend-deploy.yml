@@ -34,6 +34,15 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Set app settings (build and startup)
+        run: |
+          az webapp config appsettings set --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" --name "${{ env.AZURE_WEBAPP_NAME }}" --settings \
+            SCM_DO_BUILD_DURING_DEPLOYMENT=true \
+            WEBSITES_PORT=8000 \
+            PYTHON_VERSION=3.11 \
+            StartupCommand="gunicorn backend.wsgi:application --bind 0.0.0.0:\$PORT" \
+            --output none
+
       - name: Set SECRET_KEY
         env:
           DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
