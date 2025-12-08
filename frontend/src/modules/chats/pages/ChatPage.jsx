@@ -8,6 +8,7 @@ import { useChat } from "../../chats/useChat.js";
 import useAuth from "../../../auth/useAuth.js";
 import { useProjects } from "../../shared/components/ProjectsContext.jsx";
 import { sanitizeChatMessage } from "../../shared/utils/sanitize.js";
+import apiClient from "../../../api/client.js";
 
 export default function ChatPage() {
   const { user, organization: activeOrganization } = useAuth() || {};
@@ -34,6 +35,7 @@ export default function ChatPage() {
     loadMoreMessages,
     hasMore,
     loadingMore,
+    deleteMessageFromState,
   } = useChat(initialChannel, currentUser, activeOrganization?.id);
   // Use filtered chats from global context; no local fetching here
   const { chats: contextChats, chatsLoading } = useProjects();
@@ -52,6 +54,23 @@ export default function ChatPage() {
     if (!disabled && draft.trim()) {
       sendMessage(draft);
       setDraft("");
+    }
+  };
+
+  const handleDeleteMessage = async (messageId) => {
+    if (!activeOrganization?.id) return;
+
+    if (!window.confirm("Czy na pewno chcesz usunąć tę wiadomość?")) return;
+
+    try {
+      await apiClient.delete(
+        `messages/delete/${activeOrganization.id}/${messageId}/`
+      );
+      // Remove message from local state
+      deleteMessageFromState(messageId);
+    } catch (error) {
+      console.error("Failed to delete message:", error);
+      alert("Nie udało się usunąć wiadomości");
     }
   };
 
@@ -111,6 +130,7 @@ export default function ChatPage() {
                 hasMore={hasMore}
                 loadingMore={loadingMore}
                 loading={status === "connecting"}
+                onDeleteMessage={handleDeleteMessage}
               />
               <form
                 onSubmit={handleSubmit}

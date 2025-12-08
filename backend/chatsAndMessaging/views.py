@@ -203,6 +203,44 @@ def save_message(request, organization_id):
 
 
 # -----------------------------
+# DELETE MESSAGE
+# -----------------------------
+@require_http_methods(["DELETE"])
+@csrf_exempt
+def delete_message(request, organization_id, message_uuid):
+    try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "Użytkownik nie jest uwierzytelniony"}, status=401)
+
+        # Find the message by UUID
+        try:
+            message = Message.objects.get(message_uuid=message_uuid)
+        except Message.DoesNotExist:
+            return JsonResponse({"error": "Nie znaleziono wiadomości"}, status=404)
+
+        # Check if the user is the sender of the message (by ID or username)
+        is_sender = (
+            (message.sender_id and message.sender_id == request.user.id) or
+            (message.author_username == request.user.username)
+        )
+        
+        if not is_sender:
+            return JsonResponse({"error": "Nie masz uprawnień do usunięcia tej wiadomości"}, status=403)
+
+        # Check if message belongs to the organization
+        if message.chat and message.chat.organization_id != organization_id:
+            return JsonResponse({"error": "Wiadomość nie należy do tej organizacji"}, status=403)
+
+        # Delete the message
+        message.delete()
+
+        return JsonResponse({"message": "Wiadomość została usunięta", "message_uuid": message_uuid}, status=200)
+
+    except Exception as e:
+        return JsonResponse({"error": f"Błąd: {str(e)}"}, status=400)
+
+
+# -----------------------------
 # CHAT LIST
 # -----------------------------
 @require_http_methods(["GET"])

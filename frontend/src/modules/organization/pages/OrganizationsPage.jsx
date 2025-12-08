@@ -259,6 +259,17 @@ function OrganizationsPage() {
   const handleAddMember = async (event) => {
     event.preventDefault();
     if (!selectedOrgId || !user?.username) return;
+
+    // Validate that all required fields are filled
+    if (
+      !memberForm.first_name.trim() ||
+      !memberForm.last_name.trim() ||
+      !memberForm.email.trim()
+    ) {
+      setMemberError("Imię, nazwisko i email są wymagane.");
+      return;
+    }
+
     const submission = {
       username: memberForm.username.trim(),
       password: memberForm.password,
@@ -324,6 +335,16 @@ function OrganizationsPage() {
   const handleUpdateMember = async (event) => {
     event.preventDefault();
     if (!selectedOrgId || !user?.username || !editingMember?.username) {
+      return;
+    }
+
+    // Validate that all required fields are filled
+    if (
+      !memberEditForm.first_name.trim() ||
+      !memberEditForm.last_name.trim() ||
+      !memberEditForm.email.trim()
+    ) {
+      setMemberEditError("Imię, nazwisko i email są wymagane.");
       return;
     }
 
@@ -982,7 +1003,7 @@ function OrganizationsPage() {
               className="grid grid-cols-1 md:grid-cols-2 gap-4"
             >
               <label className="flex flex-col gap-2">
-                <span className="text-slate-200 font-medium">Imię</span>
+                <span className="text-slate-200 font-medium">Imię *</span>
                 <input
                   name="first_name"
                   value={memberEditForm.first_name}
@@ -995,11 +1016,12 @@ function OrganizationsPage() {
                       target: { name: "first_name", value: cleaned },
                     });
                   }}
+                  required
                   className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500"
                 />
               </label>
               <label className="flex flex-col gap-2">
-                <span className="text-slate-200 font-medium">Nazwisko</span>
+                <span className="text-slate-200 font-medium">Nazwisko *</span>
                 <input
                   name="last_name"
                   value={memberEditForm.last_name}
@@ -1012,11 +1034,14 @@ function OrganizationsPage() {
                       target: { name: "last_name", value: cleaned },
                     });
                   }}
+                  required
                   className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500"
                 />
               </label>
               <label className="flex flex-col gap-2 md:col-span-2">
-                <span className="text-slate-200 font-medium">Adres email</span>
+                <span className="text-slate-200 font-medium">
+                  Adres email *
+                </span>
                 <input
                   name="email"
                   type="email"
@@ -1027,13 +1052,19 @@ function OrganizationsPage() {
                       target: { name: "email", value: cleaned },
                     });
                   }}
+                  required
                   className="rounded px-3 py-2 border border-slate-600 bg-slate-900 text-slate-100 focus:outline-none focus:border-indigo-500"
                 />
               </label>
               <div className="flex items-center gap-3 md:col-span-2">
                 <button
                   type="submit"
-                  disabled={memberEditSubmitting}
+                  disabled={
+                    memberEditSubmitting ||
+                    !memberEditForm.first_name.trim() ||
+                    !memberEditForm.last_name.trim() ||
+                    !memberEditForm.email.trim()
+                  }
                   className="bg-indigo-600 text-white px-5 py-2 rounded font-semibold disabled:opacity-60 hover:brightness-110 transition"
                 >
                   {memberEditSubmitting ? "Zapisywanie…" : "Zapisz zmiany"}
@@ -1063,7 +1094,7 @@ function OrganizationsPage() {
           <form onSubmit={handleAddMember} className="flex flex-col gap-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <label className="flex flex-col gap-2">
-                <span className="text-slate-200 font-medium">Imię</span>
+                <span className="text-slate-200 font-medium">Imię *</span>
                 <div className="relative">
                   <input
                     name="first_name"
@@ -1078,6 +1109,7 @@ function OrganizationsPage() {
                       });
                     }}
                     maxLength={50}
+                    required
                     className="w-full rounded px-3 py-2 pr-16 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
                   />
                   <div
@@ -1094,7 +1126,7 @@ function OrganizationsPage() {
                 </div>
               </label>
               <label className="flex flex-col gap-2">
-                <span className="text-slate-200 font-medium">Nazwisko</span>
+                <span className="text-slate-200 font-medium">Nazwisko *</span>
                 <div className="relative">
                   <input
                     name="last_name"
@@ -1109,6 +1141,7 @@ function OrganizationsPage() {
                       });
                     }}
                     maxLength={50}
+                    required
                     className="w-full rounded px-3 py-2 pr-16 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
                   />
                   <div
@@ -1128,7 +1161,7 @@ function OrganizationsPage() {
 
             <label className="flex flex-col gap-2">
               <span className="text-slate-200 font-medium">
-                Email nowego członka
+                Email nowego członka *
               </span>
               <div className="relative">
                 <input
@@ -1142,6 +1175,7 @@ function OrganizationsPage() {
                     });
                   }}
                   maxLength={100}
+                  required
                   className="w-full rounded px-3 py-2 pr-16 border border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
                 />
                 <div
@@ -1161,7 +1195,7 @@ function OrganizationsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <label className="flex flex-col gap-2">
                 <span className="text-slate-200 font-medium">
-                  Login nowego członka
+                  Login nowego członka *
                 </span>
                 <div className="relative">
                   <input
@@ -1195,7 +1229,7 @@ function OrganizationsPage() {
                 </div>
               </label>
               <label className="flex flex-col gap-2">
-                <span className="text-slate-200 font-medium">Hasło</span>
+                <span className="text-slate-200 font-medium">Hasło *</span>
                 <div className="relative">
                   <input
                     name="password"
@@ -1255,7 +1289,12 @@ function OrganizationsPage() {
             <div className="pt-2">
               <button
                 type="submit"
-                disabled={memberSubmitting}
+                disabled={
+                  memberSubmitting ||
+                  !memberForm.first_name.trim() ||
+                  !memberForm.last_name.trim() ||
+                  !memberForm.email.trim()
+                }
                 className="bg-indigo-600 text-white px-5 py-2 rounded font-semibold disabled:opacity-60 hover:brightness-110 transition"
               >
                 {memberSubmitting ? "Dodawanie…" : "Dodaj członka"}
