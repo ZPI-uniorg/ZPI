@@ -2,11 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import useAuth from "../../auth/useAuth.js";
 import apiClient from "../../api/client.js";
 
-const BACKEND_BASE =
-  typeof window !== "undefined"
-    ? import.meta.env?.VITE_BACKEND_URL ||
-      `${window.location.protocol}//zpi-uniorg-backend-fua0anh6hgb5facf.polandcentral-01.azurewebsites.net`
-    : "https://zpi-uniorg-backend-fua0anh6hgb5facf.polandcentral-01.azurewebsites.net";
+const BACKEND_BASE = `https://${import.meta.env.VITE_BACKEND_URL}`;
 
 export function useChat(
   initialChannel = null,
