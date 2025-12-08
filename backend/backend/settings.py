@@ -181,6 +181,23 @@ CORS_ALLOWED_ORIGINS = [
 ]
 CORS_ALLOW_CREDENTIALS = True
 
+# Session cookie settings for cross-origin authentication
+SESSION_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_SECURE = True  # Required for SameSite=None
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_DOMAIN = None  # None allows cookies to work across different domains
+
+# CSRF cookie settings for cross-origin requests
+CSRF_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_HTTPONLY = False  # Must be False so JavaScript can read it if needed
+
+# Trusted origins for CSRF validation
+CSRF_TRUSTED_ORIGINS = [
+    "https://zealous-pond-01ec7c503-7.westeurope.3.azurestaticapps.net",
+    "https://zealous-pond-01ec7c503.3.azurestaticapps.net",
+]
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
