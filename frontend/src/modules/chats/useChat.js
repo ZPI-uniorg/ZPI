@@ -5,8 +5,8 @@ import apiClient from "../../api/client.js";
 const BACKEND_BASE =
   typeof window !== "undefined"
     ? import.meta.env?.VITE_BACKEND_URL ||
-      `${window.location.protocol}//localhost:8000`
-    : "http://localhost:8000";
+      `${window.location.protocol}//zpi-uniorg-backend-fua0anh6hgb5facf.polandcentral-01.azurewebsites.net`
+    : "https://zpi-uniorg-backend-fua0anh6hgb5facf.polandcentral-01.azurewebsites.net";
 
 export function useChat(
   initialChannel = null,
@@ -99,7 +99,9 @@ export function useChat(
       // Wait for chatMap to be populated with the current channel
       const chat_id = chatMap[channel];
       if (!chat_id) {
-        console.warn(`⚠️ Waiting for chatMap to be populated for channel: ${channel}`);
+        console.warn(
+          `⚠️ Waiting for chatMap to be populated for channel: ${channel}`
+        );
         setStatus("offline");
         return;
       }
@@ -407,7 +409,9 @@ export function useChat(
 
       // Validate that we have a chat_id before sending
       if (!chat_id) {
-        console.error(`❌ Cannot send message: no chat_id found for channel "${currentChannelRef.current}"`);
+        console.error(
+          `❌ Cannot send message: no chat_id found for channel "${currentChannelRef.current}"`
+        );
         console.error("Available channels in chatMap:", Object.keys(chatMap));
         return;
       }
