@@ -36,7 +36,8 @@ jobs:
 
       - name: Set SECRET_KEY
         run: |
-          az webapp config appsettings set --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" --name ${{ env.AZURE_WEBAPP_NAME }} --settings DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}
+          az webapp config appsettings set --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" --name "${{ env.AZURE_WEBAPP_NAME }}" --settings DJANGO_SECRET_KEY="${{ secrets.DJANGO_SECRET_KEY }}"
+          az webapp restart --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" --name "${{ env.AZURE_WEBAPP_NAME }}"
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
