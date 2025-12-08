@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import useAuth from "../../auth/useAuth.js";
 import apiClient from "../../api/client.js";
 
-const BACKEND_BASE = `https://${import.meta.env.VITE_BACKEND_URL}`;
+const BACKEND_BASE = `http://${import.meta.env.VITE_BACKEND_URL}`;
 
 export function useChat(
   initialChannel = null,
@@ -463,6 +463,10 @@ export function useChat(
     ]
   );
 
+  const deleteMessageFromState = useCallback((messageId) => {
+    setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+  }, []);
+
   return {
     channel,
     channels,
@@ -474,5 +478,6 @@ export function useChat(
     loadMoreMessages,
     hasMore,
     loadingMore,
+    deleteMessageFromState,
   };
 }

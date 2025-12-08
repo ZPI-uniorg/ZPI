@@ -1,4 +1,5 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
+import { Trash2 } from "lucide-react";
 
 // Helper to format date headers
 function formatDateHeader(dateStr) {
@@ -70,15 +71,65 @@ export default function MessageList({
   hasMore,
   loadingMore,
   loading = false,
+  onDeleteMessage,
 }) {
   const endRef = useRef(null);
   const containerRef = useRef(null);
   const previousScrollHeightRef = useRef(0);
+  const isInitialLoadRef = useRef(true);
+  const [hoveredMessageId, setHoveredMessageId] = useState(null);
 
-  // Auto-scroll to bottom on new messages
+  // Auto-scroll to bottom on new messages or initial load
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messages.length > 0) {
+      // Use requestAnimationFrame to ensure DOM is rendered before scrolling
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (isInitialLoadRef.current) {
+            // For initial load, scroll immediately to bottom
+            if (containerRef.current) {
+              containerRef.current.scrollTop =
+                containerRef.current.scrollHeight;
+            }
+            isInitialLoadRef.current = false;
+          } else {
+            // For new messages, scroll smoothly
+            endRef.current?.scrollIntoView({ behavior: "smooth" });
+          }
+        });
+      });
+    }
   }, [messages]);
+
+  // Check if we need to load more messages when container isn't scrollable
+  useEffect(() => {
+    if (loading || loadingMore || !hasMore) return;
+
+    const container = containerRef.current;
+    if (!container || messages.length === 0) return;
+
+    // Wait for DOM to render
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        // If content doesn't fill the container (no scrollbar), load more
+        if (
+          container.scrollHeight <= container.clientHeight &&
+          hasMore &&
+          !loadingMore
+        ) {
+          console.log("Container not scrollable, loading more messages...");
+          loadMoreMessages();
+        }
+      });
+    });
+  }, [messages, loading, loadingMore, hasMore, loadMoreMessages]);
+
+  // Reset initial load flag when loading state changes (new chat selected)
+  useEffect(() => {
+    if (loading) {
+      isInitialLoadRef.current = true;
+    }
+  }, [loading]);
 
   // Handle scroll event to detect when user scrolls near top
   const handleScroll = useCallback(() => {
@@ -148,8 +199,8 @@ export default function MessageList({
       ) : (
         <>
           {loadingMore && hasMore && (
-            <div className="text-center py-2 text-slate-400 text-sm">
-              Ładowanie starszych wiadomości...
+            <div className="flex justify-center py-4">
+              <div className="w-6 h-6 border-2 border-slate-600 border-t-indigo-500 rounded-full animate-spin"></div>
             </div>
           )}
           {groupMessages(messages).map((item, idx) => {
@@ -176,6 +227,8 @@ export default function MessageList({
                   (item.showTime ? "" : "-mt-3 ") +
                   (m.mine ? "self-end items-end" : "self-start items-start")
                 }
+                onMouseEnter={() => m.mine && setHoveredMessageId(m.id)}
+                onMouseLeave={() => setHoveredMessageId(null)}
               >
                 {item.showTime && (
                   <div className="flex items-center gap-2">
@@ -187,17 +240,31 @@ export default function MessageList({
                     <span className="text-[10px] text-slate-500">{m.time}</span>
                   </div>
                 )}
-                <div
-                  className={
-                    "group relative rounded-xl text-sm leading-relaxed whitespace-pre-wrap break-words " +
-                    (item.showTime ? "px-4 py-2 " : "px-4 py-1.5 ") +
-                    (m.mine
-                      ? "bg-indigo-600 text-white shadow-md"
-                      : "bg-slate-800 text-slate-100 border border-slate-700")
-                  }
-                  style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
-                >
-                  {m.text}
+                <div className="relative flex items-center gap-2">
+                  {m.mine && hoveredMessageId === m.id && onDeleteMessage && (
+                    <button
+                      onClick={() => onDeleteMessage(m.id)}
+                      className="p-1.5 rounded-full bg-slate-700 hover:bg-red-600 text-slate-300 hover:text-white transition-all"
+                      title="Usuń wiadomość"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  <div
+                    className={
+                      "rounded-xl text-sm leading-relaxed whitespace-pre-wrap break-words " +
+                      (item.showTime ? "px-4 py-2 " : "px-4 py-1.5 ") +
+                      (m.mine
+                        ? "bg-indigo-600 text-white shadow-md"
+                        : "bg-slate-800 text-slate-100 border border-slate-700")
+                    }
+                    style={{
+                      overflowWrap: "anywhere",
+                      wordBreak: "break-word",
+                    }}
+                  >
+                    {m.text}
+                  </div>
                 </div>
               </div>
             );
