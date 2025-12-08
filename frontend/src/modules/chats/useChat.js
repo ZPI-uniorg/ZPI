@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import useAuth from "../../auth/useAuth.js";
 import apiClient from "../../api/client.js";
 
-const BACKEND_BASE = `http://${import.meta.env.VITE_BACKEND_URL}`;
+const BACKEND_BASE = import.meta.env.VITE_BACKEND_URL;
 
 export function useChat(
   initialChannel = null,
