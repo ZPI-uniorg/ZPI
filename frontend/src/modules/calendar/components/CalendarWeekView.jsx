@@ -111,13 +111,13 @@ export default function CalendarWeekView({ weekDays, events }) {
   const handleHourClick = (dateStr, hour) => {
     const timeStr = `${String(hour).padStart(2, "0")}:00`;
     navigate("/calendar/event/new", {
-      state: { date: dateStr, time: timeStr },
+      state: { date: dateStr, time: timeStr, view: "week" },
     });
   };
 
   const handleEventClick = (e, event) => {
     e.stopPropagation();
-    navigate("/calendar/event/edit", { state: { event } });
+    navigate("/calendar/event/edit", { state: { event, view: "week" } });
   };
 
   // Funkcja sprawdzająca czy wydarzenia się nakładają czasowo
@@ -382,9 +382,10 @@ export default function CalendarWeekView({ weekDays, events }) {
                                   type: "single",
                                   value: tag,
                                 })),
-                                ...(ev.tagCombinations || []).map(
-                                  (combo) => ({ type: "combo", value: combo })
-                                ),
+                                ...(ev.tagCombinations || []).map((combo) => ({
+                                  type: "combo",
+                                  value: combo,
+                                })),
                               ];
                               const maxVisible = 2;
                               const visible = allTags.slice(0, maxVisible);

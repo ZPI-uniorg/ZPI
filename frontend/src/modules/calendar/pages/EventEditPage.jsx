@@ -110,6 +110,7 @@ export default function EventEditPage() {
     event: editingEvent,
     date: presetDate,
     time: presetTime,
+    view: savedView,
   } = location.state || {};
   const { user, organization } = useAuth();
   const { projects } = useProjects();
@@ -145,12 +146,10 @@ export default function EventEditPage() {
   // Fetch organization tags
   useEffect(() => {
     if (!organization?.id || !user?.username) return;
-    
+
     getTags(organization.id, user.username)
       .then((data) => {
-        const tagNames = (data || [])
-          .map((t) => t.name)
-          .filter(Boolean);
+        const tagNames = (data || []).map((t) => t.name).filter(Boolean);
         setAllTagsFromOrg(tagNames);
       })
       .catch((err) => {
@@ -239,7 +238,7 @@ export default function EventEditPage() {
           isAllDay,
         });
       }
-      navigate("/calendar");
+      navigate("/calendar", { state: { view: savedView } });
     } catch (err) {
       setError(
         err.response?.data?.error ??
@@ -263,7 +262,7 @@ export default function EventEditPage() {
         editingEvent.event_id || editingEvent.id,
         user.username
       );
-      navigate("/calendar");
+      navigate("/calendar", { state: { view: savedView } });
     } catch (err) {
       setError(
         err.response?.data?.error ??
@@ -307,7 +306,9 @@ export default function EventEditPage() {
             <button
               type="button"
               className="border border-slate-600 px-4 py-2 rounded-lg text-slate-200 hover:bg-slate-700/40 transition"
-              onClick={() => navigate("/calendar")}
+              onClick={() =>
+                navigate("/calendar", { state: { view: savedView } })
+              }
             >
               Powrót
             </button>

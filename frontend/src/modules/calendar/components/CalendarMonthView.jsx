@@ -75,12 +75,14 @@ export default function CalendarMonthView({
     const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(
       day
     ).padStart(2, "0")}`;
-    navigate("/calendar/event/new", { state: { date: dateStr } });
+    navigate("/calendar/event/new", {
+      state: { date: dateStr, view: "month" },
+    });
   };
 
   const handleEventClick = (e, event) => {
     e.stopPropagation();
-    navigate("/calendar/event/edit", { state: { event } });
+    navigate("/calendar/event/edit", { state: { event, view: "month" } });
   };
 
   return (
@@ -132,8 +134,8 @@ export default function CalendarMonthView({
                   <div
                     key={`${weekIdx}-${dayIdx}`}
                     className={`p-1 flex flex-col overflow-hidden min-h-0 transition-colors ${
-                      isTodayDay 
-                        ? "bg-indigo-600/20 border border-indigo-500/40" 
+                      isTodayDay
+                        ? "bg-indigo-600/20 border border-indigo-500/40"
                         : "bg-slate-900/95"
                     } ${day ? "hover:bg-slate-800/70 cursor-pointer" : ""}`}
                     onClick={() => handleDayClick(day)}
