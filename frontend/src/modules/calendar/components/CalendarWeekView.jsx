@@ -115,6 +115,12 @@ export default function CalendarWeekView({ weekDays, events }) {
     });
   };
 
+  const handleAllDayClick = (dateStr) => {
+    navigate("/calendar/event/new", {
+      state: { date: dateStr, time: "", view: "week", isAllDay: true },
+    });
+  };
+
   const handleEventClick = (e, event) => {
     e.stopPropagation();
     navigate("/calendar/event/edit", { state: { event, view: "week" } });
@@ -219,44 +225,155 @@ export default function CalendarWeekView({ weekDays, events }) {
       </div>
 
       {/* Sekcja wydarzeń wielodniowych */}
-      <div className="grid grid-cols-[60px_repeat(7,1fr)] gap-px bg-slate-700/30 min-h-[40px] mb-1">
-        <div className="bg-slate-900/95 text-slate-400 text-xs p-2 border-r border-slate-700/50"></div>
-        {weekDays.map((d, dayIdx) => {
+      {(() => {
+        // Collect all unique events and organize them into rows
+        const allUniqueEvents = [];
+        const seenEventIds = new Set();
+
+        weekDays.forEach((d) => {
           const dateStr = `${d.getFullYear()}-${String(
             d.getMonth() + 1
           ).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-          const allDayEvents = getAllDayEvents(events, dateStr);
+          const dayEvents = getAllDayEvents(events, dateStr);
 
-          return (
-            <div
-              key={dayIdx}
-              className="bg-slate-900/95 p-1 flex flex-col gap-1"
-            >
-              {allDayEvents.map((ev) => {
-                const isStart = dateStr === ev.date;
-                const isEnd = dateStr === (ev.endDate || ev.date);
+          dayEvents.forEach((ev) => {
+            if (!seenEventIds.has(ev.id)) {
+              seenEventIds.add(ev.id);
+
+              // Calculate which columns this event spans
+              const startDate = ev.date;
+              const endDate = ev.endDate || ev.date;
+
+              let startCol = -1;
+              let endCol = -1;
+
+              weekDays.forEach((wd, idx) => {
+                const wdStr = `${wd.getFullYear()}-${String(
+                  wd.getMonth() + 1
+                ).padStart(2, "0")}-${String(wd.getDate()).padStart(2, "0")}`;
+
+                if (wdStr === startDate) startCol = idx;
+                if (wdStr === endDate) endCol = idx;
+              });
+
+              // Only include if event is visible in this week
+              if (startCol !== -1 || endCol !== -1) {
+                // Adjust for events starting before or ending after the visible week
+                if (startCol === -1) startCol = 0;
+                if (endCol === -1) endCol = 6;
+
+                allUniqueEvents.push({
+                  ...ev,
+                  startCol,
+                  endCol,
+                });
+              }
+            }
+          });
+        });
+
+        // Arrange events into rows (no overlapping in same row)
+        const rows = [];
+        allUniqueEvents.forEach((ev) => {
+          let placed = false;
+
+          for (let row of rows) {
+            const overlaps = row.some(
+              (existing) =>
+                !(
+                  ev.endCol < existing.startCol || ev.startCol > existing.endCol
+                )
+            );
+
+            if (!overlaps) {
+              row.push(ev);
+              placed = true;
+              break;
+            }
+          }
+
+          if (!placed) {
+            rows.push([ev]);
+          }
+        });
+
+        const rowHeight = 36; // Height of each event row
+        const totalHeight = Math.max(40, rows.length * rowHeight + 8);
+
+        return (
+          <div
+            className="grid grid-cols-[60px_repeat(7,1fr)] gap-px bg-slate-700/30 mb-1 relative"
+            style={{ minHeight: `${totalHeight}px` }}
+          >
+            <div className="bg-slate-900/95 text-slate-400 text-xs p-2 border-r border-slate-700/50"></div>
+            {weekDays.map((d, dayIdx) => {
+              const dateStr = `${d.getFullYear()}-${String(
+                d.getMonth() + 1
+              ).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+              return (
+                <div
+                  key={dayIdx}
+                  className="bg-slate-900/95 cursor-pointer hover:bg-slate-800/70 transition-colors"
+                  onClick={() => handleAllDayClick(dateStr)}
+                />
+              );
+            })}
+
+            {/* Render events in rows */}
+            {rows.map((row, rowIdx) =>
+              row.map((ev) => {
+                const weekStartStr = `${weekDays[0].getFullYear()}-${String(
+                  weekDays[0].getMonth() + 1
+                ).padStart(2, "0")}-${String(weekDays[0].getDate()).padStart(
+                  2,
+                  "0"
+                )}`;
+                const weekEndStr = `${weekDays[6].getFullYear()}-${String(
+                  weekDays[6].getMonth() + 1
+                ).padStart(2, "0")}-${String(weekDays[6].getDate()).padStart(
+                  2,
+                  "0"
+                )}`;
+
+                const startDate = ev.date;
+                const endDate = ev.endDate || ev.date;
                 const isMultiDay = ev.endDate && ev.endDate !== ev.date;
+                const startsInWeek = startDate >= weekStartStr;
+                const endsInWeek = endDate <= weekEndStr;
 
-                // Remove arrows and extra suffixes for multi-day events
                 let roundedClass = "rounded";
                 if (isMultiDay) {
-                  if (isStart && !isEnd) {
+                  if (startsInWeek && !endsInWeek) {
                     roundedClass = "rounded-l";
-                  } else if (!isStart && isEnd) {
+                  } else if (!startsInWeek && endsInWeek) {
                     roundedClass = "rounded-r";
-                  } else if (!isStart && !isEnd) {
-                    roundedClass = "rounded-sm";
+                  } else if (!startsInWeek && !endsInWeek) {
+                    roundedClass = "";
                   }
                 }
+
+                // Calculate grid position
+                const gridColumnStart = ev.startCol + 2; // +2 because first column is the time label
+                const gridColumnEnd = ev.endCol + 3; // +3 to span to the end of the last day
 
                 return (
                   <div
                     key={ev.id}
-                    className={`text-sm px-2 py-1 ${roundedClass} cursor-pointer hover:shadow-lg transition flex flex-col gap-1 overflow-hidden bg-indigo-600 text-white border border-white/15 border-l-4 border-indigo-800 shadow-md`}
+                    className={`text-sm px-2 py-1 ${roundedClass} cursor-pointer hover:shadow-lg hover:z-10 transition flex items-center gap-2 overflow-hidden bg-indigo-600 text-white border border-white/15 border-l-4 border-indigo-800 shadow-md`}
+                    style={{
+                      gridColumn: `${gridColumnStart} / ${gridColumnEnd}`,
+                      gridRow: 1,
+                      marginTop: `${rowIdx * rowHeight + 4}px`,
+                      height: `${rowHeight - 4}px`,
+                    }}
                     title={`${ev.title} - ${ev.start_time} - ${ev.end_time}`}
-                    onClick={(e) => handleEventClick(e, ev)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEventClick(e, ev);
+                    }}
                   >
-                    <span className="truncate flex-shrink font-semibold">
+                    <span className="truncate font-semibold flex-shrink min-w-0">
                       {ev.start_time === "00:00" && ev.end_time === "00:00"
                         ? ev.title
                         : `${ev.start_time}-${ev.end_time} ${ev.title}`}
@@ -273,11 +390,11 @@ export default function CalendarWeekView({ weekDays, events }) {
                       const hiddenCount = allTags.length - maxVisible;
 
                       return (
-                        <div className="flex items-center gap-1 flex-wrap">
+                        <div className="flex items-center gap-1 flex-shrink-0">
                           {visible.map((tag, idx) => (
                             <span
                               key={idx}
-                              className="bg-fuchsia-700/80 px-1 rounded text-xs truncate max-w-[120px] flex-shrink-0"
+                              className="bg-fuchsia-700/80 px-1 rounded text-xs whitespace-nowrap"
                               title={tag}
                             >
                               {tag}
@@ -293,11 +410,11 @@ export default function CalendarWeekView({ weekDays, events }) {
                     })()}
                   </div>
                 );
-              })}
-            </div>
-          );
-        })}
-      </div>
+              })
+            )}
+          </div>
+        );
+      })()}
 
       {/* Separator directly under all-day events */}
       <div className="grid grid-cols-[60px_repeat(7,1fr)] mb-1">
@@ -357,10 +474,14 @@ export default function CalendarWeekView({ weekDays, events }) {
                           ? `calc(${width} - 4px)`
                           : `calc(${width} - 2px)`;
 
+                      // Check if there's enough space to put tags below (need at least 60px height)
+                      const heightPx = parseFloat(position.height);
+                      const hasSpaceForTagsBelow = heightPx >= 60;
+
                       return (
                         <div
                           key={ev.id}
-                          className="absolute text-[10px] text-white px-1 py-1 rounded cursor-pointer shadow-md hover:shadow-lg hover:z-50 transition-all overflow-hidden bg-indigo-600 border border-white/15 border-l-4 border-indigo-800"
+                          className="absolute text-[10px] text-white px-1 py-1 rounded cursor-pointer shadow-md hover:shadow-lg hover:z-50 transition-all overflow-hidden bg-indigo-600 border border-white/15 border-l-4 border-indigo-800 flex flex-col gap-0.5"
                           style={{
                             top: position.top,
                             height: position.height,
@@ -372,50 +493,107 @@ export default function CalendarWeekView({ weekDays, events }) {
                           title={`${ev.title} - ${ev.start_time} - ${ev.end_time}`}
                           onClick={(e) => handleEventClick(e, ev)}
                         >
-                          <div className="font-semibold text-sm truncate">
-                            {ev.start_time}-{ev.end_time} {ev.title}
-                          </div>
-                          {columnInfo.totalColumns === 1 &&
-                            (() => {
-                              const allTags = [
-                                ...ev.tags.map((tag) => ({
-                                  type: "single",
-                                  value: tag,
-                                })),
-                                ...(ev.tagCombinations || []).map((combo) => ({
-                                  type: "combo",
-                                  value: combo,
-                                })),
-                              ];
-                              const maxVisible = 2;
-                              const visible = allTags.slice(0, maxVisible);
-                              const hiddenCount = allTags.length - maxVisible;
+                          {hasSpaceForTagsBelow ? (
+                            <>
+                              <div className="font-semibold text-sm truncate">
+                                {ev.start_time}-{ev.end_time} {ev.title}
+                              </div>
+                              {columnInfo.totalColumns === 1 &&
+                                (() => {
+                                  const allTags = [
+                                    ...ev.tags.map((tag) => ({
+                                      type: "single",
+                                      value: tag,
+                                    })),
+                                    ...(ev.tagCombinations || []).map(
+                                      (combo) => ({
+                                        type: "combo",
+                                        value: combo,
+                                      })
+                                    ),
+                                  ];
+                                  const maxVisible = 2;
+                                  const visible = allTags.slice(0, maxVisible);
+                                  const hiddenCount =
+                                    allTags.length - maxVisible;
 
-                              return (
-                                <div className="flex items-center gap-1 flex-wrap mt-1">
-                                  {visible.map((tag, idx) => (
-                                    <span
-                                      key={idx}
-                                      className="bg-fuchsia-700/80 px-1 rounded text-xs truncate max-w-[120px] flex-shrink-0"
-                                      title={
-                                        tag.type === "combo"
-                                          ? tag.value.join(" + ")
-                                          : tag.value
-                                      }
-                                    >
-                                      {tag.type === "combo"
-                                        ? tag.value.join(" + ")
-                                        : tag.value}
-                                    </span>
-                                  ))}
-                                  {hiddenCount > 0 && (
-                                    <span className="bg-fuchsia-700/80 px-1 rounded text-xs flex-shrink-0">
-                                      +{hiddenCount}
-                                    </span>
-                                  )}
-                                </div>
-                              );
-                            })()}
+                                  return (
+                                    <div className="flex items-center gap-1 flex-wrap">
+                                      {visible.map((tag, idx) => (
+                                        <span
+                                          key={idx}
+                                          className="bg-fuchsia-700/80 px-1 rounded text-xs whitespace-nowrap"
+                                          title={
+                                            tag.type === "combo"
+                                              ? tag.value.join(" + ")
+                                              : tag.value
+                                          }
+                                        >
+                                          {tag.type === "combo"
+                                            ? tag.value.join(" + ")
+                                            : tag.value}
+                                        </span>
+                                      ))}
+                                      {hiddenCount > 0 && (
+                                        <span className="bg-fuchsia-700/80 px-1 rounded text-xs flex-shrink-0">
+                                          +{hiddenCount}
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
+                            </>
+                          ) : (
+                            <div className="flex items-center gap-1 overflow-hidden">
+                              <div className="font-semibold text-sm truncate min-w-0 flex-shrink">
+                                {ev.start_time}-{ev.end_time} {ev.title}
+                              </div>
+                              {columnInfo.totalColumns === 1 &&
+                                (() => {
+                                  const allTags = [
+                                    ...ev.tags.map((tag) => ({
+                                      type: "single",
+                                      value: tag,
+                                    })),
+                                    ...(ev.tagCombinations || []).map(
+                                      (combo) => ({
+                                        type: "combo",
+                                        value: combo,
+                                      })
+                                    ),
+                                  ];
+                                  const maxVisible = 2;
+                                  const visible = allTags.slice(0, maxVisible);
+                                  const hiddenCount =
+                                    allTags.length - maxVisible;
+
+                                  return (
+                                    <div className="flex items-center gap-1 flex-shrink-0">
+                                      {visible.map((tag, idx) => (
+                                        <span
+                                          key={idx}
+                                          className="bg-fuchsia-700/80 px-1 rounded text-xs whitespace-nowrap"
+                                          title={
+                                            tag.type === "combo"
+                                              ? tag.value.join(" + ")
+                                              : tag.value
+                                          }
+                                        >
+                                          {tag.type === "combo"
+                                            ? tag.value.join(" + ")
+                                            : tag.value}
+                                        </span>
+                                      ))}
+                                      {hiddenCount > 0 && (
+                                        <span className="bg-fuchsia-700/80 px-1 rounded text-xs flex-shrink-0">
+                                          +{hiddenCount}
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
+                            </div>
+                          )}
                         </div>
                       );
                     })}

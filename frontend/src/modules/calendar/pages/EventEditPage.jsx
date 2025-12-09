@@ -111,6 +111,7 @@ export default function EventEditPage() {
     date: presetDate,
     time: presetTime,
     view: savedView,
+    isAllDay: presetIsAllDay,
   } = location.state || {};
   const { user, organization } = useAuth();
   const { projects } = useProjects();
@@ -133,9 +134,14 @@ export default function EventEditPage() {
   );
   const [endTime, setEndTime] = useState(editingEvent?.end_time || "");
   // All day: true if both times are empty or if explicitly set
+  // If presetTime exists (clicked on hour), disable all-day mode
   const [isAllDay, setIsAllDay] = useState(
     editingEvent?.isAllDay !== undefined
       ? editingEvent.isAllDay
+      : presetTime
+      ? false
+      : presetIsAllDay !== undefined
+      ? presetIsAllDay
       : !editingEvent?.start_time && !editingEvent?.end_time
   );
   const [isEditing, setIsEditing] = useState(!editingEvent);
@@ -198,12 +204,9 @@ export default function EventEditPage() {
     let submitEndTime = endTime;
     let submitEndDate = endDate;
     if (isAllDay) {
-      // All-day event: 00:00 start, 00:00 end of next day
+      // All-day event: 00:00 start to 00:00 end on the selected end date
       submitStartTime = "00:00";
-      // Calculate endDate + 1 day
-      const end = new Date(endDate);
-      end.setDate(end.getDate() + 1);
-      submitEndDate = end.toISOString().slice(0, 10);
+      submitEndDate = endDate;
       submitEndTime = "00:00";
     }
 
