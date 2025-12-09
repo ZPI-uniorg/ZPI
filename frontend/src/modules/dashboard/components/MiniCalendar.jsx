@@ -278,53 +278,126 @@ export default function MiniCalendar() {
             ))}
           </div>
         ) : (
-          <div
-            className={`grid grid-cols-7 grid-rows-${matrix.length} gap-0.5 flex-1`}
-          >
-            {matrix.flat().map((day, idx) => {
-              const dayEvents = day
-                ? getEventsForDay(events, year, month, day)
-                : [];
-              const isTodayDay = isToday(day);
-              return (
-                <div
-                  key={idx}
-                  className={`rounded-lg px-0.5 py-0.5 flex flex-col items-start transition-colors overflow-hidden relative ${
-                    isTodayDay
-                      ? "bg-indigo-600/30 border border-indigo-500/50 text-slate-100 hover:bg-indigo-600/40 cursor-pointer"
-                      : day
-                      ? "bg-slate-800/40 text-slate-100 hover:bg-slate-700/50 cursor-pointer"
-                      : "bg-slate-800/40 text-slate-500/40"
-                  }`}
-                  onClick={() => handleDayClick(day)}
-                >
-                  <span
-                    className={`text-[10px] font-bold leading-tight ${
-                      isTodayDay ? "text-indigo-300" : ""
+          <div className="relative flex-1">
+            <div
+              className={`grid grid-cols-7 grid-rows-${matrix.length} gap-0.5`}
+              style={{ height: '100%' }}
+            >
+              {matrix.flat().map((day, idx) => {
+                const isTodayDay = isToday(day);
+                return (
+                  <div
+                    key={idx}
+                    className={`rounded-lg px-0.5 py-0.5 flex flex-col items-start transition-colors overflow-hidden ${
+                      isTodayDay
+                        ? "bg-indigo-600/30 border border-indigo-500/50 text-slate-100 hover:bg-indigo-600/40 cursor-pointer"
+                        : day
+                        ? "bg-slate-800/40 text-slate-100 hover:bg-slate-700/50 cursor-pointer"
+                        : "bg-slate-800/40 text-slate-500/40"
                     }`}
+                    onClick={() => handleDayClick(day)}
                   >
-                    {day || ""}
-                  </span>
-                  <div className="absolute top-[14px] left-0.5 right-0.5 bottom-0.5 flex flex-col gap-0.5 overflow-hidden">
-                    {dayEvents.slice(0, 2).map((ev) => (
-                      <div
-                        key={ev.id}
-                        className="w-full truncate text-xs bg-indigo-600/80 text-white px-0.5 rounded leading-tight h-[14px] flex-shrink-0 hover:bg-indigo-700 transition"
-                        title={ev.title}
-                        onClick={(e) => handleEventClick(e, ev)}
-                      >
-                        {ev.title}
-                      </div>
-                    ))}
-                    {dayEvents.length > 2 && (
-                      <div className="text-[9px] text-slate-400 px-0.5 h-[10px] flex-shrink-0">
-                        +{dayEvents.length - 2}
-                      </div>
-                    )}
+                    <span
+                      className={`text-[10px] font-bold leading-tight ${
+                        isTodayDay ? "text-indigo-300" : ""
+                      }`}
+                    >
+                      {day || ""}
+                    </span>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+            
+            {/* Render multi-day events as spanning bars */}
+            {(() => {
+              const allEvents = [];
+              const seenIds = new Set();
+              
+              matrix.forEach((week, weekIdx) => {
+                week.forEach((day, dayIdx) => {
+                  if (!day) return;
+                  const dayEvents = getEventsForDay(events, year, month, day);
+                  dayEvents.forEach((ev) => {
+                    if (!seenIds.has(ev.id)) {
+                      seenIds.add(ev.id);
+                      
+                      // Find start and end positions
+                      let startRow = -1, startCol = -1, endRow = -1, endCol = -1;
+                      
+                      matrix.forEach((wk, wkIdx) => {
+                        wk.forEach((d, dIdx) => {
+                          if (!d) return;
+                          const dStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+                          if (dStr === ev.date) {
+                            startRow = wkIdx;
+                            startCol = dIdx;
+                          }
+                          if (dStr === (ev.endDate || ev.date)) {
+                            endRow = wkIdx;
+                            endCol = dIdx;
+                          }
+                        });
+                      });
+                      
+                      if (startRow !== -1 && endRow !== -1) {
+                        allEvents.push({ ...ev, startRow, startCol, endRow, endCol });
+                      }
+                    }
+                  });
+                });
+              });
+              
+              const cellHeight = 100 / matrix.length;
+              const cellWidth = 100 / 7;
+              
+              return allEvents.slice(0, 10).map((ev, idx) => {
+                // For simplicity in mini calendar, show events as bars within each row
+                if (ev.startRow === ev.endRow) {
+                  // Single row event
+                  return (
+                    <div
+                      key={ev.id}
+                      className="absolute text-[9px] bg-indigo-600/80 text-white px-0.5 rounded leading-tight truncate hover:bg-indigo-700 transition cursor-pointer"
+                      style={{
+                        top: `calc(${ev.startRow * cellHeight}% + 14px + ${idx % 2 * 12}px)`,
+                        left: `calc(${ev.startCol * cellWidth}% + 2px)`,
+                        width: `calc(${(ev.endCol - ev.startCol + 1) * cellWidth}% - 4px)`,
+                        height: '11px',
+                      }}
+                      title={ev.title}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEventClick(e, ev);
+                      }}
+                    >
+                      {ev.title}
+                    </div>
+                  );
+                } else {
+                  // Multi-row event - show in start row to end of week
+                  return (
+                    <div
+                      key={ev.id}
+                      className="absolute text-[9px] bg-indigo-600/80 text-white px-0.5 rounded-l leading-tight truncate hover:bg-indigo-700 transition cursor-pointer"
+                      style={{
+                        top: `calc(${ev.startRow * cellHeight}% + 14px + ${idx % 2 * 12}px)`,
+                        left: `calc(${ev.startCol * cellWidth}% + 2px)`,
+                        width: `calc(${(6 - ev.startCol + 1) * cellWidth}% - 4px)`,
+                        height: '11px',
+                      }}
+                      title={ev.title}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEventClick(e, ev);
+                      }}
+                    >
+                      {ev.title}
+                    </div>
+                  );
+                }
+              });
+            })()}
           </div>
         )}
       </div>

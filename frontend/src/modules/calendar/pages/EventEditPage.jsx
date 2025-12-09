@@ -110,6 +110,8 @@ export default function EventEditPage() {
     event: editingEvent,
     date: presetDate,
     time: presetTime,
+    view: savedView,
+    isAllDay: presetIsAllDay,
   } = location.state || {};
   const { user, organization } = useAuth();
   const { projects } = useProjects();
@@ -132,9 +134,14 @@ export default function EventEditPage() {
   );
   const [endTime, setEndTime] = useState(editingEvent?.end_time || "");
   // All day: true if both times are empty or if explicitly set
+  // If presetTime exists (clicked on hour), disable all-day mode
   const [isAllDay, setIsAllDay] = useState(
     editingEvent?.isAllDay !== undefined
       ? editingEvent.isAllDay
+      : presetTime
+      ? false
+      : presetIsAllDay !== undefined
+      ? presetIsAllDay
       : !editingEvent?.start_time && !editingEvent?.end_time
   );
   const [isEditing, setIsEditing] = useState(!editingEvent);
@@ -145,12 +152,10 @@ export default function EventEditPage() {
   // Fetch organization tags
   useEffect(() => {
     if (!organization?.id || !user?.username) return;
-    
+
     getTags(organization.id, user.username)
       .then((data) => {
-        const tagNames = (data || [])
-          .map((t) => t.name)
-          .filter(Boolean);
+        const tagNames = (data || []).map((t) => t.name).filter(Boolean);
         setAllTagsFromOrg(tagNames);
       })
       .catch((err) => {
@@ -199,12 +204,9 @@ export default function EventEditPage() {
     let submitEndTime = endTime;
     let submitEndDate = endDate;
     if (isAllDay) {
-      // All-day event: 00:00 start, 00:00 end of next day
+      // All-day event: 00:00 start to 00:00 end on the selected end date
       submitStartTime = "00:00";
-      // Calculate endDate + 1 day
-      const end = new Date(endDate);
-      end.setDate(end.getDate() + 1);
-      submitEndDate = end.toISOString().slice(0, 10);
+      submitEndDate = endDate;
       submitEndTime = "00:00";
     }
 
@@ -239,7 +241,7 @@ export default function EventEditPage() {
           isAllDay,
         });
       }
-      navigate("/calendar");
+      navigate("/calendar", { state: { view: savedView } });
     } catch (err) {
       setError(
         err.response?.data?.error ??
@@ -263,7 +265,7 @@ export default function EventEditPage() {
         editingEvent.event_id || editingEvent.id,
         user.username
       );
-      navigate("/calendar");
+      navigate("/calendar", { state: { view: savedView } });
     } catch (err) {
       setError(
         err.response?.data?.error ??
@@ -307,7 +309,9 @@ export default function EventEditPage() {
             <button
               type="button"
               className="border border-slate-600 px-4 py-2 rounded-lg text-slate-200 hover:bg-slate-700/40 transition"
-              onClick={() => navigate("/calendar")}
+              onClick={() =>
+                navigate("/calendar", { state: { view: savedView } })
+              }
             >
               Powrót
             </button>

@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
@@ -43,6 +43,7 @@ function getWeekDays(year, month, day) {
 
 export default function CalendarPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const {
     allEvents,
     eventsLoading,
@@ -58,10 +59,11 @@ export default function CalendarPage() {
     month: today.getMonth(),
     day: today.getDate(),
   });
-  const [view, setView] = useState("month");
+  const [view, setView] = useState(location.state?.view || "month");
 
   useEffect(() => {
-    if (!loadEventsForDateRange || !userMember || allProjects.length === 0) return;
+    if (!loadEventsForDateRange || !userMember || allProjects.length === 0)
+      return;
     const { year, month, day } = date;
 
     if (view === "month") {
@@ -185,15 +187,17 @@ export default function CalendarPage() {
 
     const parsed = uniqueEvents.map(parseEventRow);
     console.log("ALL Parsed events for calendar:", parsed);
-    
+
     // Apply client-side filtering based on selectedTags
     const sel = Array.isArray(selectedTags) ? selectedTags : [];
     let filtered = parsed;
-    
+
     if (sel.length > 0) {
       const splitTags = (arr) =>
-        arr.flatMap((t) => t.split(/[+,]/).map((s) => s.trim())).filter(Boolean);
-      
+        arr
+          .flatMap((t) => t.split(/[+,]/).map((s) => s.trim()))
+          .filter(Boolean);
+
       filtered = parsed.filter((ev) => {
         const eventTags = splitTags(ev.permissions || []);
         if (logic === "AND") {
@@ -202,9 +206,14 @@ export default function CalendarPage() {
           return sel.some((tag) => eventTags.includes(tag));
         }
       });
-      console.log(`Filtered events (${logic}):`, filtered.length, "of", parsed.length);
+      console.log(
+        `Filtered events (${logic}):`,
+        filtered.length,
+        "of",
+        parsed.length
+      );
     }
-    
+
     console.log("=== CALENDAR EVENTS PARSING END ===");
 
     return filtered;
