@@ -410,7 +410,7 @@ export default function MiniCalendar() {
                       key={ev.id}
                       className="absolute text-[9px] bg-indigo-600/80 text-white px-0.5 rounded leading-tight truncate hover:bg-indigo-700 transition cursor-pointer"
                       style={{
-                        top: `calc(${ev.startRow * cellHeight}% + 12px + ${stackOffset}px)`,
+                        top: `calc(${ev.startRow * cellHeight}% + 16px + ${stackOffset}px)`,
                         left: `calc(${ev.startCol * cellWidth}% + 2px)`,
                         width: `calc(${(ev.endCol - ev.startCol + 1) * cellWidth}% - 4px)`,
                         height: '10px',
@@ -431,7 +431,7 @@ export default function MiniCalendar() {
                       key={ev.id}
                       className="absolute text-[9px] bg-indigo-600/80 text-white px-0.5 rounded-l leading-tight truncate hover:bg-indigo-700 transition cursor-pointer"
                       style={{
-                        top: `calc(${ev.startRow * cellHeight}% + 12px + ${stackOffset}px)`,
+                        top: `calc(${ev.startRow * cellHeight}% + 16px + ${stackOffset}px)`,
                         left: `calc(${ev.startCol * cellWidth}% + 2px)`,
                         width: `calc(${(6 - ev.startCol + 1) * cellWidth}% - 4px)`,
                         height: '10px',
