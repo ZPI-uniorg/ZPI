@@ -10,11 +10,12 @@ from organizations.views import (
     get_project_members, add_tag_to_user, remove_tag_from_user,
 )
 
-from .views import login_view, logout_view, change_password_view, login_status_view
+from .views import login_view, logout_view, change_password_view, login_status_view, get_csrf_token
 
 router = DefaultRouter()
 
 urlpatterns = [
+    path('auth/csrf_token/', get_csrf_token, name='get_csrf_token'),
     path("auth/login/<str:organization_name>/", login_view, name="login"),
     path("auth/logout/<str:organization_name>/", logout_view, name="logout"),
     path("auth/change-password/", change_password_view, name="change-password"),
