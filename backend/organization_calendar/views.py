@@ -297,7 +297,7 @@ def create_event(request, organization_id):
         if not all([name, start_time, end_time]):
             return JsonResponse({"error": "Missing required fields"}, status=400)
 
-        if start_time >= end_time:
+        if start_time > end_time:
             return JsonResponse({"error": "Nieprawidłowy zakres czasu"}, status=400)
 
         event = Event.objects.create(
@@ -389,66 +389,70 @@ def update_event(request, organization_id, event_id):
         both_dates_provided = start_time and end_time
 
         if start_time and end_time:
-            if start_time >= end_time:
+            if start_time > end_time:
                 return JsonResponse({"error": "Nieprawidłowy zakres czasu"}, status=400)
 
 
-        if permissions_str:
-            if membership.role != "admin":
-                allowed_permissions = membership.permissions.all()
+        if permissions_str is not None:
+            if permissions_str == "":
+                # Clear all permissions
+                event.permissions.clear()
             else:
-                allowed_permissions = Tag.objects.filter(
-                    organization__id=organization_id
-                )
-
-            permissions_str_list = permissions_str.split(",")
-            permissions_ids = []
-
-            for permission in permissions_str_list:
-                temp = permission.split("+")
-
-                if len(temp) == 1:
-                    tag = Tag.objects.get(
-                        name=temp[0], organization__id=organization_id
+                if membership.role != "admin":
+                    allowed_permissions = membership.permissions.all()
+                else:
+                    allowed_permissions = Tag.objects.filter(
+                        organization__id=organization_id
                     )
 
-                    if tag not in allowed_permissions:
-                        return JsonResponse(
-                            {"error": "Unauthorized permission assignment"}, status=403
+                permissions_str_list = permissions_str.split(",")
+                permissions_ids = []
+
+                for permission in permissions_str_list:
+                    temp = permission.split("+")
+
+                    if len(temp) == 1:
+                        tag = Tag.objects.get(
+                            name=temp[0], organization__id=organization_id
                         )
 
-                    permissions_ids.append(tag.id)
-
-                else:
-                    for tag_name in temp:
-                        if not allowed_permissions.filter(name=tag_name).exists():
+                        if tag not in allowed_permissions:
                             return JsonResponse(
-                                {"error": "Unauthorized permission assignment"},
-                                status=403,
+                                {"error": "Unauthorized permission assignment"}, status=403
                             )
 
-                    if not Tag.objects.filter(name=permission, organization__id=organization_id, combined=True).exists():
-                        with transaction.atomic():
-                            new_combined_tag = Tag.objects.create(
-                                name=permission,
-                                organization=Organization.objects.get(id=organization_id),
-                                combined=True,
-                            )
+                        permissions_ids.append(tag.id)
 
-                            for tag_name in temp:
-                                basic_tag = Tag.objects.get(
-                                    name=tag_name, organization__id=organization_id
-                                )
-                                CombinedTag.objects.create(
-                                    combined_tag_id=new_combined_tag, basic_tag_id=basic_tag
-                                )
-                            permissions_ids.append(new_combined_tag.id)
                     else:
-                        combined_tag = Tag.objects.get(name=permission, organization__id=organization_id)
-                        permissions_ids.append(combined_tag.id)
+                        for tag_name in temp:
+                            if not allowed_permissions.filter(name=tag_name).exists():
+                                return JsonResponse(
+                                    {"error": "Unauthorized permission assignment"},
+                                    status=403,
+                                )
 
-            tags_to_set = Tag.objects.filter(id__in=permissions_ids)
-            event.permissions.set(tags_to_set)
+                        if not Tag.objects.filter(name=permission, organization__id=organization_id, combined=True).exists():
+                            with transaction.atomic():
+                                new_combined_tag = Tag.objects.create(
+                                    name=permission,
+                                    organization=Organization.objects.get(id=organization_id),
+                                    combined=True,
+                                )
+
+                                for tag_name in temp:
+                                    basic_tag = Tag.objects.get(
+                                        name=tag_name, organization__id=organization_id
+                                    )
+                                    CombinedTag.objects.create(
+                                        combined_tag_id=new_combined_tag, basic_tag_id=basic_tag
+                                    )
+                                permissions_ids.append(new_combined_tag.id)
+                        else:
+                            combined_tag = Tag.objects.get(name=permission, organization__id=organization_id)
+                            permissions_ids.append(combined_tag.id)
+
+                tags_to_set = Tag.objects.filter(id__in=permissions_ids)
+                event.permissions.set(tags_to_set)
 
         if name:
             event.name = name
@@ -456,12 +460,12 @@ def update_event(request, organization_id, event_id):
             event.description = description
         if start_time:
             if not both_dates_provided:
-                    if start_time >= event.end_time:
+                    if start_time > event.end_time:
                         return JsonResponse({"error": "Nieprawidłowy zakres czasu"}, status=400)
             event.start_time = start_time
         if end_time:
             if not both_dates_provided:
-                    if event.start_time >= end_time:
+                    if event.start_time > end_time:
                         return JsonResponse({"error": "Nieprawidłowy zakres czasu"}, status=400)
             event.end_time = end_time
 

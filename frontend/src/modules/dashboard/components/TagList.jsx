@@ -1,6 +1,7 @@
 import React from "react";
 import { Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import useAuth from "../../../auth/useAuth.js";
 
 export default function TagList({
   tags,
@@ -11,6 +12,41 @@ export default function TagList({
   toggleTag,
 }) {
   const navigate = useNavigate();
+  const { organization, user } = useAuth();
+  const isAdmin = organization?.role === "admin";
+
+  // Debug: sprawdź co mamy w projects
+  React.useEffect(() => {
+    console.log('TagList - Debug info:', {
+      projects: projects.map(p => ({
+        name: p.name,
+        coordinator_username: p.coordinator_username,
+        id: p.id
+      })),
+      currentUser: user?.username,
+      isAdmin
+    });
+  }, [projects, user, isAdmin]);
+
+  const canEditItem = (tag) => {
+    const project = projects.find((p) => p.name === tag);
+    
+    if (project) {
+      // Dla projektów: admin albo koordynator tego projektu
+      if (isAdmin) return true;
+      const isCoordinator = project.coordinator_username === user?.username;
+      console.log('Checking project:', tag, {
+        coordinator_username: project.coordinator_username,
+        user_username: user?.username,
+        isCoordinator
+      });
+      return isCoordinator;
+    } else {
+      // Dla tagów bezprojektowych: tylko admin
+      console.log('Tag bez projektu:', tag, 'isAdmin:', isAdmin);
+      return isAdmin;
+    }
+  };
 
   const handleEdit = (tag) => {
     const project = projects.find((p) => p.name === tag);
@@ -73,17 +109,19 @@ export default function TagList({
                     projekt
                   </span>
                 )}
-                <button
-                  type="button"
-                  className="ml-auto p-1 rounded hover:bg-slate-700/40 transition"
-                  title={isProject ? "Edytuj projekt" : "Edytuj tag"}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleEdit(t);
-                  }}
-                >
-                  <Settings className="w-4 h-4 text-slate-400" />
-                </button>
+                {canEditItem(t) && (
+                  <button
+                    type="button"
+                    className="ml-auto p-1 rounded hover:bg-slate-700/40 transition"
+                    title={isProject ? "Edytuj projekt" : "Edytuj tag"}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleEdit(t);
+                    }}
+                  >
+                    <Settings className="w-4 h-4 text-slate-400" />
+                  </button>
+                )}
               </label>
             </li>
           );
