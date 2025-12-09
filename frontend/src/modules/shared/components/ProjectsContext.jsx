@@ -129,6 +129,7 @@ export function ProjectsProvider({
             id: p.id,
             name: p.name,
             tags: p.tags,
+            coordinator_username: p.coordinator_username,
           }))
         );
 
