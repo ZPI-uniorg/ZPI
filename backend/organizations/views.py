@@ -348,22 +348,11 @@ def get_organization_users(request, organization_id):
             organization__id=organization_id, user__username=username
         )
 
-        # Get all memberships in organization
-        all_memberships = Membership.objects.filter(organization__id=organization_id)
-        
-        # If admin, show all users. Otherwise filter by shared tags
-        if requester_membership.role == "admin":
-            memberships = all_memberships
-        else:
-            # Get requester's permissions (tags)
-            requester_perms = set(requester_membership.permissions.values_list("name", flat=True))
-            
-            # Filter memberships that share at least one tag with requester
-            memberships = []
-            for m in all_memberships:
-                member_perms = set(m.permissions.values_list("name", flat=True))
-                if requester_perms & member_perms or m.user.username == username:  # Show if shared tags or self
-                    memberships.append(m)
+        if requester_membership.role == "member":
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
+
+        memberships = Membership.objects.filter(organization__id=organization_id)
+
         users = [
             {
                 "user_id": membership.user.id,
@@ -646,17 +635,10 @@ def get_all_tags(request, organization_id):
             organization__id=organization_id, user__username=username
         )
 
-        # Get user's permissions (tags)
-        user_permissions = list(membership.permissions.values_list("name", flat=True))
-        
-        # If admin, show all tags. Otherwise show only user's tags
-        if membership.role == "admin":
-            tags = Tag.objects.filter(organization__id=organization_id)
-        else:
-            tags = Tag.objects.filter(
-                organization__id=organization_id,
-                name__in=user_permissions
-            )
+        if membership.role != "admin":
+            return JsonResponse({"error": "Brak uprawnień"}, status=403)
+
+        tags = Tag.objects.filter(organization__id=organization_id)
         
         tag_list = [
             {
