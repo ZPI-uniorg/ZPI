@@ -351,7 +351,57 @@ export default function MiniCalendar() {
               const cellHeight = 100 / matrix.length;
               const cellWidth = 100 / 7;
               
-              return allEvents.slice(0, 10).map((ev, idx) => {
+              // Sort events by start position, then by duration (longer first)
+              const sortedEvents = [...allEvents].sort((a, b) => {
+                if (a.startRow !== b.startRow) return a.startRow - b.startRow;
+                if (a.startCol !== b.startCol) return a.startCol - b.startCol;
+                const aDuration = (a.endRow - a.startRow) * 7 + (a.endCol - a.startCol);
+                const bDuration = (b.endRow - b.startRow) * 7 + (b.endCol - b.startCol);
+                return bDuration - aDuration;
+              });
+              
+              // Check if two events visually overlap in the same row
+              const eventsOverlap = (ev1, ev2) => {
+                // Must be in the same row to overlap
+                if (ev1.startRow !== ev2.startRow) return false;
+                // Check if their column ranges overlap
+                return ev1.startCol <= ev2.endCol && ev2.startCol <= ev1.endCol;
+              };
+              
+              // Assign stack levels with max 3 per row
+              const eventLevels = new Map();
+              const rowLevelCounts = {};
+              
+              sortedEvents.forEach((ev) => {
+                const rowKey = ev.startRow;
+                if (!rowLevelCounts[rowKey]) {
+                  rowLevelCounts[rowKey] = [0, 0, 0]; // count for each level
+                }
+                
+                let level = 0;
+                // Find the first level (0, 1, or 2) where this event doesn't overlap
+                while (level < 3) {
+                  const overlaps = sortedEvents.some((other) => {
+                    if (other.id === ev.id) return false;
+                    if (eventLevels.get(other.id) !== level) return false;
+                    return eventsOverlap(ev, other);
+                  });
+                  if (!overlaps) break;
+                  level++;
+                }
+                
+                if (level < 3) {
+                  eventLevels.set(ev.id, level);
+                  rowLevelCounts[rowKey][level]++;
+                }
+              });
+              
+              // Filter to only events that got assigned a level
+              const visibleEvents = allEvents.filter(ev => eventLevels.has(ev.id));
+              
+              return visibleEvents.map((ev) => {
+                const stackLevel = eventLevels.get(ev.id) || 0;
+                const stackOffset = stackLevel * 11;
                 // For simplicity in mini calendar, show events as bars within each row
                 if (ev.startRow === ev.endRow) {
                   // Single row event
@@ -360,10 +410,10 @@ export default function MiniCalendar() {
                       key={ev.id}
                       className="absolute text-[9px] bg-indigo-600/80 text-white px-0.5 rounded leading-tight truncate hover:bg-indigo-700 transition cursor-pointer"
                       style={{
-                        top: `calc(${ev.startRow * cellHeight}% + 14px + ${idx % 2 * 12}px)`,
+                        top: `calc(${ev.startRow * cellHeight}% + 12px + ${stackOffset}px)`,
                         left: `calc(${ev.startCol * cellWidth}% + 2px)`,
                         width: `calc(${(ev.endCol - ev.startCol + 1) * cellWidth}% - 4px)`,
-                        height: '11px',
+                        height: '10px',
                       }}
                       title={ev.title}
                       onClick={(e) => {
@@ -381,10 +431,10 @@ export default function MiniCalendar() {
                       key={ev.id}
                       className="absolute text-[9px] bg-indigo-600/80 text-white px-0.5 rounded-l leading-tight truncate hover:bg-indigo-700 transition cursor-pointer"
                       style={{
-                        top: `calc(${ev.startRow * cellHeight}% + 14px + ${idx % 2 * 12}px)`,
+                        top: `calc(${ev.startRow * cellHeight}% + 12px + ${stackOffset}px)`,
                         left: `calc(${ev.startCol * cellWidth}% + 2px)`,
                         width: `calc(${(6 - ev.startCol + 1) * cellWidth}% - 4px)`,
-                        height: '11px',
+                        height: '10px',
                       }}
                       title={ev.title}
                       onClick={(e) => {
