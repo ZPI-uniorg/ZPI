@@ -76,23 +76,18 @@ export function ProjectsProvider({
   const loadUserMember = useCallback(async () => {
     setState((s) => ({ ...s, userMemberLoading: true, userMemberError: null }));
     try {
-      const data = await getOrganizationMembers(organization.id, user.username);
-      const members = Array.isArray(data) ? data : [];
-      const member = members.find((m) => m.username === user.username);
-      if (member) {
-        setState((s) => ({
-          ...s,
-          userMember: member,
-          userMemberLoading: false,
-        }));
-      } else {
-        console.error("User member not found in organization");
-        setState((s) => ({
-          ...s,
-          userMemberError: "Nie znaleziono użytkownika w organizacji.",
-          userMemberLoading: false,
-        }));
-      }
+      const res = await apiClient.get(`membership/${organization.id}/`);
+      const member = {
+        username: user.username,
+        role: res.data.role,
+        permissions: res.data.permissions || [],
+        tags: res.data.permissions || [],
+      };
+      setState((s) => ({
+        ...s,
+        userMember: member,
+        userMemberLoading: false,
+      }));
     } catch (err) {
       console.error("Failed to load user member:", err);
       setState((s) => ({
