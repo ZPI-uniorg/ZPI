@@ -147,9 +147,14 @@ export async function createTag(organizationId, actorUsername, tagName) {
 }
 
 export async function getTags(organizationId, actorUsername) {
-  const response = await apiClient.get(`tags/all/${organizationId}/`);
+  const response = await apiClient.get(`tags/my/${organizationId}/`);
   return response.data;
 }
+
+// export async function getUserTags(organizationId, actorUsername) {
+//   const response = await apiClient.get(`tags/all/${organizationId}/`);
+//   return response.data;
+// }
 
 export async function updateMemberPermissions(
   organizationId,
